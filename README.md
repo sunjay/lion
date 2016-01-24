@@ -1,3 +1,19 @@
+# lion
+
+Design Goals
+------------
+* Have a very minimal set of language features (functions, symbols,
+    etc. -- that's it) that act as building blocks for other
+    language features
+* Be flexible enough so that most things can be defined in the language
+    itself and then additional functionality can be implemented using
+    extension modules that "hook in" using middleware
+* Allow for prefix, postfix and infix function evaluation -- thus supporting
+    functions, units and operators in a form that is familiar
+* Make purity easy and natural without making it an absolute requirement
+* Do not write a programming language. Write a language for evaluating
+    expressions as collections of functions in a concise and dynamic manner.
+
 GOALS: Language Features
 ------------------------
 
@@ -26,11 +42,12 @@ GOALS: Language Features
 * Functions define closures
 * Numbers are simply symbols that can be reduced like anything else (same with true and false)
 * Short circuit evaluation
-* Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `inRange(value, start, end)`, etc.)
+* Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `assertInRange(value, start, end)`, etc.)
 * Anything that isn't defined is automatically a special Symbol type (useful for isinstance checking)
 * Lazy by default (kind of) (makes `if` easier to implement)
 * Possible extensions:
     * Varadic parameters (i.e. (...args) => args) - requires support for arrays
+    * Basic array methods for acting on ranges: `map`, `foldl`, `foldr`, `range`, `flatten`
 
 TODO:
 * Some more work needs to be done to make things truly lazy. For example,
