@@ -5,7 +5,7 @@ GOALS: Language Features
     * Functions: (args) => {body; return result}
     * Variables: variableName = value
     * Operators: prefix, postfix, infix
-    * Boolean: true, false
+    * Boolean: true = 1, false = 0
 * Split multiple statements with semicolon (;)
 * Ability to define operators as functions with precedence
 * Quantities can have a unit or be dimensionless (a unit of `unit`)
@@ -29,6 +29,8 @@ GOALS: Language Features
 * Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `inRange(value, start, end)`, etc.)
 * Anything that isn't defined is automatically a special Symbol type (useful for isinstance checking)
 * Lazy by default (makes `if` easier to implement)
+* Possible extensions:
+    * Varadic parameters (i.e. (...args) => args) - requires support for arrays
 
 Supported Expressions:
 ----------------------
