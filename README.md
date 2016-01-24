@@ -159,7 +159,29 @@ quantity with the unit `units`.
 Custom transformations between units can be defined using the special
 defineTransformation function.
 
-    $ defineTransformation cm m ((x) => x * 100)
+    $ defineTransformation CM M ((x) => x * 100)
+
+### Defining custom units
+In order to expose enough so that units can be used as defined above,
+the following minimal complete definition should be made for each custom
+unit.
+
+    $ # This automatically creates an uppercase constant for that unit
+    $ # This will produce an error if the uppercase constant clashes with
+    $ # the name of that unit (i.e. uppercase of $@ is still $@) 
+    $ # So make there is at least one letter.
+    $ # This will automatically create a transformation from UNITS to the
+    $ # newly defined constant that simply sets the unit on the value 
+    $ defineUnit cm
+
+Note that this **does not** allow you to redefine existing units. To do that,
+you must first explicitly remove them using `undefineUnit`.
+
+    $ # automatically removes unit and constant from lookup table
+    $ undefineUnit CM
+
+Trying to redefine an existing unit without undefining it first will result
+in an error.
 
 Language Implementation
 -----------------------
@@ -314,4 +336,38 @@ In terms of scope/closures/etc., for now, functions will simply have
 access to everything that can be looked up (read: is defined). In
 the future they may only have access to things in their immediate closure
 (i.e. on their branch or on a parent branch).
+
+If a lookup fails, that symbol will simply be returned as is. This is
+considered reasonable means for the stoppage of evaluation. None of the
+immediate parent branches of that branch can be evaluated.
+
+For a tree
+
+    ADD
+    --> SYMBOL(23)
+    --> MULTIPLY
+        --> SYMBOL(a)
+        --> SUBTRACT
+            --> SYMBOL(9)
+            --> SYMBOL(3)
+
+The branch with `SYMBOL(a)` cannot be evaluated. Its sibling can be, so evaluation stops once that sibling has been evaluated. The return value is thus a tree and that tree is printed as is.
+
+The result of this tree is `23 + a * 6` since this is the furthest it could
+be reduced.
+
+Note that this returned tree **is not** a value type. If an expression being evaluated cannot be reduced to a single value, a function is returned with
+the arguments being any symbols in its deepest branches that could not
+be evaluated. Thus, a more accurate statement is that the return value of
+this tree is `(a) => 23 + a * 6`.
+
+This enables the expression to be futher evaluated down the line and also
+creates the ability to make the interpreter generate pseudo functions on
+the fly. The original function notation `(args) => expression` is simply
+syntatictic sugar designed to avoid any naming conflicts with the outside
+context. So even if you have `x` defined elsewhere, you can safely define
+a function using `(x) => ...` without worry.
+
+`SYMBOL`s will contain debugging information such as the line number and
+character number of that symbol. This will help make error reporting clear.
 
