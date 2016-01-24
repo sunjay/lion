@@ -28,9 +28,21 @@ GOALS: Language Features
 * Short circuit evaluation
 * Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `inRange(value, start, end)`, etc.)
 * Anything that isn't defined is automatically a special Symbol type (useful for isinstance checking)
-* Lazy by default (makes `if` easier to implement)
+* Lazy by default (kind of) (makes `if` easier to implement)
 * Possible extensions:
     * Varadic parameters (i.e. (...args) => args) - requires support for arrays
+
+TODO:
+* Some more work needs to be done to make things truly lazy. For example,
+    in the evaluation model, function arguments are evaluated as soon as
+    the function is invoked. Instead of that, function arguments should
+    only be invoked when they are substituted for their place in the
+    function body. Additionally, evaluation should not be entirely depth
+    first. It should begin at the top, attempt to evaluate that, and then
+    continuously evaluate whatever bare minimum number of symbols is
+    necessary for that evaluation to occur. Tokens that are not symbols
+    should always be evaluated (turned into a tree) right away as they
+    have syntactic meaning, not semantic meaning.
 
 Supported Expressions:
 ----------------------
