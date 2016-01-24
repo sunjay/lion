@@ -1,5 +1,8 @@
 # lion
 
+A minimal and highly flexible language designed to make calculations
+readable and concise.
+
 Design Goals
 ------------
 * Have a very minimal set of language features (functions, symbols,
@@ -11,7 +14,7 @@ Design Goals
 * Allow for prefix, postfix and infix function evaluation -- thus supporting
     functions, units and operators in a form that is familiar
 * Make purity easy and natural without making it an absolute requirement
-* Do not write a programming language. Write a language for evaluating
+* Do not create another programming language. Write a language for evaluating
     expressions as collections of functions in a concise and dynamic manner.
 
 GOALS: Language Features
