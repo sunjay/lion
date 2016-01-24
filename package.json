@@ -1,11 +1,19 @@
 {
-  "name": "mlang",
+  "name": "lion",
   "version": "1.0.0",
   "description": "Language Features -----------------",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "MIT"
+  "author": "Sunjay Varma <varma.sunjay@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sunjay/lion.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sunjay/lion/issues"
+  },
+  "homepage": "https://github.com/sunjay/lion#readme"
 }
