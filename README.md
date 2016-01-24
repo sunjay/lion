@@ -310,4 +310,8 @@ above. Since the `()` create a deeper branch of the tree, that leaf-node
 will be evaluated first. Thus forcing that expression to be evaluated
 and effectively changing the operator precedence just as we desired.
 
+In terms of scope/closures/etc., for now, functions will simply have
+access to everything that can be looked up (read: is defined). In
+the future they may only have access to things in their immediate closure
+(i.e. on their branch or on a parent branch).
 
