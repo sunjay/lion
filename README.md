@@ -79,7 +79,14 @@ Supported Expressions:
     $ a = 2
     $ # always requires all arguments
     $ if (a == 2) (() => 3) (() => 4)
-    3
+    = 3
+    $ # multiple lines
+    $ if (a == 3) (() => {
+        return 17
+    }) (() => {
+        return 21
+    })
+    = 21
 
 
 
