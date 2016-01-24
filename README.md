@@ -3,7 +3,7 @@ GOALS: Language Features
 
 * Basic Types:
     * Functions: (args) => {body; return result}
-    * Variables: variable_name = value
+    * Variables: variableName = value
     * Operators: prefix, postfix, infix
     * Boolean: true, false
 * Split multiple statements with semicolon (;)
@@ -11,13 +11,24 @@ GOALS: Language Features
 * Quantities can have a unit or be dimensionless (a unit of `unit`)
 * Comments begin with `#`
 * Functions with default arguments
-* Valid characters for variable name/operator: `a-zA-Z$_^&*!@%+?<>.:/\|~'"\``
+* Valid characters for variable name/operator:
+    `a-zA-Z0-9$_^&*!@%+?<>.:/\|~'"\``
 * Ability to create JavaScript modules that tap into the interpreter
+    * `middleware` hooks into various things such as finding undefined variables (could be used to define numbers, constants, etc.)
+    * Side-effects of this: you could potentially do things like
+        define `2 = 9` if you want...might be dangerous (but also 
+        extremely powerful)
+    * If middleware is done right, it could enable extensions to provide
+        additional functionality like `const` function or an `override` 
+        function for storing whether certain symbols are constant 
+        or variable and then overriding that information when necessary
 * Basic definitions written in the language loaded initially (like Prelude)
 * Functions define closures
 * Numbers are simply symbols that can be reduced like anything else (same with true and false)
 * Short circuit evaluation
-* Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `in_range(value, start, end)`, etc.)
+* Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `inRange(value, start, end)`, etc.)
+* Anything that isn't defined is automatically a special Symbol type (useful for isinstance checking)
+* Lazy by default (makes `if` easier to implement)
 
 Supported Expressions:
 ----------------------
@@ -75,6 +86,10 @@ Supported Expressions:
     $ # now + will bind higher than f
     $ r 7 + 2
     = 63
+
+Control Flow
+------------
+
     $ if/else are functions
     $ a = 2
     $ # always requires all arguments
@@ -88,5 +103,211 @@ Supported Expressions:
     })
     = 21
 
+Note that certain expressions aren't possible because the flexibility of
+this syntax makes them ambiguous:
+
+    4*x
+    x*2
+
+Cannot be parsed since it is impossible to know whether it is multiplication
+or another operator of some kind.
+
+Dimensionless Quantities & Units
+--------------------------------
+
+Units are subcategories of certain types. Operators using these units are
+defined at the type level. For example, the Number type can have units like
+`cm`, `inch`, `metre`, etc. Unit names can be any of the valid characters.
+That means that units like `cm^2` are possible (note that there can be no
+spaces between `cm` and `^2`).
+
+Examples of usage:
+
+    $ 4
+    = 4
+    $ # the unit for something is simply an arbitrary string constant defined in the JavaScript
+    $ unitFor 4
+    = units
+    $ # by convention, this string is also usually a postfix function used to convert other values into that unit
+    $ 4 units
+    = 4
+    $ 4 cm
+    = 4 cm
+    $ # valueOf returns the dimensionless version of a quantity
+    $ # internally, this is a conversion from that unit to `units`
+    $ valueOf (4 cm)
+    = 4
+    $ # unit functions should have the highest precedence binding so that expressions work as expected
+    $ 4 cm + 8 cm
+    = 12 cm
+    $ # you can set a quantity to a specific unit using that unit's constant
+    $ # by convention, this is just the uppercase name of that unit
+    $ # internally, this is a conversion from `units` to that unit
+    $ transform 4 CM
+    = 4 cm
+    $ # alternatively, you can use the special transform operator
+    $ 4 -> cm
+    = 4 cm
+    $ # this applies to any unit transformation
+    $ 3 m -> CM
+    = 300 cm
+
+When defining a type, care should be taken to account for both dimensionless
+quantities and quantities with units. A dimensionless quantity is simple a
+quantity with the unit `units`.
+
+Custom transformations between units can be defined using the special
+defineTransformation function.
+
+    $ defineTransformation cm m ((x) => x * 100)
+
+Language Implementation
+-----------------------
+Internally, the language is implemented such that everything is tokenized
+and then those tokens are dynamically interpreted at runtime.
+
+For example, let's say you have this function:
+
+    f = (x) => 23 + x * 4
+
+This might be tokenized as follows:
+
+    SYMBOL(f) EQUALS PARENOPEN SYMBOL(x) PARENCLOSE ARROW SYMBOL(23) SYMBOL(+) SYMBOL(x) SYMBOL(*) SYMBOL(4)
+
+Note how mostly there are symbols. These are what will be dynamically evaluated at runtime.
+
+When the interpreter reaches this line, it will attempt to create a 
+evaluation tree. First it will attempt to create one using any non-symbols.
+If that is not possible, the symbols themselves will be evaluated to create an evaluation tree based on their precedence.
+
+Since there are non-symbols present, the above set of tokens is turned into the following:
+
+    ASSIGNMENT
+    --> SYMBOL(f)
+    --> FUNCTION
+        --> SYMBOL(x)
+        --> SYMBOL(23) SYMBOL(+) SYMBOL(x) SYMBOL(*) SYMBOL(4)
+
+This tree represents the assignment of the symbol `f` to the function with
+one argument `x`. The body of that function is the remaining symbols.
+All the symbols representing the function's body are now grouped together.
+They are not evaluated any further at this point.
+
+Evaluation of a tree like this stops when no further reductions are possible.
+In this case, no further reductions are possible because the function is
+simply being assigned to the symbol. The symbol will be evaluated as part
+of the assignment. The reasons for that will be realized as you read on.
+
+When this function gets evaluated, the same algorithm is applied. This time,
+since there are only symbols and nothing else, the symbols are used to 
+create a tree. This tree, once created, will be beta reduced as much as 
+possible as part of the evaluation. 
+
+It is necessary and important that this step be taken on every function 
+evaluation since symbol precedence is completely dynamic in this language.
+
+The symbols are looked at in order and their precedence is looked up. 
+Symbols only containing numbers are looked up to find their numeric values.
+Numbers have the highest precedence values and are defined by zero argument 
+functions that evaluate to themselves. Zero arguments means that none of 
+their sibling symbols are required for their evaluation. A lookup is enough.
+Operators are functions that each have their own defined precedence and 
+fixity. This precedence is used to create the evaluation tree that will be 
+reduced.
+
+Every time a symbol is encountered that exactly matches a symbol from the
+function's arguments, the value provided to that function (or a default
+value) is put in its place. For example, if `f 7` is the expression being
+evaluated, `SYMBOL(x)` will be replaced with `SYMBOL(7)` whenever it is
+encountered.
+
+Since by default, the operator `*` has a higher precedence than the
+operator `+`, the above symbols will produce the following tree when `f 7` 
+is evaluated.
+
+    ADD
+    --> SYMBOL(23)
+    --> MULTIPLY
+        --> SYMBOL(7)
+        --> SYMBOL(4)
+
+Note that as described, `SYMBOL(x)` is replaced with `SYMBOL(7)`. 
+
+When reducing, the interpreter will go to the deepest part of the tree and
+attempt to reduce each part, one at a time. Each symbol that only contains
+a number will evaluate to that number when looked up. `ADD` and `MULTIPLY`
+simply represent the function bodies defined for those operators. These
+will take the evaluated arguments and further evaluate them based on their
+definitions.
+
+Steps:
+
+1. Symbols are evaluated (in reality this would happen one at a time)
+
+    ADD
+    --> SYMBOL(23)
+    --> MULTIPLY
+        --> 7
+        --> 4
+
+2. First operation is completed
+
+    ADD
+    --> SYMBOL(23)
+    --> 28
+
+3. Last symbol is evaluated. Note how nothing is evaluated until it is
+absolutely needed. And note how symbol conversion happens exactly once. Values don't need to be looked up again mid-evaluation.
+
+    ADD
+    --> 23
+    --> 28
+
+4. Final operation is completed
+    51
+
+Evaluation stops because there is just a single value left that cannot be
+evaulated any further. No further reductions can take place.
+
+### Building evaluation trees from symbols
+The algorithm for building evaluation trees from symbols is very simple.
+
+1. Find the symbol with the highest precedence (for the same precedence, go left to right)
+2. Attempt to look it up, find the number of arguments that function needs
+    as well as its fixity
+    * Numbers when looked up return a zero argument function returning that number's literal value
+3. For each argument required, take one of the adjacent symbols and evaluate
+    it starting at step 2
+    * Use the fixity to determine the direction of this search
+    * Infix functions can only have 2 arguments.
+4. Replace that symbol with its evaluated version
+5. Repeat at step 1 until there are no more symbols to evaluate
+
+This algorithm only applies when there are only symbols within the expression. Before this can be run, any non-symbols (other tokens) must
+be evaluated. Once non-symbols have been reduced as much as possible into
+either symbols or evaluated components, this algorithm can finish the job.
+
+Every reduction stops once the given tree cannot be reduced any further.
+
+Parenthesis evaluate to a zero argument function returning the evaluation of the tokens within it. This is useful as a method for implementing symbol
+grouping and for overriding function/operator precedence.
+
+Example: Given the following set of tokens
+
+    SYMBOL(4) SYMBOL(/) PARENOPEN SYMBOL(5) SYMBOL(+) SYMBOL(6) PARENCLOSE
+
+The first step will be to evaluate the non-symbol tokens. This will result
+in the following tree:
+
+    (expr)
+    --> SYMBOL(4) SYMBOL(/)
+    --> ()
+        --> SYMBOL(5) SYMBOL(+) SYMBOL(6)
+
+Note how the items within the PAREN* tokens are now grouped. Each branch
+of this tree will now be evaluated following the symbol-tree algorithm
+above. Since the `()` create a deeper branch of the tree, that leaf-node
+will be evaluated first. Thus forcing that expression to be evaluated
+and effectively changing the operator precedence just as we desired.
 
 
