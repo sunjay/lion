@@ -405,3 +405,64 @@ a function using `(x) => ...` without worry.
 `SYMBOL`s will contain debugging information such as the line number and
 character number of that symbol. This will help make error reporting clear.
 
+### Implementing types
+Types are implemented as extension modules that tap into the interpreter.
+The number type is one of the defaults included in the interpreter initially.
+
+Numbers can be represented minimally by just a single object:
+
+    {
+        value: <numeric value>
+        category: <default: units>
+    }
+
+That type will then be responsible for implementing all the functionality
+it desires by creating an evaluation middleware. Evaluation middleware
+is a means for multiple types to define methods for the evaluation of a
+single function. This is something only available in extension modules and
+essentially means that a symbol can have multiple implementations based
+on its context.
+
+Each definition in the lookup table has a default definition. For example,
+if a function is defined as follows:
+
+    f = (x) => 2 * x
+
+Then it will be placed in the lookup table as a simple one argument function
+accepting all kinds of types. This is the default or catch-all version of
+the symbol f.
+
+With middleware, we can add a step before that default function where we
+attempt to do something else. 
+
+    function redirectMiddleware(info) {
+        if (info.symbol.data === "f") {
+            // instead of being a function, f is now a number
+            info.finish(new Number(42, UNITS));
+            return;
+        }
+    }
+
+Here, we hook into the lookup for f and return a number instead of a 
+function.
+
+    function redirectMiddleware(info) {
+        if (info.symbol.data === "f") {
+            info.finish(new Symbol("g"));
+            return;
+        }
+    }
+
+Here, we check the symbol's data and then replace it with another symbol.
+Then we explicitly stop the evaluation of any further middleware with
+`finish()`. The symbol "g" will not be further evaluated until the next
+reduction step. An attempt to look it up will be made. If we had called
+`finish()` with another type instead (a non-symbol), no further attempts to
+look anything up would be made and that symbol would now take the type
+passed to `finish()`.
+
+TODO: If info is just the symbol, how do types differentiate using the
+type of each argument? Does each version of a function run one at a time?
+Am I describing the wrong type of middleware here? This looks like a lookup
+middleware when I really should have been describing an evaluation middleware.
+
