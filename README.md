@@ -17,8 +17,8 @@ Design Goals
 * Do not create another programming language. Write a language for evaluating
     expressions as collections of functions in a concise and dynamic manner.
 
-GOALS: Language Features
-------------------------
+Language Features
+-----------------
 
 * Basic Types:
     * Functions: (args) => {body; return result}
@@ -48,6 +48,9 @@ GOALS: Language Features
 * Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `assertInRange(value, start, end)`, etc.)
 * Anything that isn't defined is automatically a special Symbol type (useful for isinstance checking)
 * Lazy by default (kind of) (makes `if` easier to implement)
+* `import` is just a function that hooks into the interpreter to dynamically
+    load and evaluate some file (usually as JavaScript) -- there should be
+    some middleware for this too.
 * Possible extensions:
     * Varadic parameters (i.e. (...args) => args) - requires support for arrays
     * Basic array methods for acting on ranges: `map`, `foldl`, `foldr`, `range`, `flatten`
@@ -465,4 +468,39 @@ TODO: If info is just the symbol, how do types differentiate using the
 type of each argument? Does each version of a function run one at a time?
 Am I describing the wrong type of middleware here? This looks like a lookup
 middleware when I really should have been describing an evaluation middleware.
+
+Types can even define methods for converting them to strings which is
+useful in the REPL.
+
+### More Advanced Types
+Let's say we wanted to implement a Vector type. To do that, we may store
+a generic vector as follows:
+
+    {
+        values: [<array of Number objects>]
+    }
+
+We may choose to inject several functions into the namespace such as
+
+    # could be nicer with varadic parameters
+    $ v = Vector3 1 2 3
+    $ v2 = Vector2 1 2
+    $ vectorLength v
+    = 3
+    $ vectorLength v2
+    = 2
+    $ vectorMagnitude v
+    = sqrt 14
+
+We may also want to support several operations such as
+
+    $ v + (Vector 3 2 1)
+    (Vector 4 4 4)
+
+These operations can be implemented using evaluation middleware as defined
+above. Simply put, if one evaluation middleware fails to evaluate something,
+the next one will attempt it. This will go on until something is evaluated
+or until it can no longer be evaluated at all. At that point, evaluation
+will stop.
+
 
