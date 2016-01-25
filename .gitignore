@@ -1,20 +1,6 @@
-
-# Created by https://www.gitignore.io/api/vim,node
-
-### Vim ###
-[._]*.s[a-w][a-z]
-[._]s[a-w][a-z]
-*.un~
-Session.vim
-.netrwhist
-*~
-
-
-### Node ###
 # Logs
 logs
 *.log
-npm-debug.log*
 
 # Runtime data
 pids
@@ -37,12 +23,17 @@ coverage
 build/Release
 
 # Dependency directory
-# https://docs.npmjs.com/misc/faq#should-i-check-my-node-modules-folder-into-git
+# https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
 node_modules
 
-# Optional npm cache directory
-.npm
+# Bower
+bower_components/
 
-# Optional REPL history
-.node_repl_history
+### Vim ###
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*.un~
+Session.vim
+.netrwhist
+*~
 
