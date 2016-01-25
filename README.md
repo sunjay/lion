@@ -503,4 +503,20 @@ the next one will attempt it. This will go on until something is evaluated
 or until it can no longer be evaluated at all. At that point, evaluation
 will stop.
 
+Writing Middleware
+------------------
+The middleware implementation is inspired by koa.js where middleware
+functions "yield downstream" and then control flows back "upstream" 
+afterwards.
+
+There are currently just a few main types of middleware:
+1. Assignment middleware
+2. Evaluation middleware
+
+### Asignment middleware
+Assignment middleware allows you to influence the behaviour of the
+assignment operator from extension modules. 
+
+
+
 
