@@ -1,7 +1,0 @@
-{
-  "generator-react-webpack": {
-    "appName": "lion",
-    "style": "scss",
-    "postcss": true
-  }
-}
