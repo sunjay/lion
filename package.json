@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "./node_modules/.bin/babel src -d lib",
+    "build": "./node_modules/.bin/webpack --config-file webpack.config.js",
+    "watch": "webpack --progress --colors --watch --config-file webpack.config.js",
+    "clean": "rm -rf lib/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Sunjay Varma <varma.sunjay@gmail.com>",
@@ -18,8 +20,9 @@
   },
   "homepage": "https://github.com/sunjay/lion#readme",
   "devDependencies": {
-    "babel": "^6.3.26",
-    "babel-cli": "^6.4.5",
-    "babel-preset-es2015": "^6.3.13"
+    "babel-core": "^6.4.5",
+    "babel-loader": "^6.2.1",
+    "babel-preset-es2015": "^6.3.13",
+    "webpack": "^1.12.12"
   }
 }
