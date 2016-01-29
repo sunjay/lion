@@ -2,7 +2,7 @@
   "name": "lion",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/lion.js",
   "scripts": {
     "build": "./node_modules/.bin/webpack --config-file webpack.config.js",
     "watch": "webpack --progress --colors --watch --config-file webpack.config.js",
