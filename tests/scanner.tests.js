@@ -1,6 +1,6 @@
 const {expect} = require('chai');
 
-const Scanner = require('../src/scanner.js'); 
+const Scanner = require('../src/scanner'); 
 
 describe('Scanner', () => {
     const SMALL_TEXT = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut convallis turpis velit,\nid ullamcorper nulla\ntristique vel. Morbi vel massa in lacus euismod facilisis.\nEtiam quis est velit. Suspendisse\nmolestie ultricies lectus, in vehicula neque\nfaucibus eget. Phasellus\nvenenatis tincidunt massa. Mauris\nlaoreet luctus\nfinibus. Donec sit amet quam\nquis."
