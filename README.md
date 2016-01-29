@@ -17,6 +17,12 @@ Design Goals
 * Do not create another programming language. Write a language for evaluating
     expressions as collections of functions in a concise and dynamic manner.
 
+Implementation Goals
+--------------------
+* Be able to generate parse trees and abstract syntax trees given raw text source
+* Be able to evaluate raw text source from the generated trees
+* Be able to compile programs into bytecode
+
 Language Features
 -----------------
 
