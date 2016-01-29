@@ -5,7 +5,7 @@
   "main": "lib/lion.js",
   "scripts": {
     "build": "./node_modules/.bin/webpack --config-file webpack.config.js",
-    "watch": "webpack --progress --colors --watch --config-file webpack.config.js",
+    "watch": "./node_modules/.bin/webpack --progress --colors --watch --config-file webpack.config.js",
     "clean": "rm -rf lib/",
     "test": "./node_modules/.bin/mocha --compilers js:babel-register --reporter nyan tests/**/*.tests.js"
   },
