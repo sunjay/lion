@@ -27,6 +27,10 @@ describe('Token', () => {
       testToken('parenclose', Token.PARENCLOSE);
     });
 
+    it('eof', () => {
+      testToken('eof', Token.EOF);
+    });
+
     function testToken(methodName, type, value=null) {
       const token = Token[methodName](value);
       expect(token.type).to.equal(type);

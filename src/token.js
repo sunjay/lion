@@ -4,10 +4,25 @@ class Token {
   static ARROW = "arrow";
   static PARENOPEN = "paren-open";
   static PARENCLOSE = "paren-close";
+  static EOF = "eof";
 
   constructor(type, value=null) {
     this.type = type;
     this.value = value;
+  }
+
+  /**
+   * Returns true if the given token is of the given type
+   */
+  static is(token, type) {
+    return token.type === type;
+  }
+
+  /**
+   * Returns true if the given token represents the end of the file
+   */
+  static isEOF(token) {
+    return this.is(token, this.EOF);
   }
 
   static symbol(value) {
@@ -28,6 +43,10 @@ class Token {
 
   static parenclose() {
     return new Token(Token.PARENCLOSE);
+  }
+
+  static eof() {
+    return new Token(Token.EOF);
   }
 }
 
