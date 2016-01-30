@@ -1,7 +1,7 @@
+const r_whitespace = /[ \t\r\f\v]/;
+
 class Scanner {
   static EOF = "EOF";
-
-  static WHITESPACE = /[ \t\r\f\v]/;
 
   constructor(text='') {
     this.text = text;
@@ -24,7 +24,7 @@ class Scanner {
   }
 
   ignoreWhitespace() {
-    while (Scanner.WHITESPACE.test(this.getChar())) {}
+    while (r_whitespace.test(this.getChar())) {}
     this.ungetChar();
   }
 }
