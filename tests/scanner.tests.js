@@ -57,4 +57,23 @@ describe('Scanner', () => {
       scanner.ungetChar();
     }
   });
+
+  it('should ignore whitespace', () => {
+    const scanner = new Scanner("a     \t  \r \n   a a ok");
+    let position = scanner.position;
+    scanner.ignoreWhitespace();
+    // should not move because there is no whitespace
+    expect(scanner.position).to.equal(position);
+
+    scanner.getChar();
+
+    position = scanner.position;
+    scanner.ignoreWhitespace();
+    expect(scanner.position).to.not.equal(position);
+
+    expect(scanner.getChar()).to.equal('\n');
+
+    scanner.ignoreWhitespace();
+    expect(scanner.getChar()).to.equal('a');
+  });
 });

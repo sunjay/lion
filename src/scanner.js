@@ -1,6 +1,8 @@
 class Scanner {
   static EOF = "EOF";
 
+  static WHITESPACE = /[ \t\r\f\v]/;
+
   constructor(text='') {
     this.text = text;
     this.position = -1;
@@ -19,6 +21,11 @@ class Scanner {
       return;
     }
     this.position--;
+  }
+
+  ignoreWhitespace() {
+    while (Scanner.WHITESPACE.test(this.getChar())) {}
+    this.ungetChar();
   }
 }
 
