@@ -27,7 +27,7 @@ Language Features
 -----------------
 
 * Basic Types:
-    * Functions: (args) => {body; return result}
+    * Functions: \args = {body; return result}
     * Variables: variableName = value
     * Operators: prefix, postfix, infix
     * Boolean: true = 1, false = 0
@@ -58,7 +58,7 @@ Language Features
     load and evaluate some file (usually as JavaScript) -- there should be
     some middleware for this too.
 * Possible extensions:
-    * Varadic parameters (i.e. (...args) => args) - requires support for arrays
+    * Varadic parameters (i.e. \...args = args) - requires support for arrays
     * Basic array methods for acting on ranges: `map`, `foldl`, `foldr`, `range`, `flatten`
 
 TODO:
@@ -88,16 +88,16 @@ Supported Expressions:
     = 2.5
     $ # defining a function
     $ # functions automatically get the highest precedence as do most symbols or numbers
-    $ f = (x) => 2 * x
+    $ f x = 2 * x
     $ # functions are simply prefix operators
     $ # evaluating with a defined value
     $ f 3
     = 6
     $ # evaluating with an undefined value
     $ f x
-    = (x) => 2 * x
+    = \x = 2 * x
     $ f y
-    = (y) => 2 * y
+    = \y = 2 * y
     $ # defining an operator
     $ # POSTFIX is simply a variable
     $ operator POSTFIX 7 doubled f
@@ -106,11 +106,11 @@ Supported Expressions:
     $ # infix operators have to have two parameters
     $ # functions can be defined in the operator definition too
     $ # second parameter after operator type is precedence between 0 and 9
-    $ operator INFIX 7 $$ ((x, y) => x + y * x)
+    $ operator INFIX 7 $$ (\x y = x + y * x)
     $ 5 $$ 8
     = 45
     $ # postfix operators and prefix operators can have any number > 0
-    $ q = (x, y, z) => {
+    $ q x y z = {
         w = x * y
         return w + z * w
     }
@@ -121,7 +121,7 @@ Supported Expressions:
     = 8
     $ # use `operator` to reassign an existing prefix operator's precedence
     $ # prefix operator and function are synonymous
-    $ r = (t) => t * 7
+    $ r t = t * 7
     $ r 7 + 2
     = 51
     $ # this is usually not recommended unless you absolutely need it
@@ -136,15 +136,8 @@ Control Flow
     $ if/else are functions
     $ a = 2
     $ # always requires all arguments
-    $ if (a == 2) (() => 3) (() => 4)
+    $ if (a == 2) 3 4
     = 3
-    $ # multiple lines
-    $ if (a == 3) (() => {
-        return 17
-    }) (() => {
-        return 21
-    })
-    = 21
 
 Note that certain expressions aren't possible because the flexibility of
 this syntax makes them ambiguous:
@@ -202,7 +195,7 @@ quantity with the unit `units`.
 Custom transformations between units can be defined using the special
 defineTransformation function.
 
-    $ defineTransformation CM M ((x) => x * 100)
+    $ defineTransformation CM M (\x = x * 100)
 
 ### Defining custom units
 In order to expose enough so that units can be used as defined above,
@@ -228,12 +221,13 @@ in an error.
 
 Language Implementation
 -----------------------
+//TODO: Rewrite without ARROW
 Internally, the language is implemented such that everything is tokenized
 and then those tokens are dynamically interpreted at runtime.
 
 For example, let's say you have this function:
 
-    f = (x) => 23 + x * 4
+    f x = 23 + x * 4
 
 This might be tokenized as follows:
 
@@ -402,14 +396,14 @@ be reduced.
 Note that this returned tree **is not** a value type. If an expression being evaluated cannot be reduced to a single value, a function is returned with
 the arguments being any symbols in its deepest branches that could not
 be evaluated. Thus, a more accurate statement is that the return value of
-this tree is `(a) => 23 + a * 6`.
+this tree is `\a = 23 + a * 6`.
 
 This enables the expression to be futher evaluated down the line and also
 creates the ability to make the interpreter generate pseudo functions on
-the fly. The original function notation `(args) => expression` is simply
+the fly. The original function notation `\args = expression` is simply
 syntatictic sugar designed to avoid any naming conflicts with the outside
 context. So even if you have `x` defined elsewhere, you can safely define
-a function using `(x) => ...` without worry.
+a function using `\x = ...` without worry.
 
 `SYMBOL`s will contain debugging information such as the line number and
 character number of that symbol. This will help make error reporting clear.
@@ -435,7 +429,7 @@ on its context.
 Each definition in the lookup table has a default definition. For example,
 if a function is defined as follows:
 
-    f = (x) => 2 * x
+    f x = 2 * x
 
 Then it will be placed in the lookup table as a simple one argument function
 accepting all kinds of types. This is the default or catch-all version of

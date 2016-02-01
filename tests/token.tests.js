@@ -15,8 +15,8 @@ describe('Token', () => {
       testToken('equals', Token.EQUALS);
     });
 
-    it('arrow', () => {
-      testToken('arrow', Token.ARROW);
+    it('backslash', () => {
+      testToken('backslash', Token.BACKSLASH);
     });
 
     it('parenopen', () => {

@@ -1,7 +1,7 @@
 class Token {
   static SYMBOL = "symbol";
   static EQUALS = "equals";
-  static ARROW = "arrow";
+  static BACKSLASH = "backslash";
   static PARENOPEN = "paren-open";
   static PARENCLOSE = "paren-close";
   static EOF = "eof";
@@ -33,8 +33,8 @@ class Token {
     return new Token(Token.EQUALS);
   }
 
-  static arrow() {
-    return new Token(Token.ARROW);
+  static backslash() {
+    return new Token(Token.BACKSLASH);
   }
 
   static parenopen() {
