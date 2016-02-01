@@ -34,10 +34,10 @@ class Tokenizer {
         return Token.parenclose();
       case Scanner.EOF:
         return Token.eof();
+      default:
+        this.scanner.ungetChar();
+        return this._symbol();
     }
-
-    this.scanner.ungetChar();
-    return this._symbol();
   }
 
   _symbol() {
