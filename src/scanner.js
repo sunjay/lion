@@ -1,7 +1,7 @@
 const rWhitespace = /[ \t\r\f\v]/;
 
 class Scanner {
-  static EOF = "EOF";
+  static EOF = null;
 
   constructor(text='') {
     this.text = text;
