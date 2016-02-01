@@ -17,25 +17,30 @@ class Tokenizer {
   next() {
     this.scanner.ignoreWhitespace();
 
-    let text = "";
-    let c;
-    while (rSymbol.test(c = this.scanner.getChar())) {
-      text += c;
-    }
-    this.scanner.ungetChar();
-
-    if (!text.length) {
-      return Token.eof();
-    }
-
+    let text = this.scanner.getChar();
     switch (text) {
       case "=":
         return Token.equals();
-      case "=>":
-        return Token.arrow();
-      default:
-        return Token.symbol(text);
+      case "\\":
+        return Token.backslash();
+      case "(":
+        return Token.parenopen();
+      case ")":
+        return Token.parenclose();
+      case Scanner.EOF:
+        return Token.eof();
     }
+
+    while (true) {
+      const c = this.scanner.getChar();
+      if (Scanner.isWhitespace(c)) {
+        this.scanner.ungetChar();
+        break;
+      }
+
+      text += c;
+    }
+    return Token.symbol(text);
   }
 
   /**
