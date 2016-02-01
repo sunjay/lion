@@ -10,6 +10,12 @@ describe('Tokenizer', () => {
     // x^2 != x ^ 2
   });
 
+  it('allows the use of parenthesis with or without whitespace', () => {
+  });
+
+  it('allows the use of backslash with or without whitespace', () => {
+  });
+
   it('accepts all characters valid for symbols', () => {
   });
 
