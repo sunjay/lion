@@ -20,6 +20,11 @@ describe('Tokenizer', () => {
     expect(1).to.equal(2);
   });
 
+  it('distinguishes between equals surrounded by symbol characters and equals surrounded by whitespace', () => {
+    // ` = 2` is not ` =2`
+    expect(1).to.equal(2);
+  });
+
   it('accepts all characters valid for symbols', () => {
     expect(1).to.equal(2);
   });
