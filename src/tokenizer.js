@@ -1,10 +1,10 @@
 const Scanner = require('./scanner');
 const Token = require('./token');
 
-const {UnexpectedTokenError} = require('./errors');
+const {InvalidCharacterError, UnexpectedTokenError} = require('./errors');
 
 // represents a valid character for use in the token SYMBOL
-const rSymbol = /[a-z0-9\-_$^&*!@%+?<>.:/|~,=]/i;
+const rSymbol = /[a-z0-9-_$^&*!@%+?<>.:/|~,=]/i;
 
 class Tokenizer {
   constructor(text='') {
@@ -17,10 +17,15 @@ class Tokenizer {
   next() {
     this.scanner.ignoreWhitespace();
 
-    let text = this.scanner.getChar();
+    const text = this.scanner.getChar();
     switch (text) {
       case "=":
-        return Token.equals();
+          const nextChar = this.scanner.getChar();
+          this.scanner.ungetChar();
+          if (Scanner.isWhitespace(nextChar)) {
+            return Token.equals();
+          }
+          // fallthrough and continue checking
       case "\\":
         return Token.backslash();
       case "(":
@@ -31,15 +36,26 @@ class Tokenizer {
         return Token.eof();
     }
 
+    this.scanner.ungetChar();
+    return this._symbol();
+  }
+
+  _symbol() {
+    let text = "";
     while (true) {
       const c = this.scanner.getChar();
-      if (Scanner.isWhitespace(c)) {
+      if (!rSymbol.test(c)) {
         this.scanner.ungetChar();
         break;
       }
 
       text += c;
     }
+
+    if (!text.length) {
+      throw new InvalidCharacterError("Invalid character");
+    }
+
     return Token.symbol(text);
   }
 

@@ -3,3 +3,5 @@ export class UnexpectedTokenError extends Error {
     super(`Expected a '${expected}' but saw a '${actual}' instead.`);
   }
 }
+
+export class InvalidCharacterError extends Error {}

@@ -21,6 +21,7 @@ Implementation Goals
 --------------------
 * Be able to generate parse trees and abstract syntax trees given raw text source
 * Be able to evaluate raw text source from the generated trees
+    * Be able to generate good error messages with line and character numbers
 * Be able to compile programs into bytecode
 
 Language Features
