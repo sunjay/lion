@@ -3,6 +3,9 @@ const Token = require('./token');
 
 const {UnexpectedTokenError} = require('./errors');
 
+// represents a valid character for use in the token SYMBOL
+const rSymbol = /[a-z0-9\-_$^&*!@%+?<>.:/\\|~,=]/i;
+
 class Tokenizer {
   constructor(text='') {
     this.scanner = new Scanner(text);
@@ -12,6 +15,7 @@ class Tokenizer {
    * Searches for and returns the next token
    */
   next() {
+    this.scanner.ignoreWhitespace();
   }
 
   /**

@@ -1,4 +1,4 @@
-const r_whitespace = /[ \t\r\f\v]/;
+const rWhitespace = /[ \t\r\f\v]/;
 
 class Scanner {
   static EOF = "EOF";
@@ -23,9 +23,16 @@ class Scanner {
     this.position--;
   }
 
+  /**
+   * Ignores all whitespace other than newlines
+   */
   ignoreWhitespace() {
-    while (r_whitespace.test(this.getChar())) {}
+    while (Scanner.isWhitespace(this.getChar())) {}
     this.ungetChar();
+  }
+
+  static isWhitespace(c) {
+    return rWhitespace.test(c);
   }
 }
 

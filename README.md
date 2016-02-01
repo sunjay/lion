@@ -37,7 +37,7 @@ Language Features
 * Comments begin with `#`
 * Functions with default arguments
 * Valid characters for variable name/operator:
-    `a-zA-Z0-9$_^&*!@%+?<>.:/\|~'"\``
+    `a-zA-Z0-9$_^&*!@%+?<>.:/\|~`
 * Ability to create JavaScript modules that tap into the interpreter
     * `middleware` hooks into various things such as finding undefined variables (could be used to define numbers, constants, etc.)
     * Side-effects of this: you could potentially do things like
