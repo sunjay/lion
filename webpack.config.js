@@ -1,5 +1,8 @@
 module.exports = {
-  entry: "./index.js",
+  entry: [
+    "babel-polyfill",
+    "./index.js"
+  ],
   context: __dirname + "/src",
   output: {
     library: "LION",

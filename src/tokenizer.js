@@ -53,7 +53,7 @@ class Tokenizer {
   /**
    * Iterates over every token from the current position
    */
-  [Symbol.iterator]() {
+  *[Symbol.iterator]() {
     while (true) {
       const token = this.next();
       yield token;
