@@ -11,6 +11,14 @@ class Token {
     this.value = value;
   }
 
+  toString() {
+    let str = `${this.type.toUpperCase()}`;
+    if (this.value && !(this.value instanceof Symbol)) {
+      str += `('${this.value}')`;
+    }
+    return str;
+  }
+
   /**
    * Returns true if the given token is of the given type
    */
