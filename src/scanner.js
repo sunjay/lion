@@ -32,6 +32,9 @@ class Scanner {
   }
 
   static isWhitespace(c) {
+    if (c === Scanner.EOF) {
+      return false;
+    }
     return rWhitespace.test(c);
   }
 }
