@@ -27,8 +27,13 @@ class Scanner {
    * Ignores all whitespace other than newlines
    */
   ignoreWhitespace() {
-    while (Scanner.isWhitespace(this.getChar())) {}
-    this.ungetChar();
+    let c = this.getChar();
+    while (Scanner.isWhitespace(c)) {
+      c = this.getChar();
+    }
+    if (c !== Scanner.EOF) {
+      this.ungetChar();
+    }
   }
 
   static isWhitespace(c) {

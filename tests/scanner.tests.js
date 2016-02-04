@@ -80,5 +80,6 @@ describe('Scanner', () => {
   it('should stop ignoring whitespace quietly at the end of a string', () => {
     const scanner = new Scanner('   \t    ');
     expect(() => scanner.ignoreWhitespace()).to.not.throw(Error);
+    expect(scanner.getChar()).to.equal(Scanner.EOF);
   });
 });
