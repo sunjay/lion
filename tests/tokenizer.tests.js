@@ -2,6 +2,7 @@ const {expect} = require('chai');
 
 const Tokenizer = require('../src/tokenizer'); 
 
+
 describe('Tokenizer', () => {
   it('ignores whitespace at the beginning of an expression', () => {
     expect(1).to.equal(2);
@@ -33,8 +34,12 @@ describe('Tokenizer', () => {
     expect(1).to.equal(2);
   });
 
-  it('it accepts all basic operators as valid symbols', () => {
+  it('accepts all basic operators as valid symbols', () => {
     // +, -, *, /, ^, ++, --, ==, >=, <=
+    expect(1).to.equal(2);
+  });
+
+  it('allows newlines to be inserted appropriately in expressions', () => {
     expect(1).to.equal(2);
   });
 });
