@@ -73,11 +73,11 @@ class Tokenizer {
     for (let token of this) {
       found.push(token);
 
-      if (Token.is(token, tokenType)) {
+      if (token.is(tokenType)) {
         return found;
       }
 
-      if (Token.isEOF(token)) {
+      if (token.isEOF) {
         throw new UnexpectedTokenError(tokenType, token.type);
       }
     }
@@ -89,7 +89,7 @@ class Tokenizer {
    */
   match(tokenType) {
     const token = this.next();
-    if (!Token.is(token, tokenType)) {
+    if (!token.is(tokenType)) {
       throw new UnexpectedTokenError(tokenType, token.type);
     }
     return token;
@@ -103,7 +103,7 @@ class Tokenizer {
       const token = this.next();
       yield token;
 
-      if (Token.isEOF(token)) {
+      if (token.isEOF) {
         break;
       }
     }

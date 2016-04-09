@@ -20,17 +20,17 @@ class Token {
   }
 
   /**
-   * Returns true if the given token is of the given type
+   * Returns true if the token is of the given type
    */
-  static is(token, type) {
-    return token.type === type;
+  is(type) {
+    return this.type === type;
   }
 
   /**
-   * Returns true if the given token represents the end of the file
+   * Returns true if the token represents the end of the file
    */
-  static isEOF(token) {
-    return this.is(token, this.EOF);
+  get isEOF() {
+    return this.is(this.EOF);
   }
 
   static symbol(value) {
