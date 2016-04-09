@@ -222,36 +222,37 @@ in an error.
 
 Language Implementation
 -----------------------
-//TODO: Rewrite without ARROW
 Internally, the language is implemented such that everything is tokenized
 and then those tokens are dynamically interpreted at runtime.
 
 For example, let's say you have this function:
 
-    f x = 23 + x * 4
+    f x = (23 + x) * 4
 
 This might be tokenized as follows:
 
-    SYMBOL(f) EQUALS PARENOPEN SYMBOL(x) PARENCLOSE ARROW SYMBOL(23) SYMBOL(+) SYMBOL(x) SYMBOL(*) SYMBOL(4)
+    SYMBOL(f) SYMBOL(x) EQUALS PARENOPEN SYMBOL(23) SYMBOL(+) SYMBOL(x) PARENCLOSE SYMBOL(*) SYMBOL(4) EOF
 
 Note how mostly there are symbols. These are what will be dynamically evaluated at runtime.
 
 When the interpreter reaches this line, it will attempt to create a 
 evaluation tree. First it will attempt to create one using any non-symbols.
-If that is not possible, the symbols themselves will be evaluated to create an evaluation tree based on their precedence.
+Once that is complete, the symbols themselves will be evaluated to create an evaluation tree based on their precedence.
 
-Since there are non-symbols present, the above set of tokens is turned into the following:
+Continuing the example, since there are non-symbols present, the above set of tokens is turned into the following:
 
     ASSIGNMENT
-    --> SYMBOL(f)
-    --> FUNCTION
+    --> EXPRESSION (will be used as a pattern)
+        --> SYMBOL(f)
         --> SYMBOL(x)
-        --> SYMBOL(23) SYMBOL(+) SYMBOL(x) SYMBOL(*) SYMBOL(4)
+    --> EXPRESSION
+        --> EXPRESSION
+            --> SYMBOL(23) SYMBOL(+) SYMBOL(x)
+        --> SYMBOL(*) SYMBOL(4)
 
-This tree represents the assignment of the symbol `f` to the function with
-one argument `x`. The body of that function is the remaining symbols.
-All the symbols representing the function's body are now grouped together.
-They are not evaluated any further at this point.
+This tree represents the assignment of the expression `f x` to the expression. The left side of the assignment is represented by an expression because this enables the implementation of "pattern matching". Most of the symbols are left as is so that they can be dynamically evaluated at runtime.
+
+//TODO: Continue updating this section from here.
 
 Evaluation of a tree like this stops when no further reductions are possible.
 In this case, no further reductions are possible because the function is
