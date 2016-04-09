@@ -304,27 +304,28 @@ Steps:
 
 1. Symbols are evaluated (in reality this would happen one at a time)
 
-    ADD
-    --> SYMBOL(23)
-    --> MULTIPLY
-        --> 7
-        --> 4
+        ADD
+        --> SYMBOL(23)
+        --> MULTIPLY
+            --> 7
+            --> 4
 
 2. First operation is completed
 
-    ADD
-    --> SYMBOL(23)
-    --> 28
+        ADD
+        --> SYMBOL(23)
+        --> 28
 
 3. Last symbol is evaluated. Note how nothing is evaluated until it is
 absolutely needed. And note how symbol conversion happens exactly once. Values don't need to be looked up again mid-evaluation.
 
-    ADD
-    --> 23
-    --> 28
+        ADD
+        --> 23
+        --> 28
 
 4. Final operation is completed
-    51
+
+        51
 
 Evaluation stops because there is just a single value left that cannot be
 evaulated any further. No further reductions can take place.
