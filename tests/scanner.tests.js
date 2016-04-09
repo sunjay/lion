@@ -3,7 +3,7 @@ const {expect} = require('chai');
 const Scanner = require('../src/scanner'); 
 
 describe('Scanner', () => {
-    const SMALL_TEXT = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut convallis turpis velit,\nid ullamcorper nulla\ntristique vel. Morbi vel massa in lacus euismod facilisis.\nEtiam quis est velit. Suspendisse\nmolestie ultricies lectus, in vehicula neque\nfaucibus eget. Phasellus\nvenenatis tincidunt massa. Mauris\nlaoreet luctus\nfinibus. Donec sit amet quam\nquis."
+    const SMALL_TEXT = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut convallis turpis velit,\nid ullamcorper nulla\ntristique vel. Morbi vel massa in lacus euismod facilisis.\nEtiam quis est velit. Suspendisse\nmolestie ultricies lectus, in vehicula neque\nfaucibus eget. Phasellus\nvenenatis tincidunt massa. Mauris\nlaoreet luctus\nfinibus. Donec sit amet quam\nquis.';
 
   it('works with no text', () => {
     const scanner = new Scanner();
@@ -43,7 +43,7 @@ describe('Scanner', () => {
     const scanner = new Scanner(SMALL_TEXT);
 
     for (let i = 0; i < SMALL_TEXT.length; i++) {
-      const c = scanner.getChar();
+      scanner.getChar();
     }
 
     expect(scanner.getChar()).to.equal(Scanner.EOF);
@@ -59,7 +59,7 @@ describe('Scanner', () => {
   });
 
   it('should ignore whitespace', () => {
-    const scanner = new Scanner("a     \t  \r \n   a a ok");
+    const scanner = new Scanner('a     \t  \r \n   a a ok');
     let position = scanner.position;
     scanner.ignoreWhitespace();
     // should not move because there is no whitespace

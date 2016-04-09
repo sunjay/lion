@@ -1,10 +1,10 @@
 class Token {
-  static SYMBOL = "symbol";
-  static EQUALS = "equals";
-  static BACKSLASH = "backslash";
-  static PARENOPEN = "paren-open";
-  static PARENCLOSE = "paren-close";
-  static EOF = "eof";
+  static SYMBOL = 'symbol';
+  static EQUALS = 'equals';
+  static BACKSLASH = 'backslash';
+  static PARENOPEN = 'paren-open';
+  static PARENCLOSE = 'paren-close';
+  static EOF = 'eof';
 
   constructor(type, value=null) {
     this.type = type;

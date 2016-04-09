@@ -19,18 +19,18 @@ class Tokenizer {
 
     const text = this.scanner.getChar();
     switch (text) {
-      case "=":
+      case '=':
           const nextChar = this.scanner.getChar();
           this.scanner.ungetChar();
           if (Scanner.isWhitespace(nextChar)) {
             return Token.equals();
           }
           // fallthrough and continue checking
-      case "\\":
+      case '\\':
         return Token.backslash();
-      case "(":
+      case '(':
         return Token.parenopen();
-      case ")":
+      case ')':
         return Token.parenclose();
       case Scanner.EOF:
         return Token.eof();
@@ -41,7 +41,7 @@ class Tokenizer {
   }
 
   _symbol() {
-    let text = "";
+    let text = '';
     while (true) {
       const c = this.scanner.getChar();
       if (c === Scanner.EOF) {
@@ -57,7 +57,7 @@ class Tokenizer {
     }
 
     if (!text.length) {
-      throw new InvalidCharacterError("Invalid character");
+      throw new InvalidCharacterError('Invalid character');
     }
 
     return Token.symbol(text);
@@ -70,7 +70,9 @@ class Tokenizer {
    */
   search(tokenType) {
     const found = [];
-    for (let token of this) {
+    
+    let token;
+    for (token of this) {
       found.push(token);
 
       if (token.is(tokenType)) {
@@ -78,9 +80,10 @@ class Tokenizer {
       }
 
       if (token.isEOF) {
-        throw new UnexpectedTokenError(tokenType, token.type);
+        break;
       }
     }
+    throw new UnexpectedTokenError(tokenType, token.type);
   }
 
   /**

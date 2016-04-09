@@ -1,6 +1,6 @@
 const LION = {
   run() {
-    return "LION!";
-  }
+    return 'LION!';
+  },
 };
 module.exports = LION;
