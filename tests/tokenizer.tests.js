@@ -9,6 +9,7 @@ describe('Tokenizer', () => {
   });
 
   it('ignores whitespace at the beginning of an expression', () => {
+    const tokens = new Tokenizer('      \t \t    a');
     expect(1).to.equal(2);
   });
 
