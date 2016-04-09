@@ -4,7 +4,7 @@ const Token = require('./token');
 const {InvalidCharacterError, UnexpectedTokenError} = require('./errors');
 
 // represents a valid character for use in the token SYMBOL
-const rSymbol = /[a-z0-9-_$^&*!@%+?<>.:/|~,=]/i;
+const rSymbol = /^[a-z0-9-_$^&*!@%+?<>.:/|~,=]$/i;
 
 class Tokenizer {
   constructor(text='') {
@@ -44,6 +44,10 @@ class Tokenizer {
     let text = "";
     while (true) {
       const c = this.scanner.getChar();
+      if (c === Scanner.EOF) {
+        break;
+      }
+
       if (!rSymbol.test(c)) {
         this.scanner.ungetChar();
         break;
