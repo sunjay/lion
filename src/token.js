@@ -30,7 +30,7 @@ class Token {
    * Returns true if the token represents the end of the file
    */
   get isEOF() {
-    return this.is(this.EOF);
+    return this.is(Token.EOF);
   }
 
   static symbol(value) {
