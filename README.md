@@ -1,524 +1,191 @@
 # lion
 
-A minimal and highly flexible language designed to make calculations
-readable and concise.
+A very tiny, dynamic, loosely-typed language for doing calculations in a more intuitive way.
 
-Design Goals
-------------
-* Have a very minimal set of language features (functions, symbols,
-    etc. -- that's it) that act as building blocks for other
-    language features
-* Be flexible enough so that most things can be defined in the language
-    itself and then additional functionality can be implemented using
-    extension modules that "hook in" using middleware
-* Allow for prefix, postfix and infix function evaluation -- thus supporting
-    functions, units and operators in a form that is familiar
-* Make purity easy and natural without making it an absolute requirement
-* Do not create another programming language. Write a language for evaluating
-    expressions as collections of functions in a concise and dynamic manner.
+## Examples
 
-Implementation Goals
---------------------
+```
+$ 2 + 2
+= 4
+$ 20 cm + 2 m
+= 220 cm
+$ (20 cm + 2 m) m
+= 2.2 m
+$ add2 x = x + 2
+$ add2 5
+= 7
+$ add2cm x = x + 2 cm
+$ add2cm (5 cm)
+= 7 cm
+```
+
+## Design Goals
+
+* Define most things in the language itself rather than on a compiler level
+* Support prefix, postfix and infix operators -- functions, units and operators
+* Be lazy, not eager (still under consideration) -- but still provide a way to force strict evaluation
+* **Do not write another programming language.** Keep it simple.
+
+## Implementation Goals:
 * Be able to generate parse trees and abstract syntax trees given raw text source
 * Be able to evaluate raw text source from the generated trees
     * Be able to generate good error messages with line and character numbers
 * Be able to compile programs into bytecode
-
-Language Features
------------------
-
-* Basic Types:
-    * Functions: \args = {body; return result}
-    * Variables: variableName = value
-    * Operators: prefix, postfix, infix
-    * Boolean: true = 1, false = 0
-* Split multiple statements with semicolon (;)
-* Ability to define operators as functions with precedence
-* Quantities can have a unit or be dimensionless (a unit of `unit`)
-* Comments begin with `#`
-* Functions with default arguments
-* Valid characters for variable name/operator:
-    `a-zA-Z0-9$_^&*!@%+?<>.:/\|~`
-* Ability to create JavaScript modules that tap into the interpreter
-    * `middleware` hooks into various things such as finding undefined variables (could be used to define numbers, constants, etc.)
-    * Side-effects of this: you could potentially do things like
-        define `2 = 9` if you want...might be dangerous (but also 
-        extremely powerful)
-    * If middleware is done right, it could enable extensions to provide
-        additional functionality like `const` function or an `override` 
-        function for storing whether certain symbols are constant 
-        or variable and then overriding that information when necessary
-* Basic definitions written in the language loaded initially (like Prelude)
-* Functions define closures
-* Numbers are simply symbols that can be reduced like anything else (same with true and false)
-* Short circuit evaluation
-* Exceptions thrown using special functions (`error(message)`, `assert(boolean)`, `assertInRange(value, start, end)`, etc.)
-* Anything that isn't defined is automatically a special Symbol type (useful for isinstance checking)
-* Lazy by default (kind of) (makes `if` easier to implement)
-* `import` is just a function that hooks into the interpreter to dynamically
-    load and evaluate some file (usually as JavaScript) -- there should be
-    some middleware for this too.
-* Possible extensions:
-    * Varadic parameters (i.e. \...args = args) - requires support for arrays
-    * Basic array methods for acting on ranges: `map`, `foldl`, `foldr`, `range`, `flatten`
-
-TODO:
-* Some more work needs to be done to make things truly lazy. For example,
-    in the evaluation model, function arguments are evaluated as soon as
-    the function is invoked. Instead of that, function arguments should
-    only be invoked when they are substituted for their place in the
-    function body. Additionally, evaluation should not be entirely depth
-    first. It should begin at the top, attempt to evaluate that, and then
-    continuously evaluate whatever bare minimum number of symbols is
-    necessary for that evaluation to occur. Tokens that are not symbols
-    should always be evaluated (turned into a tree) right away as they
-    have syntactic meaning, not semantic meaning.
-
-Supported Expressions:
-----------------------
-
-    $ # simple arithmetic
-    $ 2 + 2 * 3
-    = 8
-    $ # parenthesis change operator precedence
-    $ # fractions are automatically preserved
-    $ 2 * (3 + 2) / 4
-    = 5 / 2
-    $ # force fraction evaluation with the ! postfix operator
-    $ (5 / 2)!
-    = 2.5
-    $ # defining a function
-    $ # functions automatically get the highest precedence as do most symbols or numbers
-    $ f x = 2 * x
-    $ # functions are simply prefix operators
-    $ # evaluating with a defined value
-    $ f 3
-    = 6
-    $ # evaluating with an undefined value
-    $ f x
-    = \x = 2 * x
-    $ f y
-    = \y = 2 * y
-    $ # defining an operator
-    $ # POSTFIX is simply a variable
-    $ operator POSTFIX 7 doubled f
-    $ 7 doubled
-    = 14
-    $ # infix operators have to have two parameters
-    $ # functions can be defined in the operator definition too
-    $ # second parameter after operator type is precedence between 0 and 9
-    $ operator INFIX 7 $$ (\x y = x + y * x)
-    $ 5 $$ 8
-    = 45
-    $ # postfix operators and prefix operators can have any number > 0
-    $ q x y z = {
-        w = x * y
-        return w + z * w
-    }
-    $ q 1 2 3
-    = 8
-    $ operator POSTFIX 7 %^hi q
-    $ 1 2 3 %^hi
-    = 8
-    $ # use `operator` to reassign an existing prefix operator's precedence
-    $ # prefix operator and function are synonymous
-    $ r t = t * 7
-    $ r 7 + 2
-    = 51
-    $ # this is usually not recommended unless you absolutely need it
-    $ operator PREFIX 1 f f
-    $ # now + will bind higher than f
-    $ r 7 + 2
-    = 63
-
-Control Flow
-------------
-
-    $ if/else are functions
-    $ a = 2
-    $ # always requires all arguments
-    $ if (a == 2) 3 4
-    = 3
-
-Note that certain expressions aren't possible because the flexibility of
-this syntax makes them ambiguous:
-
-    4*x
-    x*2
-
-Cannot be parsed since it is impossible to know whether it is multiplication
-or another operator of some kind.
-
-Dimensionless Quantities & Units
---------------------------------
-
-Units are subcategories of certain types. Operators using these units are
-defined at the type level. For example, the Number type can have units like
-`cm`, `inch`, `metre`, etc. Unit names can be any of the valid characters.
-That means that units like `cm^2` are possible (note that there can be no
-spaces between `cm` and `^2`).
-
-Examples of usage:
-
-    $ 4
-    = 4
-    $ # the unit for something is simply an arbitrary string constant defined in the JavaScript
-    $ unitFor 4
-    = units
-    $ # by convention, this string is also usually a postfix function used to convert other values into that unit
-    $ 4 units
-    = 4
-    $ 4 cm
-    = 4 cm
-    $ # valueOf returns the dimensionless version of a quantity
-    $ # internally, this is a conversion from that unit to `units`
-    $ valueOf (4 cm)
-    = 4
-    $ # unit functions should have the highest precedence binding so that expressions work as expected
-    $ 4 cm + 8 cm
-    = 12 cm
-    $ # you can set a quantity to a specific unit using that unit's constant
-    $ # by convention, this is just the uppercase name of that unit
-    $ # internally, this is a conversion from `units` to that unit
-    $ transform 4 CM
-    = 4 cm
-    $ # alternatively, you can use the special transform operator
-    $ 4 -> cm
-    = 4 cm
-    $ # this applies to any unit transformation
-    $ 3 m -> CM
-    = 300 cm
-
-When defining a type, care should be taken to account for both dimensionless
-quantities and quantities with units. A dimensionless quantity is simple a
-quantity with the unit `units`.
-
-Custom transformations between units can be defined using the special
-defineTransformation function.
-
-    $ defineTransformation CM M (\x = x * 100)
-
-### Defining custom units
-In order to expose enough so that units can be used as defined above,
-the following minimal complete definition should be made for each custom
-unit.
-
-    $ # This automatically creates an uppercase constant for that unit
-    $ # This will produce an error if the uppercase constant clashes with
-    $ # the name of that unit (i.e. uppercase of $@ is still $@) 
-    $ # So make there is at least one letter.
-    $ # This will automatically create a transformation from UNITS to the
-    $ # newly defined constant that simply sets the unit on the value 
-    $ defineUnit cm
-
-Note that this **does not** allow you to redefine existing units. To do that,
-you must first explicitly remove them using `undefineUnit`.
-
-    $ # automatically removes unit and constant from lookup table
-    $ undefineUnit CM
-
-Trying to redefine an existing unit without undefining it first will result
-in an error.
-
-Language Implementation
------------------------
-Internally, the language is implemented such that everything is tokenized
-and then those tokens are dynamically interpreted at runtime.
-
-For example, let's say you have this function:
-
-    f x = (23 + x) * 4
-
-This might be tokenized as follows:
-
-    SYMBOL(f) SYMBOL(x) EQUALS PARENOPEN SYMBOL(23) SYMBOL(+) SYMBOL(x) PARENCLOSE SYMBOL(*) SYMBOL(4) EOF
-
-Note how mostly there are symbols. These are what will be dynamically evaluated at runtime.
-
-When the interpreter reaches this line, it will attempt to create a 
-evaluation tree. First it will attempt to create one using any non-symbols.
-Once that is complete, the symbols themselves will be evaluated to create an evaluation tree based on their precedence.
-
-Continuing the example, since there are non-symbols present, the above set of tokens is turned into the following:
-
-    ASSIGNMENT
-    --> EXPRESSION (will be used as a pattern)
-        --> SYMBOL(f)
-        --> SYMBOL(x)
-    --> EXPRESSION
-        --> EXPRESSION
-            --> SYMBOL(23) SYMBOL(+) SYMBOL(x)
-        --> SYMBOL(*) SYMBOL(4)
-
-This tree represents the assignment of the expression `f x` to the expression. The left side of the assignment is represented by an expression because this enables the implementation of "pattern matching". Most of the symbols are left as is so that they can be dynamically evaluated at runtime.
-
-//TODO: Continue updating this section from here.
-
-Evaluation of a tree like this stops when no further reductions are possible.
-In this case, no further reductions are possible because the function is
-simply being assigned to the symbol. The symbol will be evaluated as part
-of the assignment. The reasons for that will be realized as you read on.
-
-When this function gets evaluated, the same algorithm is applied. This time,
-since there are only symbols and nothing else, the symbols are used to 
-create a tree. This tree, once created, will be beta reduced as much as 
-possible as part of the evaluation. 
-
-It is necessary and important that this step be taken on every function 
-evaluation since symbol precedence is completely dynamic in this language.
-
-The symbols are looked at in order and their precedence is looked up. 
-Symbols only containing numbers are looked up to find their numeric values.
-Numbers have the highest precedence values and are defined by zero argument 
-functions that evaluate to themselves. Zero arguments means that none of 
-their sibling symbols are required for their evaluation. A lookup is enough.
-Operators are functions that each have their own defined precedence and 
-fixity. This precedence is used to create the evaluation tree that will be 
-reduced.
-
-Every time a symbol is encountered that exactly matches a symbol from the
-function's arguments, the value provided to that function (or a default
-value) is put in its place. For example, if `f 7` is the expression being
-evaluated, `SYMBOL(x)` will be replaced with `SYMBOL(7)` whenever it is
-encountered.
-
-Since by default, the operator `*` has a higher precedence than the
-operator `+`, the above symbols will produce the following tree when `f 7` 
-is evaluated.
-
-    ADD
-    --> SYMBOL(23)
-    --> MULTIPLY
-        --> SYMBOL(7)
-        --> SYMBOL(4)
-
-Note that as described, `SYMBOL(x)` is replaced with `SYMBOL(7)`. 
-
-When reducing, the interpreter will go to the deepest part of the tree and
-attempt to reduce each part, one at a time. Each symbol that only contains
-a number will evaluate to that number when looked up. `ADD` and `MULTIPLY`
-simply represent the function bodies defined for those operators. These
-will take the evaluated arguments and further evaluate them based on their
-definitions.
-
-Steps:
-
-1. Symbols are evaluated (in reality this would happen one at a time)
-
-        ADD
-        --> SYMBOL(23)
-        --> MULTIPLY
-            --> 7
-            --> 4
-
-2. First operation is completed
-
-        ADD
-        --> SYMBOL(23)
-        --> 28
-
-3. Last symbol is evaluated. Note how nothing is evaluated until it is
-absolutely needed. And note how symbol conversion happens exactly once. Values don't need to be looked up again mid-evaluation.
-
-        ADD
-        --> 23
-        --> 28
-
-4. Final operation is completed
-
-        51
-
-Evaluation stops because there is just a single value left that cannot be
-evaulated any further. No further reductions can take place.
-
-### Building evaluation trees from symbols
-The algorithm for building evaluation trees from symbols is very simple.
-
-1. Find the symbol with the highest precedence (for the same precedence, go left to right)
-2. Attempt to look it up, find the number of arguments that function needs
-    as well as its fixity
-    * Numbers when looked up return a zero argument function returning that number's literal value
-3. For each argument required, take one of the adjacent symbols and evaluate
-    it starting at step 2
-    * Use the fixity to determine the direction of this search
-    * Infix functions can only have 2 arguments.
-4. Replace that symbol with its evaluated version
-5. Repeat at step 1 until there are no more symbols to evaluate
-
-This algorithm only applies when there are only symbols within the expression. Before this can be run, any non-symbols (other tokens) must
-be evaluated. Once non-symbols have been reduced as much as possible into
-either symbols or evaluated components, this algorithm can finish the job.
-
-Every reduction stops once the given tree cannot be reduced any further.
-
-Parenthesis evaluate to a zero argument function returning the evaluation of the tokens within it. This is useful as a method for implementing symbol
-grouping and for overriding function/operator precedence.
-
-Example: Given the following set of tokens
-
-    SYMBOL(4) SYMBOL(/) PARENOPEN SYMBOL(5) SYMBOL(+) SYMBOL(6) PARENCLOSE
-
-The first step will be to evaluate the non-symbol tokens. This will result
-in the following tree:
-
-    (expr)
-    --> SYMBOL(4) SYMBOL(/)
-    --> ()
-        --> SYMBOL(5) SYMBOL(+) SYMBOL(6)
-
-Note how the items within the PAREN* tokens are now grouped. Each branch
-of this tree will now be evaluated following the symbol-tree algorithm
-above. Since the `()` create a deeper branch of the tree, that leaf-node
-will be evaluated first. Thus forcing that expression to be evaluated
-and effectively changing the operator precedence just as we desired.
-
-In terms of scope/closures/etc., for now, functions will simply have
-access to everything that can be looked up (read: is defined). In
-the future they may only have access to things in their immediate closure
-(i.e. on their branch or on a parent branch).
-
-If a lookup fails, that symbol will simply be returned as is. This is
-considered reasonable means for the stoppage of evaluation. None of the
-immediate parent branches of that branch can be evaluated.
-
-For a tree
-
-    ADD
-    --> SYMBOL(23)
-    --> MULTIPLY
-        --> SYMBOL(a)
-        --> SUBTRACT
-            --> SYMBOL(9)
-            --> SYMBOL(3)
-
-The branch with `SYMBOL(a)` cannot be evaluated. Its sibling can be, so evaluation stops once that sibling has been evaluated. The return value is thus a tree and that tree is printed as is.
-
-The result of this tree is `23 + a * 6` since this is the furthest it could
-be reduced.
-
-Note that this returned tree **is not** a value type. If an expression being evaluated cannot be reduced to a single value, a function is returned with
-the arguments being any symbols in its deepest branches that could not
-be evaluated. Thus, a more accurate statement is that the return value of
-this tree is `\a = 23 + a * 6`.
-
-This enables the expression to be futher evaluated down the line and also
-creates the ability to make the interpreter generate pseudo functions on
-the fly. The original function notation `\args = expression` is simply
-syntatictic sugar designed to avoid any naming conflicts with the outside
-context. So even if you have `x` defined elsewhere, you can safely define
-a function using `\x = ...` without worry.
-
-`SYMBOL`s will contain debugging information such as the line number and
-character number of that symbol. This will help make error reporting clear.
-
-### Implementing types
-Types are implemented as extension modules that tap into the interpreter.
-The number type is one of the defaults included in the interpreter initially.
-
-Numbers can be represented minimally by just a single object:
-
-    {
-        value: <numeric value>
-        category: <default: units>
-    }
-
-That type will then be responsible for implementing all the functionality
-it desires by creating an evaluation middleware. Evaluation middleware
-is a means for multiple types to define methods for the evaluation of a
-single function. This is something only available in extension modules and
-essentially means that a symbol can have multiple implementations based
-on its context.
-
-Each definition in the lookup table has a default definition. For example,
-if a function is defined as follows:
-
-    f x = 2 * x
-
-Then it will be placed in the lookup table as a simple one argument function
-accepting all kinds of types. This is the default or catch-all version of
-the symbol f.
-
-With middleware, we can add a step before that default function where we
-attempt to do something else. 
-
-    function redirectMiddleware(info) {
-        if (info.symbol.data === "f") {
-            // instead of being a function, f is now a number
-            info.finish(new Number(42, UNITS));
-            return;
-        }
-    }
-
-Here, we hook into the lookup for f and return a number instead of a 
-function.
-
-    function redirectMiddleware(info) {
-        if (info.symbol.data === "f") {
-            info.finish(new Symbol("g"));
-            return;
-        }
-    }
-
-Here, we check the symbol's data and then replace it with another symbol.
-Then we explicitly stop the evaluation of any further middleware with
-`finish()`. The symbol "g" will not be further evaluated until the next
-reduction step. An attempt to look it up will be made. If we had called
-`finish()` with another type instead (a non-symbol), no further attempts to
-look anything up would be made and that symbol would now take the type
-passed to `finish()`.
-
-TODO: If info is just the symbol, how do types differentiate using the
-type of each argument? Does each version of a function run one at a time?
-Am I describing the wrong type of middleware here? This looks like a lookup
-middleware when I really should have been describing an evaluation middleware.
-
-Types can even define methods for converting them to strings which is
-useful in the REPL.
-
-### More Advanced Types
-Let's say we wanted to implement a Vector type. To do that, we may store
-a generic vector as follows:
-
-    {
-        values: [<array of Number objects>]
-    }
-
-We may choose to inject several functions into the namespace such as
-
-    # could be nicer with varadic parameters
-    $ v = Vector3 1 2 3
-    $ v2 = Vector2 1 2
-    $ vectorLength v
-    = 3
-    $ vectorLength v2
-    = 2
-    $ vectorMagnitude v
-    = sqrt 14
-
-We may also want to support several operations such as
-
-    $ v + (Vector 3 2 1)
-    (Vector 4 4 4)
-
-These operations can be implemented using evaluation middleware as defined
-above. Simply put, if one evaluation middleware fails to evaluate something,
-the next one will attempt it. This will go on until something is evaluated
-or until it can no longer be evaluated at all. At that point, evaluation
-will stop.
-
-Writing Middleware
-------------------
-The middleware implementation is inspired by koa.js where middleware
-functions "yield downstream" and then control flows back "upstream" 
-afterwards.
-
-There are currently just a few main types of middleware:
-1. Assignment middleware
-2. Evaluation middleware
-
-### Asignment middleware
-Assignment middleware allows you to influence the behaviour of the
-assignment operator from extension modules. 
+* Support basic scope / stack
+
+## Version 1.0.0 Notes
+* In order to speed up the process of making this, the first version will be very simple and only support numeric types
+* Numbers will be represented by a value as well as a unit
+* Vectors and other fancier types will not be included until future versions
+* Only simple expressions as found in the examples will be included in this initial release
+
+## Possible Future Extensions:
+* Pattern matching on functions
+  * Unwrapping
+  * Supporting variable numbers of arguments
+  * Matching units
+* Supporting default values and multiple function signatures
+* Defining the supported input and output types of a function (useful for adding Vectors and stuff while still keeping addition operators, etc.)
+  * Adding types should be an all or nothing process, either you have them on every parameter and the output or you do not have them at all
+* Language extensions:
+  * Defined outside of the runtime in order to add some feature or type to the language using some sort of plugin or middleware API
+  * Vectors
+  * Arrays, operations on arrays
+  * Strings, operations on strings as arrays of characters
+  * I/O
+  * Graphing
+* Importing and modules - being able to add defintions defined in a separate module somewhere (split circuits from basic math, etc.)
+
+## Syntax
+
+* Functions:
+  * Basic syntax for defining a name and some parameters
+  `<function_name> <param1> <param2> = <expression>`
+  * Anonymous functions can omit the function name and use a backslash instead (when using a backslash, the space after the name is not necessary)
+  `\<param1> <param2> = <expression>`
+  * Function expressions return the defined function
+
+* Expressions:
+  * Composed of symbols and evaluated at runtime based on the definitions of those symbols (precedence, etc.)
+  * [ADVANCED] Can be enclosed within a block `{ <expressions> }` where the result of the expression is the final line in the block
+
+* Strings: (but no string operators...yet)
+  * Double-quotes only for strings, backslash escapes for double quotes within strings
+
+* Default operators:
+  * Definitions are included in prelude for the following basic operators:
+    * `+`
+    * `-`
+    * `*`
+    * `/`
+    * `**`
+    * `==`
+    * `!=`
+    * `>=`
+    * `<=`
+    * Math functions such as `max`, `min`, `sin`, `cos`, `tan`, etc.
+
+## Custom Operators
+All the basic operators will be defined in lion syntax in a special prelude module. 
+
+Defining an operator is as simple as calling the `operator` function and passing in its three parameters:
+1. The fixity of your operator, one of: `PREFIX`, `POSTFIX`, `INFIX`
+2. The precedence, a number from 0 to 9 where 9 is the highest precedence
+3. The name of the operator in double-quotes (example: `"$$"`)
+4. A function (can be anonymous) representing the relationship between your operator's input and your operator's output
+  * `PREFIX` and `POSTFIX` operators take one parameter
+  * `INFIX` operators take two parameters
+  * The names of the function parameters do not matter
+
+Function declaration syntax is syntatic sugar for defining a `PREFIX` operator with high precedence.
+
+### Examples
+```
+$ operator INFIX 6 "$$" (\x y = x * y + x)
+$ 3 $$ 2
+= 9
+$ f x = 2 * x
+$ operator POSTFIX 6 "timestwo" (f)
+$ 2.5 timestwo
+= 5
+$ (2.5 cm) timestwo
+= 5 cm
+```
+
+## Units
+Units are simply `POSTFIX` operators with a very high precedence. This section describes some useful functions introduced to make working with units easier.
+
+Units can have any casing, but to avoid confusion it is recommended to always use proper SI prefixes (or whatever other system you are following) whenever possible.
+
+The `defineUnit` function takes a case-sensitive string (use double-quotes) representing the unit's name. This defines a tightly-bound (high precedence) `POSTFIX` function which when used, attempts to convert its argument to the now defined unit based on any conversions that are currently defined. 
+
+```
+$ defineUnit "kohm"
+$ 3 kohm
+= 3 kohm
+```
+
+All values with no unit are defined to have a special unit called `units`. The conversion to this unit simply removes whatever unit a value already has. To convert from this unit to another one, the new unit just replaces `units` as the unit for this value.
+
+`defineUnit` takes care of defining this simple conversion for you and immediately makes your unit available for use in simple conversions to and from `units`.
+
+The now defined unit function can be used as an argument in the `convert` function. The `convert` function is what is used behind the scenes to convert from the current unit of the quantity to a new unit.
+
+```
+# By wrapping the `cm` function in parentheses, it is not evaluated
+$ convert (2 units) (cm)
+```
+
+Conversions are automatically performed during calculations. The units are combined such that the leftmost unit is preserved. Incompatible units (where no conversion can be resolved) are left untouched since they cannot be reduced any further.
+
+```
+$ 20 cm + 2 m
+= 220 cm
+$ 20 cm + 2 m + 2 kohm
+= 220 cm + 2 kohm
+```
+
+You can explicitly convert to a unit by calling its function:
+
+```
+$ (20 cm + 2 m) m
+= 2.2 m
+```
+
+This is equivalent to:
+
+```
+$ convert (20 cm + 2 m) (m)
+= 2.2 m
+```
+
+This will only work if a conversion from `cm` to `m` is defined. The `prelude` module loaded with each program session has many useful units and conversions already built in.
+
+### Defining Conversions
+To define a conversion between two units, use the `conversion` function.
+
+The `conversion` function takes the two units to convert from and to as well as a function to convert from the first argument to the second one. This conversion definition is **one way**. No equivalence is automatically defined.
+
+```
+$ conversion cm m (\x = x / 100)
+```
+
+## Implementation Notes
+Essentially does beta reduction on any given expression. Since the language is lazy, many advanced expressions can be supported without explicitly requiring lambdas everywhere (see `if` below). Everything, including unit conversions must be lazy since many unit conversions can often be ruled out.
+
+Certain functions will be defined on a "language level". Language level just means that these are immutable functions available at runtime.
+
+Examples of lanaguage level functions:
+* `operator` - for defining custom operators (See Custom Operators)
+* `defineUnit` - for defining a new unit (See Units), does not error if the unit already exists, creates a `POSTFIX` function with the given name that attempts to resolve the given parameter to this unit
+* `convert` - for giving some quantity a new unit, performs a conversion
+* `unitFor` - retrieves the unit for some quantity
+* `valueOf` - retrieves the raw value (without a unit) for a given quantity, technically just performs a conversion to the unit `units`
+* `conversion` - defines a conversion from one unit to another, overwrites any existing conversion (See Defining Conversions)
+* `if` - evaluates a given boolean expression and then returns one of its arguments based on the result
+  * `if <expr> <if_true> <if_false>` results in one of the expressions based on the result of expr
+  * Fairly flexible because of how blocks work
+  * Both parameters are required
 
 
 
