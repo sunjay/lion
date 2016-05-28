@@ -94,18 +94,18 @@ mod tests {
 
     #[test]
     fn groups_characters_into_symbols() {
-        let symbol = "abqq$$1111^&/|!".to_string();
+        let symbol = "abqq$$1111^&/|!";
         let mut tokenizer = tokenizer_for(symbol);
-        assert!(tokenizer.next().unwrap() == Symbol(symbol));
+        assert!(tokenizer.next().unwrap() == Symbol(symbol.to_owned()));
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn groups_equals_into_symbols_when_there_is_no_whitespace() {
-        let symbol = "=ifsaoi=hfsdMMDS,,,,~~~:=";
+        let symbol = "=ifsaoi=hfsdMMDS,,,,~~~:=".to_owned();
 
         // Make sure leading whitespace does not effect the output
-        let tokens = tokenizer_for("  " + symbol);
+        let mut tokenizer = tokenizer_for(format!("  {}", symbol).as_ref());
 
         assert!(tokenizer.next().unwrap() == Symbol(symbol));
         assert!(tokenizer.next().is_none());
