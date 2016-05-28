@@ -41,6 +41,7 @@ impl Iterator for Tokenizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use token::Token;
     use token::Token::*;
     use scanner::Scanner;
 
@@ -93,11 +94,29 @@ mod tests {
 
     #[test]
     fn groups_characters_into_symbols() {
-        let mut tokenizer = tokenizer_for("\\ ) \n ( \\ = = )");
+        let symbol = "abqq$$1111^&/|!".to_string();
+        let mut tokenizer = tokenizer_for(symbol);
+        assert!(tokenizer.next().unwrap() == Symbol(symbol));
+        assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn groups_equals_into_symbols_when_there_is_no_whitespace() {
+        let symbol = "=ifsaoi=hfsdMMDS,,,,~~~:=";
+
+        // Make sure leading whitespace does not effect the output
+        let tokens = tokenizer_for("  " + symbol);
+
+        assert!(tokenizer.next().unwrap() == Symbol(symbol));
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
+    fn disallows_symbols_starting_with_numbers() {
+    }
+
+    #[test]
+    fn accepts_all_valid_symbol_characters_into_a_symbol() {
     }
 
     #[test]
