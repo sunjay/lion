@@ -106,6 +106,8 @@ mod tests {
         scanner = Scanner::from_str("T");
         scanner.get_char();
         assert!(scanner.get_char().is_none());
+        // try again just in case
+        assert!(scanner.get_char().is_none());
     }
 
     #[test]
@@ -148,6 +150,8 @@ mod tests {
         assert!(scanner.unget_char().is_err());
         scanner.get_char();
         assert!(!scanner.unget_char().is_err());
+        assert!(scanner.unget_char().is_err());
+        // Try again just in case
         assert!(scanner.unget_char().is_err());
     }
 }
