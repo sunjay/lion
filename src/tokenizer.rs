@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn paren_close() {
+    fn string_boundary() {
         let mut tokenizer = tokenizer_for("\"");
         assert!(tokenizer.next().unwrap().unwrap() == StringBoundary);
         assert!(tokenizer.next().is_none());
