@@ -142,42 +142,42 @@ mod tests {
     #[test]
     fn backslash() {
         let mut tokenizer = tokenizer_for("\\");
-        assert!(tokenizer.next().unwrap().unwrap() == Backslash);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Backslash);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn equals() {
         let mut tokenizer = tokenizer_for("=");
-        assert!(tokenizer.next().unwrap().unwrap() == Equals);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Equals);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn paren_open() {
         let mut tokenizer = tokenizer_for("(");
-        assert!(tokenizer.next().unwrap().unwrap() == ParenOpen);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), ParenOpen);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn paren_close() {
         let mut tokenizer = tokenizer_for(")");
-        assert!(tokenizer.next().unwrap().unwrap() == ParenClose);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), ParenClose);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn string_boundary() {
         let mut tokenizer = tokenizer_for("\"");
-        assert!(tokenizer.next().unwrap().unwrap() == StringBoundary);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), StringBoundary);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn eol() {
         let mut tokenizer = tokenizer_for("\n");
-        assert!(tokenizer.next().unwrap().unwrap() == EOL);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), EOL);
         assert!(tokenizer.next().is_none());
     }
 
@@ -187,7 +187,7 @@ mod tests {
         let expected = [Backslash, ParenClose, EOL, ParenOpen, Backslash, Equals, Equals, ParenClose];
 
         for token in expected.into_iter() {
-            assert!(tokenizer.next().unwrap().unwrap() == *token);
+            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
         }
 
         assert!(tokenizer.next().is_none());
@@ -197,7 +197,7 @@ mod tests {
     fn groups_characters_into_symbols() {
         let symbol = "abqq$$1111^&/|!";
         let mut tokenizer = tokenizer_for(symbol);
-        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol.to_owned()));
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
         assert!(tokenizer.next().is_none());
     }
 
@@ -208,7 +208,7 @@ mod tests {
         // Make sure leading whitespace does not effect the output
         let mut tokenizer = tokenizer_for(&format!("  {}", symbol));
 
-        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol));
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol));
         assert!(tokenizer.next().is_none());
     }
 
@@ -216,7 +216,7 @@ mod tests {
     fn disallows_symbols_starting_with_numbers() {
         let symbol = "123abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
-        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::SymbolCannotBeNumber);
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::SymbolCannotBeNumber);
         assert!(tokenizer.next().is_none());
     }
 
@@ -224,13 +224,16 @@ mod tests {
     fn disallows_invalid_characters() {
         let symbol = "]";
         let mut tokenizer = tokenizer_for(&symbol);
-        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::UnrecognizedCharacter(']'));
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter(']'));
         assert!(tokenizer.next().is_none());
 
         // Make sure invalid character is caught among valid characters too
-        let symbol = "12[3abc~".to_owned();
+        let symbol = "a12[3abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
-        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::UnrecognizedCharacter('['));
+
+        // Ignore first token
+        assert!(tokenizer.next().unwrap().is_ok());
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('['));
         assert!(tokenizer.next().is_none());
     }
 
@@ -238,7 +241,7 @@ mod tests {
     fn accepts_all_valid_symbol_characters_into_a_symbol() {
         let symbol = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_$^&*!@%+?<>.:/|~,=".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
-        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol));
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol));
         assert!(tokenizer.next().is_none());
     }
 
@@ -248,7 +251,7 @@ mod tests {
         let expected = [ParenOpen, Symbol("x".to_owned()), Symbol("+".to_owned()), Symbol("y".to_owned()), ParenClose, ParenOpen, ParenClose, ParenClose];
 
         for token in expected.into_iter() {
-            assert!(tokenizer.next().unwrap().unwrap() == *token);
+            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
         }
 
         assert!(tokenizer.next().is_none());
@@ -260,7 +263,7 @@ mod tests {
         let expected = [StringBoundary, Symbol("x".to_owned()), Symbol("+".to_owned()), Symbol("y".to_owned()), StringBoundary, StringBoundary, StringBoundary, StringBoundary];
 
         for token in expected.into_iter() {
-            assert!(tokenizer.next().unwrap().unwrap() == *token);
+            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
         }
 
         assert!(tokenizer.next().is_none());
@@ -270,7 +273,7 @@ mod tests {
     fn ignores_leading_whitespace() {
         let symbol = "oh#*$ho".to_owned();
         let mut tokenizer = tokenizer_for(&format!("  \t\t  \t {}", symbol));
-        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol.to_owned()));
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
         assert!(tokenizer.next().is_none());
     }
 
