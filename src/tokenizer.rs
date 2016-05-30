@@ -228,12 +228,13 @@ mod tests {
         assert!(tokenizer.next().is_none());
 
         // Make sure invalid character is caught among valid characters too
-        let symbol = "a12[3abc~".to_owned();
+        let symbol = "a12[$3abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
 
         // Ignore first token
         assert!(tokenizer.next().unwrap().is_ok());
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('['));
+        assert!(tokenizer.next().unwrap().is_ok());
         assert!(tokenizer.next().is_none());
     }
 
@@ -271,7 +272,7 @@ mod tests {
 
     #[test]
     fn ignores_leading_whitespace() {
-        let symbol = "oh#*$ho".to_owned();
+        let symbol = "oh$*$ho".to_owned();
         let mut tokenizer = tokenizer_for(&format!("  \t\t  \t {}", symbol));
         assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
         assert!(tokenizer.next().is_none());
