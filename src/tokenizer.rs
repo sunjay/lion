@@ -107,7 +107,7 @@ mod tests {
         let symbol = "=ifsaoi=hfsdMMDS,,,,~~~:=".to_owned();
 
         // Make sure leading whitespace does not effect the output
-        let mut tokenizer = tokenizer_for(format!("  {}", symbol).as_ref());
+        let mut tokenizer = tokenizer_for(&format!("  {}", symbol));
 
         assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol));
         assert!(tokenizer.next().is_none());
@@ -115,18 +115,38 @@ mod tests {
 
     #[test]
     fn disallows_symbols_starting_with_numbers() {
+        let symbol = "123abc~".to_owned();
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert!(tokenizer.next().unwrap().is_err());
+        assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn accepts_all_valid_symbol_characters_into_a_symbol() {
+        let symbol = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_$^&*!@%+?<>.:/|~,=".to_owned();
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol));
+        assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn recognizes_parenthesis_regardless_of_whitespace() {
+        let mut tokenizer = tokenizer_for("(x + y)())");
+        let expected = [ParenOpen, Symbol("x".to_owned()), Symbol("+".to_owned()), Symbol("y".to_owned()), ParenClose, ParenOpen, ParenClose, ParenClose];
+
+        for token in expected.into_iter() {
+            assert!(tokenizer.next().unwrap().unwrap() == *token);
+        }
+
+        assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn ignores_leading_whitespace() {
+        let symbol = "oh#*$ho".to_owned();
+        let mut tokenizer = tokenizer_for(&format!("  \t\t  \t {}", symbol));
+        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol.to_owned()));
+        assert!(tokenizer.next().is_none());
     }
 
     fn tokenizer_for(string: &str) -> Tokenizer {
