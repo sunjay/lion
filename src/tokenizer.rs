@@ -22,7 +22,8 @@ lazy_static! {
 #[derive(Debug, Eq, PartialEq)]
 pub enum TokenError {
     UnrecognizedCharacter(char),
-    InvalidSymbol,
+    UnexpectedEndOfInput,
+    SymbolCannotBeNumber,
     ScannerError(String),
 }
 
@@ -43,19 +44,55 @@ impl Tokenizer {
 
     fn ignore_whitespace(&mut self) -> result::Result<(), &str> {
         loop {
-            let char = self.scanner.get_char();
-            if char.is_none() {
+            let c = self.scanner.get_char();
+            if c.is_none() {
                 break;
             }
 
-            let char = char.unwrap();
-            if !char.is_whitespace() || char == EOL_CHAR {
+            let c = c.unwrap();
+            if !c.is_whitespace() || c == EOL_CHAR {
                 try!(self.scanner.unget_char());
                 break;
             }
         }
 
         Ok(())
+    }
+
+    fn next_symbol(&mut self, start: char) -> Option<TokenResult> {
+        let mut symbol = String::new();
+
+        let mut next_char = Some(start);
+        while !next_char.is_none() {
+            let c = next_char.unwrap();
+            if SYMBOL_CHARS.contains(&c) {
+                symbol.push(c)
+            }
+            else {
+                if let Err(message) = self.scanner.unget_char() {
+                    return Some(Err(TokenError::ScannerError(message.to_owned())));
+                }
+                break;
+            }
+
+            next_char = self.scanner.get_char();
+        }
+
+        if symbol.len() == 0 {
+            Some(Err(match self.scanner.get_char() {
+                Some(c) => TokenError::UnrecognizedCharacter(c),
+                None => TokenError::UnexpectedEndOfInput,
+            }))
+        }
+        else if symbol.chars().next().map_or(false, |c| c.is_digit(10)) {
+            Some(Err(TokenError::SymbolCannotBeNumber))
+        }
+        else if symbol == "=" {
+            Some(Ok(Token::Equals))
+        }
+        else {
+            Some(Ok(Token::Symbol(symbol)))
+        }
     }
 }
 
@@ -71,7 +108,28 @@ impl Iterator for Tokenizer {
             return Some(Err(TokenError::ScannerError(message.to_owned())));
         }
 
-        None
+        let c = self.scanner.get_char();
+        if c.is_none() {
+            self.reached_eof = true;
+            return None;
+        }
+
+        let c = c.unwrap();
+        Some(Ok(match c {
+            '\\' => Token::Backslash,
+            '(' => Token::ParenOpen,
+            ')' => Token::ParenClose,
+            '"' => Token::StringBoundary,
+            EOL_CHAR => Token::EOL,
+            _ => {
+                if let Some(symbol_result) = self.next_symbol(c) {
+                    return Some(symbol_result);
+                }
+                else {
+                    return None;
+                }
+            },
+        }))
     }
 }
 
@@ -158,7 +216,7 @@ mod tests {
     fn disallows_symbols_starting_with_numbers() {
         let symbol = "123abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
-        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::InvalidSymbol);
+        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::SymbolCannotBeNumber);
         assert!(tokenizer.next().is_none());
     }
 
