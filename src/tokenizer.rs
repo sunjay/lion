@@ -1,4 +1,5 @@
 use std::iter::Iterator;
+use std::result;
 use std::collections::HashSet;
 
 use token::Token;
@@ -16,6 +17,8 @@ lazy_static! {
     ].into_iter().collect();
 }
 
+pub type TokenResult = result::Result<Token, String>;
+
 pub struct Tokenizer {
     scanner: Scanner,
     reached_eof: bool,
@@ -31,9 +34,9 @@ impl Tokenizer {
 }
 
 impl Iterator for Tokenizer {
-    type Item = Token;
+    type Item = TokenResult;
 
-    fn next(&mut self) -> Option<Token> {
+    fn next(&mut self) -> Option<Self::Item> {
         None
     }
 }
@@ -41,42 +44,41 @@ impl Iterator for Tokenizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::Token;
     use token::Token::*;
     use scanner::Scanner;
 
     #[test]
     fn backslash() {
         let mut tokenizer = tokenizer_for("\\");
-        assert!(tokenizer.next().unwrap() == Backslash);
+        assert!(tokenizer.next().unwrap().unwrap() == Backslash);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn equals() {
         let mut tokenizer = tokenizer_for("=");
-        assert!(tokenizer.next().unwrap() == Equals);
+        assert!(tokenizer.next().unwrap().unwrap() == Equals);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
-    fn parenOpen() {
+    fn paren_open() {
         let mut tokenizer = tokenizer_for("(");
-        assert!(tokenizer.next().unwrap() == ParenOpen);
+        assert!(tokenizer.next().unwrap().unwrap() == ParenOpen);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
-    fn parenClose() {
+    fn paren_close() {
         let mut tokenizer = tokenizer_for(")");
-        assert!(tokenizer.next().unwrap() == ParenClose);
+        assert!(tokenizer.next().unwrap().unwrap() == ParenClose);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn eol() {
         let mut tokenizer = tokenizer_for("\n");
-        assert!(tokenizer.next().unwrap() == EOL);
+        assert!(tokenizer.next().unwrap().unwrap() == EOL);
         assert!(tokenizer.next().is_none());
     }
 
@@ -86,7 +88,7 @@ mod tests {
         let expected = [Backslash, ParenClose, EOL, ParenOpen, Backslash, Equals, Equals, ParenClose];
 
         for token in expected.into_iter() {
-            assert!(tokenizer.next().unwrap() == *token);
+            assert!(tokenizer.next().unwrap().unwrap() == *token);
         }
 
         assert!(tokenizer.next().is_none());
@@ -96,7 +98,7 @@ mod tests {
     fn groups_characters_into_symbols() {
         let symbol = "abqq$$1111^&/|!";
         let mut tokenizer = tokenizer_for(symbol);
-        assert!(tokenizer.next().unwrap() == Symbol(symbol.to_owned()));
+        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol.to_owned()));
         assert!(tokenizer.next().is_none());
     }
 
@@ -107,7 +109,7 @@ mod tests {
         // Make sure leading whitespace does not effect the output
         let mut tokenizer = tokenizer_for(format!("  {}", symbol).as_ref());
 
-        assert!(tokenizer.next().unwrap() == Symbol(symbol));
+        assert!(tokenizer.next().unwrap().unwrap() == Symbol(symbol));
         assert!(tokenizer.next().is_none());
     }
 
