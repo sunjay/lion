@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Token {
     Symbol(String),
     Backslash,

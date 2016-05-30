@@ -5,6 +5,8 @@ use std::collections::HashSet;
 use token::Token;
 use scanner::Scanner;
 
+const EOL_CHAR: char = '\n';
+
 lazy_static! {
     static ref SYMBOL_CHARS: HashSet<char> = vec![
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
@@ -17,7 +19,14 @@ lazy_static! {
     ].into_iter().collect();
 }
 
-pub type TokenResult = result::Result<Token, String>;
+#[derive(Debug, Eq, PartialEq)]
+pub enum TokenError {
+    UnrecognizedCharacter(char),
+    InvalidSymbol,
+    ScannerError(String),
+}
+
+pub type TokenResult = result::Result<Token, TokenError>;
 
 pub struct Tokenizer {
     scanner: Scanner,
@@ -31,12 +40,37 @@ impl Tokenizer {
             reached_eof: false,
         }
     }
+
+    fn ignore_whitespace(&mut self) -> result::Result<(), &str> {
+        loop {
+            let char = self.scanner.get_char();
+            if char.is_none() {
+                break;
+            }
+
+            let char = char.unwrap();
+            if !char.is_whitespace() || char == EOL_CHAR {
+                try!(self.scanner.unget_char());
+                break;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl Iterator for Tokenizer {
     type Item = TokenResult;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.reached_eof {
+            return None;
+        }
+
+        if let Err(message) = self.ignore_whitespace() {
+            return Some(Err(TokenError::ScannerError(message.to_owned())));
+        }
+
         None
     }
 }
@@ -117,7 +151,21 @@ mod tests {
     fn disallows_symbols_starting_with_numbers() {
         let symbol = "123abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
-        assert!(tokenizer.next().unwrap().is_err());
+        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::InvalidSymbol);
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
+    fn disallows_invalid_characters() {
+        let symbol = "]";
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::UnrecognizedCharacter(']'));
+        assert!(tokenizer.next().is_none());
+
+        // Make sure invalid character is caught among valid characters too
+        let symbol = "12[3abc~".to_owned();
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert!(tokenizer.next().unwrap().unwrap_err() == TokenError::UnrecognizedCharacter('['));
         assert!(tokenizer.next().is_none());
     }
 
