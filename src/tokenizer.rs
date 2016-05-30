@@ -110,6 +110,13 @@ mod tests {
     }
 
     #[test]
+    fn paren_close() {
+        let mut tokenizer = tokenizer_for("\"");
+        assert!(tokenizer.next().unwrap().unwrap() == StringBoundary);
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
     fn eol() {
         let mut tokenizer = tokenizer_for("\n");
         assert!(tokenizer.next().unwrap().unwrap() == EOL);
@@ -181,6 +188,18 @@ mod tests {
     fn recognizes_parenthesis_regardless_of_whitespace() {
         let mut tokenizer = tokenizer_for("(x + y)())");
         let expected = [ParenOpen, Symbol("x".to_owned()), Symbol("+".to_owned()), Symbol("y".to_owned()), ParenClose, ParenOpen, ParenClose, ParenClose];
+
+        for token in expected.into_iter() {
+            assert!(tokenizer.next().unwrap().unwrap() == *token);
+        }
+
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
+    fn recognizes_string_boundaries_regardless_of_whitespace() {
+        let mut tokenizer = tokenizer_for("\"x + y\"\"\"\"");
+        let expected = [StringBoundary, Symbol("x".to_owned()), Symbol("+".to_owned()), Symbol("y".to_owned()), StringBoundary, StringBoundary, StringBoundary, StringBoundary];
 
         for token in expected.into_iter() {
             assert!(tokenizer.next().unwrap().unwrap() == *token);

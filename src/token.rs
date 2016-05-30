@@ -5,6 +5,7 @@ pub enum Token {
     Equals,
     ParenOpen,
     ParenClose,
+    StringBoundary,
     EOL,
 }
 
