@@ -88,7 +88,9 @@ impl Tokenizer {
             })
         }
         else if symbol.chars().next().map_or(false, |c| c.is_digit(10)) {
-            Err(TokenError::SymbolCannotBeNumber)
+            symbol.parse::<f64>()
+                .map(|value| Token::Number(value))
+                .map_err(|_| TokenError::SymbolCannotBeNumber)
         }
         else if symbol == "=" {
             Ok(Token::Equals)
@@ -172,16 +174,26 @@ mod tests {
 
     #[test]
     fn number() {
-        let mut tokenizer = tokenizer_for("5394");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Number(5394f64));
-        assert!(tokenizer.next().is_none());
+        test_number("-5394", -5394f64);
 
-        let mut tokenizer = tokenizer_for("1233.14");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Number(1233.14f64));
-        assert!(tokenizer.next().is_none());
+        test_number("1233.14", 1233.14f64);
 
-        let mut tokenizer = tokenizer_for("3.14159e-3");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Number(3.14159e-3f64));
+        test_number("3.14159e-3", 3.14159e-3f64);
+    }
+
+    fn test_number(literal: &str, expected_value: f64) {
+        const ERROR_MARGIN: f64 = 1e-1;
+        let mut tokenizer = tokenizer_for(literal);
+
+        let matched_token = tokenizer.next().unwrap().unwrap();
+        if let Number(value) = matched_token {
+            assert!(value - expected_value <= ERROR_MARGIN,
+                format!("The literal '{}' did not match the value {}, got {} instead", literal, expected_value, value));
+        }
+        else {
+            panic!("Did not get Number when expecting {}, got {:?} instead", expected_value, matched_token);
+        }
+
         assert!(tokenizer.next().is_none());
     }
 
