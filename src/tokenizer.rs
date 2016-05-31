@@ -13,9 +13,8 @@ lazy_static! {
         'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
         'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
         'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-        'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', '-', '_', '$', '^', '&', '*', '!', '@', '%', '+',
-        '?', '<', '>', '.', ':', '/', '|', '~', ',', '='
+        'W', 'X', 'Y', 'Z', '-', '_', '$', '^', '&', '*', '!', '@',
+        '%', '+', '?', '<', '>', '.', ':', '/', '|', '~', ',', '=',
     ].into_iter().collect();
 }
 
@@ -59,7 +58,12 @@ impl Tokenizer {
         Ok(())
     }
 
-    fn next_symbol(&mut self, start: char) -> TokenResult {
+    fn match_advanced_token(&mut self, start: char) -> TokenResult {
+        match self.must_match_numeric(start) {
+            Ok(yes) => if yes { return self.match_numeric(start) },
+            Err(message) => return Err(TokenError::ScannerError(message.to_owned())),
+        };
+
         let mut symbol = String::new();
 
         let mut next_char = Some(start);
@@ -80,17 +84,80 @@ impl Tokenizer {
         self.validate_symbol(symbol)
     }
 
+    fn must_match_numeric(&mut self, start: char) -> result::Result<bool, &str> {
+        // Text must match a numeric literal if it could possibly
+        // be interpreted as a number.
+        // More formally, text must match a number if any of the
+        // following conditions are met:
+        // 1. start is a digit
+        // 2. start is either '-' or '.' and the second character is a digit
+        // 3. start is '-', the second character is '.' and the third character is a digit
+        //TODO: There must be some way to optimize this significantly
+        if start.is_digit(10) {
+            return Ok(true);
+        }
+
+        let start_dash = start == '-';
+        let start_dot = start == '.';
+
+        let second = self.scanner.get_char();
+        // Cannot undo this mutation right away just in case we need to get a third character after this
+
+        let second_is_digit = second.map_or(false, |c| c.is_digit(10));
+        
+        if (start_dash || start_dot) && second_is_digit {
+            // Undo any extra mutations that occurred
+            try!(self.scanner.unget_char());
+            return Ok(true);
+        }
+
+        let third = self.scanner.get_char();
+        // Undo any extra mutations that occurred
+        try!(self.scanner.unget_char());
+        try!(self.scanner.unget_char());
+
+        let second_is_dot = second.map_or(false, |c| c == '.');
+        let third_is_digit = third.map_or(false, |c| c.is_digit(10));
+
+        if start_dash && second_is_dot && third_is_digit {
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    fn match_numeric(&mut self, start: char) -> TokenResult {
+        let mut literal = String::new();
+        literal.push(start);
+
+        // This is quite naive because parse() will do most of the work
+        loop {
+            let next_char = self.scanner.get_char();
+            if next_char.is_none() {
+                break;
+            }
+            let c = next_char.unwrap();
+            if c.is_digit(10) || c == '.' {
+                literal.push(c)
+            }
+            else {
+                try!(self.scanner.unget_char()
+                    .map_err(|e| TokenError::ScannerError(e.to_owned())));
+                break;
+            }
+        }
+
+        literal.parse::<f64>()
+            .map(|value| Token::Number(value))
+            .map_err(|_| TokenError::InvalidNumericLiteral)
+    }
+
     fn validate_symbol(&mut self, symbol: String) -> TokenResult {
         if symbol.len() == 0 {
             Err(match self.scanner.get_char() {
                 Some(c) => TokenError::UnrecognizedCharacter(c),
                 None => TokenError::UnexpectedEndOfInput,
             })
-        }
-        else if symbol.chars().next().map_or(false, |c| c.is_digit(10)) {
-            symbol.parse::<f64>()
-                .map(|value| Token::Number(value))
-                .map_err(|_| TokenError::InvalidNumericLiteral)
         }
         else if symbol == "=" {
             Ok(Token::Equals)
@@ -126,7 +193,7 @@ impl Iterator for Tokenizer {
             ')' => Token::ParenClose,
             '"' => Token::StringBoundary,
             EOL_CHAR => Token::EOL,
-            _ => return Some(self.next_symbol(c)),
+            _ => return Some(self.match_advanced_token(c)),
         }))
     }
 }
@@ -175,9 +242,10 @@ mod tests {
     #[test]
     fn number() {
         test_number("-5394", -5394f64);
-
+        test_number("0.5", 0.5f64);
+        test_number(".5", 0.5f64);
+        test_number("-.5", -0.5f64);
         test_number("1233.14", 1233.14f64);
-
         test_number("3.14159e-3", 3.14159e-3f64);
     }
 
@@ -217,6 +285,38 @@ mod tests {
     }
 
     #[test]
+    fn allows_only_minus_in_symbol() {
+        // This test is important because it may fail if numeric parsing changes
+        let mut tokenizer = tokenizer_for("x - 1");
+        let expected = [
+            Symbol("x".to_owned()),
+            Symbol("-".to_owned()),
+            Number(1f64),
+        ];
+
+        for token in expected.into_iter() {
+            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
+        }
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
+    fn allows_only_minus_dot_in_symbol() {
+        // This test is important because it may fail if numeric parsing changes since -.5 is a valid numeric literal
+        let mut tokenizer = tokenizer_for("x -. 1");
+        let expected = [
+            Symbol("x".to_owned()),
+            Symbol("-.".to_owned()),
+            Number(1f64),
+        ];
+
+        for token in expected.into_iter() {
+            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
+        }
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
     fn groups_equals_into_symbols_when_there_is_no_whitespace() {
         let symbol = "=ifsaoi=hfsdMMDS,,,,~~~:=".to_owned();
 
@@ -244,6 +344,24 @@ mod tests {
     }
 
     #[test]
+    fn disallows_invalid_numbers() {
+        let symbol = "..5".to_owned();
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
+        assert!(tokenizer.next().is_none());
+
+        let symbol = "-..5".to_owned();
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
+        assert!(tokenizer.next().is_none());
+
+        let symbol = "192.168.0.1".to_owned();
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
     fn disallows_invalid_characters() {
         let symbol = "]";
         let mut tokenizer = tokenizer_for(&symbol);
@@ -261,9 +379,17 @@ mod tests {
 
     #[test]
     fn accepts_all_valid_symbol_characters_into_a_symbol() {
-        let symbol = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_$^&*!@%+?<>.:/|~,=".to_owned();
+        let symbol = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_$^&*!@%+?<>.:/|~,=".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol));
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
+    fn recognizes_symbols_containing_numbers() {
+        let symbol = "ms^-2";
+        let mut tokenizer = tokenizer_for(symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
         assert!(tokenizer.next().is_none());
     }
 
