@@ -59,7 +59,7 @@ impl Tokenizer {
         Ok(())
     }
 
-    fn next_symbol(&mut self, start: char) -> Option<TokenResult> {
+    fn next_symbol(&mut self, start: char) -> TokenResult {
         let mut symbol = String::new();
 
         let mut next_char = Some(start);
@@ -69,9 +69,7 @@ impl Tokenizer {
                 symbol.push(c)
             }
             else {
-                if let Err(message) = self.scanner.unget_char() {
-                    return Some(Err(TokenError::ScannerError(message.to_owned())));
-                }
+                try!(self.scanner.unget_char().map_err(|e| TokenError::ScannerError(e.to_owned())));
                 break;
             }
 
@@ -79,19 +77,19 @@ impl Tokenizer {
         }
 
         if symbol.len() == 0 {
-            Some(Err(match self.scanner.get_char() {
+            Err(match self.scanner.get_char() {
                 Some(c) => TokenError::UnrecognizedCharacter(c),
                 None => TokenError::UnexpectedEndOfInput,
-            }))
+            })
         }
         else if symbol.chars().next().map_or(false, |c| c.is_digit(10)) {
-            Some(Err(TokenError::SymbolCannotBeNumber))
+            Err(TokenError::SymbolCannotBeNumber)
         }
         else if symbol == "=" {
-            Some(Ok(Token::Equals))
+            Ok(Token::Equals)
         }
         else {
-            Some(Ok(Token::Symbol(symbol)))
+            Ok(Token::Symbol(symbol))
         }
     }
 }
@@ -121,14 +119,7 @@ impl Iterator for Tokenizer {
             ')' => Token::ParenClose,
             '"' => Token::StringBoundary,
             EOL_CHAR => Token::EOL,
-            _ => {
-                if let Some(symbol_result) = self.next_symbol(c) {
-                    return Some(symbol_result);
-                }
-                else {
-                    return None;
-                }
-            },
+            _ => return Some(self.next_symbol(c)),
         }))
     }
 }
