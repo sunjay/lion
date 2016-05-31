@@ -69,13 +69,18 @@ impl Tokenizer {
                 symbol.push(c)
             }
             else {
-                try!(self.scanner.unget_char().map_err(|e| TokenError::ScannerError(e.to_owned())));
+                try!(self.scanner.unget_char()
+                    .map_err(|e| TokenError::ScannerError(e.to_owned())));
                 break;
             }
 
             next_char = self.scanner.get_char();
         }
 
+        self.validate_symbol(symbol)
+    }
+
+    fn validate_symbol(&mut self, symbol: String) -> TokenResult {
         if symbol.len() == 0 {
             Err(match self.scanner.get_char() {
                 Some(c) => TokenError::UnrecognizedCharacter(c),
