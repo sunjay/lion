@@ -181,22 +181,6 @@ mod tests {
         test_number("3.14159e-3", 3.14159e-3f64);
     }
 
-    fn test_number(literal: &str, expected_value: f64) {
-        const ERROR_MARGIN: f64 = 1e-1;
-        let mut tokenizer = tokenizer_for(literal);
-
-        let matched_token = tokenizer.next().unwrap().unwrap();
-        if let Number(value) = matched_token {
-            assert!(value - expected_value <= ERROR_MARGIN,
-                format!("The literal '{}' did not match the value {}, got {} instead", literal, expected_value, value));
-        }
-        else {
-            panic!("Did not get Number when expecting {}, got {:?} instead", expected_value, matched_token);
-        }
-
-        assert!(tokenizer.next().is_none());
-    }
-
     #[test]
     fn eol() {
         let mut tokenizer = tokenizer_for("\n");
@@ -218,7 +202,15 @@ mod tests {
 
     #[test]
     fn groups_characters_into_symbols() {
-        let symbol = "abqq$$1111^&/|!";
+        let symbol = "abqq$$^&/|!";
+        let mut tokenizer = tokenizer_for(symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
+    fn allows_symbols_starting_with_minus() {
+        let symbol = "-abqq$$^&/|!";
         let mut tokenizer = tokenizer_for(symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
         assert!(tokenizer.next().is_none());
@@ -239,7 +231,15 @@ mod tests {
     fn disallows_symbols_starting_with_numbers() {
         let symbol = "123abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::SymbolCannotBeNumber);
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
+    fn disallows_symbols_starting_with_numbers_and_minus() {
+        let symbol = "-123abc~".to_owned();
+        let mut tokenizer = tokenizer_for(&symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('1'));
         assert!(tokenizer.next().is_none());
     }
 
@@ -251,19 +251,17 @@ mod tests {
         assert!(tokenizer.next().is_none());
 
         // Make sure invalid character is caught among valid characters too
-        let symbol = "a12[$3abc~".to_owned();
+        let symbol = "a[$abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
 
         // Ignore first token
-        assert!(tokenizer.next().unwrap().is_ok());
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('['));
-        assert!(tokenizer.next().unwrap().is_ok());
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn accepts_all_valid_symbol_characters_into_a_symbol() {
-        let symbol = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_$^&*!@%+?<>.:/|~,=".to_owned();
+        let symbol = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_$^&*!@%+?<>.:/|~,=".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol));
         assert!(tokenizer.next().is_none());
@@ -304,6 +302,20 @@ mod tests {
     fn tokenizer_for(string: &str) -> Tokenizer {
         Tokenizer::new(Scanner::from_str(string))
     }
+
+    fn test_number(literal: &str, expected_value: f64) {
+        const ERROR_MARGIN: f64 = 0.0;
+        let mut tokenizer = tokenizer_for(literal);
+
+        let matched_token = tokenizer.next().unwrap().unwrap();
+        if let Number(value) = matched_token {
+            assert!(value - expected_value <= ERROR_MARGIN,
+                format!("The literal '{}' did not match the value {}, got {} instead", literal, expected_value, value));
+        }
+        else {
+            panic!("Did not get Number when expecting {}, got {:?} instead", expected_value, matched_token);
+        }
+
+        assert!(tokenizer.next().is_none());
+    }
 }
-
-
