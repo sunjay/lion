@@ -23,7 +23,7 @@ lazy_static! {
 pub enum TokenError {
     UnrecognizedCharacter(char),
     UnexpectedEndOfInput,
-    SymbolCannotBeNumber,
+    InvalidNumericLiteral,
     ScannerError(String),
 }
 
@@ -90,7 +90,7 @@ impl Tokenizer {
         else if symbol.chars().next().map_or(false, |c| c.is_digit(10)) {
             symbol.parse::<f64>()
                 .map(|value| Token::Number(value))
-                .map_err(|_| TokenError::SymbolCannotBeNumber)
+                .map_err(|_| TokenError::InvalidNumericLiteral)
         }
         else if symbol == "=" {
             Ok(Token::Equals)
