@@ -55,6 +55,7 @@ $ add2cm (5 cm)
   * I/O
   * Graphing
 * Importing and modules - being able to add defintions defined in a separate module somewhere (split circuits from basic math, etc.)
+* Other numerical bases + numeric literals for those bases (base 16, etc.)
 
 ## Syntax
 
