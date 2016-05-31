@@ -6,6 +6,7 @@ pub enum Token {
     ParenOpen,
     ParenClose,
     StringBoundary,
+    Number(f64),
     EOL,
 }
 

@@ -171,6 +171,21 @@ mod tests {
     }
 
     #[test]
+    fn number() {
+        let mut tokenizer = tokenizer_for("5394");
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Number(5394f64));
+        assert!(tokenizer.next().is_none());
+
+        let mut tokenizer = tokenizer_for("1233.14");
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Number(1233.14f64));
+        assert!(tokenizer.next().is_none());
+
+        let mut tokenizer = tokenizer_for("3.14159e-3");
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Number(3.14159e-3f64));
+        assert!(tokenizer.next().is_none());
+    }
+
+    #[test]
     fn eol() {
         let mut tokenizer = tokenizer_for("\n");
         assert_eq!(tokenizer.next().unwrap().unwrap(), EOL);
