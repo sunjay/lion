@@ -6,7 +6,8 @@ extern crate lazy_static;
 mod scanner;
 mod token;
 mod tokenizer;
+mod parser;
 
 //TODO: Make this not public
-pub use tokenizer::Tokenizer;
+pub use parser::Parser;
 
