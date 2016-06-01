@@ -1,11 +1,7 @@
-use std::fmt;
-use std::option::Option;
-use std::result::Result;
 use std::vec::Vec;
 
 pub struct Scanner {
     position: isize,
-    length: isize,
     buffer: Vec<char>,
 }
 
@@ -13,7 +9,6 @@ impl Scanner {
     pub fn new() -> Scanner {
         Scanner {
             position: -1,
-            length: 0,
             buffer: Vec::new(),
         }
     }
@@ -25,39 +20,34 @@ impl Scanner {
     }
 
     pub fn len(&self) -> isize {
-        self.length
+        self.buffer.len() as isize
     }
 
     pub fn push_str(&mut self, string: &str) {
         self.buffer.extend(string.chars());
-        self.length += string.len() as isize;
     }
 
     pub fn get_char(&mut self) -> Option<char> {
-        if self.position < self.length - 1 {
+        if self.position < self.len() - 1 {
             self.position += 1;
-            let c = self.buffer[self.position as usize];
-            Some(c)
+
+            if self.position < self.len() {
+                let c = self.buffer[self.position as usize];
+                return Some(c)
+            }
+        }
+
+        None
+    }
+
+    pub fn unget_char(&mut self) -> Option<()> {
+        if self.position >= 0 {
+            self.position -= 1;
+            Some(())
         }
         else {
             None
         }
-    }
-
-    pub fn unget_char(&mut self) -> Result<(), &str> {
-        if self.position >= 0 {
-            self.position -= 1;
-            Ok(())
-        }
-        else {
-            Err("No character to unget")
-        }
-    }
-}
-
-impl fmt::Display for Scanner {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Scanner {{position: {}, length: {}}}", self.position, self.length)
     }
 }
 
@@ -147,12 +137,12 @@ mod tests {
     #[test]
     fn cannot_unget_before_start() {
         let mut scanner = Scanner::from_str("T");
-        assert!(scanner.unget_char().is_err());
+        assert!(scanner.unget_char().is_none());
         scanner.get_char();
-        assert!(!scanner.unget_char().is_err());
-        assert!(scanner.unget_char().is_err());
+        assert!(!scanner.unget_char().is_none());
+        assert!(scanner.unget_char().is_none());
         // Try again just in case
-        assert!(scanner.unget_char().is_err());
+        assert!(scanner.unget_char().is_none());
     }
 }
 

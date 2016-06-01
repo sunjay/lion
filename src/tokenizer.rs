@@ -6,6 +6,10 @@ use token::Token;
 use scanner::Scanner;
 
 const EOL_CHAR: char = '\n';
+const BACKSLASH_CHAR: char = '\\';
+const PAREN_OPEN_CHAR: char = '(';
+const PAREN_CLOSE_CHAR: char = ')';
+const STRING_BOUNDARY_CHAR: char = '"';
 
 lazy_static! {
     static ref SYMBOL_CHARS: HashSet<char> = vec![
@@ -13,8 +17,17 @@ lazy_static! {
         'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
         'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
         'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-        'W', 'X', 'Y', 'Z', '-', '_', '$', '^', '&', '*', '!', '@',
-        '%', '+', '?', '<', '>', '.', ':', '/', '|', '~', ',', '=',
+        'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7',
+        '8', '9', '-', '_', '$', '^', '&', '*', '!', '@', '%', '+',
+        '?', '<', '>', '.', ':', '/', '|', '~', ',', '=',
+    ].into_iter().collect();
+
+    static ref TOKEN_BOUNDARY_CHARS: HashSet<char> = vec![
+        EOL_CHAR,
+        BACKSLASH_CHAR,
+        PAREN_OPEN_CHAR,
+        PAREN_CLOSE_CHAR,
+        STRING_BOUNDARY_CHAR,
     ].into_iter().collect();
 }
 
@@ -23,7 +36,6 @@ pub enum TokenError {
     UnrecognizedCharacter(char),
     UnexpectedEndOfInput,
     InvalidNumericLiteral,
-    ScannerError(String),
 }
 
 pub type TokenResult = result::Result<Token, TokenError>;
@@ -41,7 +53,7 @@ impl Tokenizer {
         }
     }
 
-    fn ignore_whitespace(&mut self) -> result::Result<(), &str> {
+    fn ignore_whitespace(&mut self) {
         loop {
             let c = self.scanner.get_char();
             if c.is_none() {
@@ -50,19 +62,16 @@ impl Tokenizer {
 
             let c = c.unwrap();
             if !c.is_whitespace() || c == EOL_CHAR {
-                try!(self.scanner.unget_char());
+                self.scanner.unget_char();
                 break;
             }
         }
-
-        Ok(())
     }
 
     fn match_advanced_token(&mut self, start: char) -> TokenResult {
-        match self.must_match_numeric(start) {
-            Ok(yes) => if yes { return self.match_numeric(start) },
-            Err(message) => return Err(TokenError::ScannerError(message.to_owned())),
-        };
+        if self.must_match_numeric(start) {
+            return self.match_numeric(start);
+        }
 
         let mut symbol = String::new();
 
@@ -72,10 +81,12 @@ impl Tokenizer {
             if SYMBOL_CHARS.contains(&c) {
                 symbol.push(c)
             }
-            else {
-                try!(self.scanner.unget_char()
-                    .map_err(|e| TokenError::ScannerError(e.to_owned())));
+            else if self.is_token_boundary(&c) {
+                self.scanner.unget_char();
                 break;
+            }
+            else {
+                return Err(TokenError::UnrecognizedCharacter(c));
             }
 
             next_char = self.scanner.get_char();
@@ -84,7 +95,7 @@ impl Tokenizer {
         self.validate_symbol(symbol)
     }
 
-    fn must_match_numeric(&mut self, start: char) -> result::Result<bool, &str> {
+    fn must_match_numeric(&mut self, start: char) -> bool {
         // Text must match a numeric literal if it could possibly
         // be interpreted as a number.
         // More formally, text must match a number if any of the
@@ -94,7 +105,7 @@ impl Tokenizer {
         // 3. start is '-', the second character is '.' and the third character is a digit
         //TODO: There must be some way to optimize this significantly
         if start.is_digit(10) {
-            return Ok(true);
+            return true;
         }
 
         let start_dash = start == '-';
@@ -107,23 +118,23 @@ impl Tokenizer {
         
         if (start_dash || start_dot) && second_is_digit {
             // Undo any extra mutations that occurred
-            try!(self.scanner.unget_char());
-            return Ok(true);
+            if !second.is_none() { self.scanner.unget_char(); }
+            return true;
         }
 
         let third = self.scanner.get_char();
         // Undo any extra mutations that occurred
-        try!(self.scanner.unget_char());
-        try!(self.scanner.unget_char());
+        if !third.is_none() { self.scanner.unget_char(); }
+        if !second.is_none() { self.scanner.unget_char(); }
 
         let second_is_dot = second.map_or(false, |c| c == '.');
         let third_is_digit = third.map_or(false, |c| c.is_digit(10));
 
         if start_dash && second_is_dot && third_is_digit {
-            return Ok(true);
+            return true;
         }
 
-        Ok(false)
+        false
     }
 
     fn match_numeric(&mut self, start: char) -> TokenResult {
@@ -140,10 +151,12 @@ impl Tokenizer {
             if c.is_digit(10) || c == '.' {
                 literal.push(c)
             }
-            else {
-                try!(self.scanner.unget_char()
-                    .map_err(|e| TokenError::ScannerError(e.to_owned())));
+            else if self.is_token_boundary(&c) {
+                self.scanner.unget_char();
                 break;
+            }
+            else {
+                return Err(TokenError::InvalidNumericLiteral);
             }
         }
 
@@ -166,6 +179,10 @@ impl Tokenizer {
             Ok(Token::Symbol(symbol))
         }
     }
+
+    fn is_token_boundary(&self, c: &char) -> bool {
+        TOKEN_BOUNDARY_CHARS.contains(&c) || c.is_whitespace()
+    }
 }
 
 impl Iterator for Tokenizer {
@@ -176,9 +193,7 @@ impl Iterator for Tokenizer {
             return None;
         }
 
-        if let Err(message) = self.ignore_whitespace() {
-            return Some(Err(TokenError::ScannerError(message.to_owned())));
-        }
+        self.ignore_whitespace();
 
         let c = self.scanner.get_char();
         if c.is_none() {
@@ -188,10 +203,10 @@ impl Iterator for Tokenizer {
 
         let c = c.unwrap();
         Some(Ok(match c {
-            '\\' => Token::Backslash,
-            '(' => Token::ParenOpen,
-            ')' => Token::ParenClose,
-            '"' => Token::StringBoundary,
+            BACKSLASH_CHAR => Token::Backslash,
+            PAREN_OPEN_CHAR => Token::ParenOpen,
+            PAREN_CLOSE_CHAR => Token::ParenClose,
+            STRING_BOUNDARY_CHAR => Token::StringBoundary,
             EOL_CHAR => Token::EOL,
             _ => return Some(self.match_advanced_token(c)),
         }))
@@ -339,22 +354,12 @@ mod tests {
     fn disallows_symbols_starting_with_numbers_and_minus() {
         let symbol = "-123abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('1'));
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
         assert!(tokenizer.next().is_none());
     }
 
     #[test]
     fn disallows_invalid_numbers() {
-        let symbol = "..5".to_owned();
-        let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-        assert!(tokenizer.next().is_none());
-
-        let symbol = "-..5".to_owned();
-        let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-        assert!(tokenizer.next().is_none());
-
         let symbol = "192.168.0.1".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
@@ -366,13 +371,12 @@ mod tests {
         let symbol = "]";
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter(']'));
-        assert!(tokenizer.next().is_none());
+        assert_eq!(tokenizer.next(), None);
 
         // Make sure invalid character is caught among valid characters too
         let symbol = "a[$abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
 
-        // Ignore first token
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('['));
         assert!(tokenizer.next().is_none());
     }
