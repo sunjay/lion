@@ -23,7 +23,7 @@ $ add2cm (5 cm)
 
 * Define most things in the language itself rather than on a compiler level
 * Support prefix, postfix and infix operators -- functions, units and operators
-* Be lazy, not eager (still under consideration) -- but still provide a way to force strict evaluation
+* Be lazy, not eager -- but still provide a way to force strict evaluation (still under consideration, since lazy probably requires immutable too)
 * **Do not write another programming language.** Keep it simple.
 
 ## Implementation Goals:
