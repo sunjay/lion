@@ -141,14 +141,15 @@ impl Tokenizer {
         let mut literal = String::new();
         literal.push(start);
 
-        // This is quite naive because parse() will do most of the work
         loop {
             let next_char = self.scanner.get_char();
             if next_char.is_none() {
                 break;
             }
+
             let c = next_char.unwrap();
-            if c.is_digit(10) || c == '.' {
+            // This is quite naive because parse() will do most of the work
+            if c.is_digit(10) || c == '.' || c == 'e' || c == '-' {
                 literal.push(c)
             }
             else if self.is_token_boundary(&c) {
@@ -347,7 +348,6 @@ mod tests {
         let symbol = "123abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-        assert!(tokenizer.next().is_none());
     }
 
     #[test]
@@ -355,7 +355,6 @@ mod tests {
         let symbol = "-123abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-        assert!(tokenizer.next().is_none());
     }
 
     #[test]
@@ -363,7 +362,6 @@ mod tests {
         let symbol = "192.168.0.1".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-        assert!(tokenizer.next().is_none());
     }
 
     #[test]
@@ -371,14 +369,12 @@ mod tests {
         let symbol = "]";
         let mut tokenizer = tokenizer_for(&symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter(']'));
-        assert_eq!(tokenizer.next(), None);
 
         // Make sure invalid character is caught among valid characters too
         let symbol = "a[$abc~".to_owned();
         let mut tokenizer = tokenizer_for(&symbol);
 
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('['));
-        assert!(tokenizer.next().is_none());
     }
 
     #[test]
