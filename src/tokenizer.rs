@@ -217,42 +217,38 @@ impl Iterator for Tokenizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use token::Token;
     use token::Token::*;
     use scanner::Scanner;
 
     #[test]
     fn backslash() {
-        let mut tokenizer = tokenizer_for("\\");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Backslash);
-        assert!(tokenizer.next().is_none());
+        test_single_token("\\", Backslash);
     }
 
     #[test]
     fn equals() {
-        let mut tokenizer = tokenizer_for("=");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Equals);
-        assert!(tokenizer.next().is_none());
+        test_single_token("=", Equals);
     }
 
     #[test]
     fn paren_open() {
-        let mut tokenizer = tokenizer_for("(");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), ParenOpen);
-        assert!(tokenizer.next().is_none());
+        test_single_token("(", ParenOpen);
     }
 
     #[test]
     fn paren_close() {
-        let mut tokenizer = tokenizer_for(")");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), ParenClose);
-        assert!(tokenizer.next().is_none());
+        test_single_token(")", ParenClose);
     }
 
     #[test]
     fn string_boundary() {
-        let mut tokenizer = tokenizer_for("\"");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), StringBoundary);
-        assert!(tokenizer.next().is_none());
+        test_single_token("\"", StringBoundary);
+    }
+
+    #[test]
+    fn eol() {
+        test_single_token("\n", EOL);
     }
 
     #[test]
@@ -266,155 +262,114 @@ mod tests {
     }
 
     #[test]
-    fn eol() {
-        let mut tokenizer = tokenizer_for("\n");
-        assert_eq!(tokenizer.next().unwrap().unwrap(), EOL);
-        assert!(tokenizer.next().is_none());
-    }
-
-    #[test]
-    fn recognizes_multiple_tokens_separated_by_whitespace() {
-        let mut tokenizer = tokenizer_for("\\ ) \n ( \\ = = )");
-        let expected = [Backslash, ParenClose, EOL, ParenOpen, Backslash, Equals, Equals, ParenClose];
-
-        for token in expected.into_iter() {
-            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
-        }
-
-        assert!(tokenizer.next().is_none());
-    }
-
-    #[test]
     fn groups_characters_into_symbols() {
-        let symbol = "abqq$$^&/|!";
-        let mut tokenizer = tokenizer_for(symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
-        assert!(tokenizer.next().is_none());
+        test_symbol("abqq$$^&/|!");
     }
 
     #[test]
     fn allows_symbols_starting_with_minus() {
-        let symbol = "-abqq$$^&/|!";
-        let mut tokenizer = tokenizer_for(symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
-        assert!(tokenizer.next().is_none());
+        test_symbol("-abqq$$^&/|!");
+    }
+
+    #[test]
+    fn groups_equals_into_symbols_when_there_is_no_whitespace() {
+        test_symbol("=ifsaoi=hfsdMMDS,,,,~~~:=");
+    }
+
+    #[test]
+    fn accepts_all_valid_symbol_characters_into_a_symbol() {
+        test_symbol("abcdefghijklmnopqrstuvwxyzABCDEFGHIJ\
+                    KLMNOPQRSTUVWXYZ0123456789-_$^&*!@%+?<>.:/|~,=");
+    }
+
+    #[test]
+    fn recognizes_symbols_containing_numbers() {
+        test_symbol("ms^-2");
+    }
+
+    #[test]
+    fn recognizes_multiple_tokens_separated_by_whitespace() {
+        test_expected_tokens("\\ ) \n ( \\ = = )", &[
+            Backslash,
+            ParenClose,
+            EOL,
+            ParenOpen,
+            Backslash,
+            Equals,
+            Equals,
+            ParenClose
+        ]);
     }
 
     #[test]
     fn allows_only_minus_in_symbol() {
         // This test is important because it may fail if numeric parsing changes
-        let mut tokenizer = tokenizer_for("x - 1");
-        let expected = [
+        test_expected_tokens("x - 1", &[
             Symbol("x".to_owned()),
             Symbol("-".to_owned()),
             Number(1f64),
-        ];
-
-        for token in expected.into_iter() {
-            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
-        }
-        assert!(tokenizer.next().is_none());
+        ]);
     }
 
     #[test]
     fn allows_only_minus_dot_in_symbol() {
         // This test is important because it may fail if numeric parsing changes since -.5 is a valid numeric literal
-        let mut tokenizer = tokenizer_for("x -. 1");
-        let expected = [
+        test_expected_tokens("x -. 1", &[
             Symbol("x".to_owned()),
             Symbol("-.".to_owned()),
             Number(1f64),
-        ];
-
-        for token in expected.into_iter() {
-            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
-        }
-        assert!(tokenizer.next().is_none());
-    }
-
-    #[test]
-    fn groups_equals_into_symbols_when_there_is_no_whitespace() {
-        let symbol = "=ifsaoi=hfsdMMDS,,,,~~~:=".to_owned();
-
-        // Make sure leading whitespace does not effect the output
-        let mut tokenizer = tokenizer_for(&format!("  {}", symbol));
-
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol));
-        assert!(tokenizer.next().is_none());
-    }
-
-    #[test]
-    fn disallows_symbols_starting_with_numbers() {
-        let symbol = "123abc~".to_owned();
-        let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-    }
-
-    #[test]
-    fn disallows_symbols_starting_with_numbers_and_minus() {
-        let symbol = "-123abc~".to_owned();
-        let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-    }
-
-    #[test]
-    fn disallows_invalid_numbers() {
-        let symbol = "192.168.0.1".to_owned();
-        let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::InvalidNumericLiteral);
-    }
-
-    #[test]
-    fn disallows_invalid_characters() {
-        let symbol = "]";
-        let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter(']'));
-
-        // Make sure invalid character is caught among valid characters too
-        let symbol = "a[$abc~".to_owned();
-        let mut tokenizer = tokenizer_for(&symbol);
-
-        assert_eq!(tokenizer.next().unwrap().unwrap_err(), TokenError::UnrecognizedCharacter('['));
-    }
-
-    #[test]
-    fn accepts_all_valid_symbol_characters_into_a_symbol() {
-        let symbol = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_$^&*!@%+?<>.:/|~,=".to_owned();
-        let mut tokenizer = tokenizer_for(&symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol));
-        assert!(tokenizer.next().is_none());
-    }
-
-    #[test]
-    fn recognizes_symbols_containing_numbers() {
-        let symbol = "ms^-2";
-        let mut tokenizer = tokenizer_for(symbol);
-        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
-        assert!(tokenizer.next().is_none());
+        ]);
     }
 
     #[test]
     fn recognizes_parenthesis_regardless_of_whitespace() {
-        let mut tokenizer = tokenizer_for("(x + y)())");
-        let expected = [ParenOpen, Symbol("x".to_owned()), Symbol("+".to_owned()), Symbol("y".to_owned()), ParenClose, ParenOpen, ParenClose, ParenClose];
-
-        for token in expected.into_iter() {
-            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
-        }
-
-        assert!(tokenizer.next().is_none());
+        test_expected_tokens("(x + y)())", &[
+            ParenOpen,
+            Symbol("x".to_owned()),
+            Symbol("+".to_owned()),
+            Symbol("y".to_owned()),
+            ParenClose,
+            ParenOpen,
+            ParenClose,
+            ParenClose
+        ]);
     }
 
     #[test]
     fn recognizes_string_boundaries_regardless_of_whitespace() {
-        let mut tokenizer = tokenizer_for("\"x + y\"\"\"\"");
-        let expected = [StringBoundary, Symbol("x".to_owned()), Symbol("+".to_owned()), Symbol("y".to_owned()), StringBoundary, StringBoundary, StringBoundary, StringBoundary];
+        test_expected_tokens("\"x + y\"\"\"\"", &[
+            StringBoundary,
+            Symbol("x".to_owned()),
+            Symbol("+".to_owned()),
+            Symbol("y".to_owned()),
+            StringBoundary,
+            StringBoundary,
+            StringBoundary,
+            StringBoundary
+        ]);
+    }
 
-        for token in expected.into_iter() {
-            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
-        }
+    #[test]
+    fn disallows_symbols_starting_with_numbers() {
+        test_symbol_error("123abc~", TokenError::InvalidNumericLiteral);
+    }
 
-        assert!(tokenizer.next().is_none());
+    #[test]
+    fn disallows_symbols_starting_with_numbers_and_minus() {
+        test_symbol_error("-123abc~", TokenError::InvalidNumericLiteral);
+    }
+
+    #[test]
+    fn disallows_invalid_numbers() {
+        test_symbol_error("192.168.0.1", TokenError::InvalidNumericLiteral);
+    }
+
+    #[test]
+    fn disallows_invalid_characters() {
+        test_symbol_error("]", TokenError::UnrecognizedCharacter(']'));
+
+        // Make sure invalid character is caught among valid characters too
+        test_symbol_error("a[$abc~", TokenError::UnrecognizedCharacter('['));
     }
 
     #[test]
@@ -425,8 +380,39 @@ mod tests {
         assert!(tokenizer.next().is_none());
     }
 
+    // Test utility functions
+
     fn tokenizer_for(string: &str) -> Tokenizer {
         Tokenizer::new(Scanner::from_str(string))
+    }
+
+    fn test_single_token(input: &str, expected_token: Token) {
+        let mut tokenizer = tokenizer_for(input);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), expected_token);
+        assert!(tokenizer.next().is_none());
+    }
+
+    fn test_symbol(symbol: &str) {
+        let mut tokenizer = tokenizer_for(symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap(), Symbol(symbol.to_owned()));
+        // Ensure no extra tokens other than what is expected
+        assert!(tokenizer.next().is_none());
+    }
+
+    fn test_symbol_error(symbol: &str, err: TokenError) {
+        let mut tokenizer = tokenizer_for(symbol);
+        assert_eq!(tokenizer.next().unwrap().unwrap_err(), err);
+        // Behaviour of tokens after an error are undefined
+    }
+
+    fn test_expected_tokens(input: &str, expected: &[Token]) {
+        let mut tokenizer = tokenizer_for(input);
+
+        for token in expected.into_iter() {
+            assert_eq!(tokenizer.next().unwrap().unwrap(), *token);
+        }
+
+        assert!(tokenizer.next().is_none());
     }
 
     fn test_number(literal: &str, expected_value: f64) {
