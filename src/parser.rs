@@ -12,6 +12,7 @@ pub type ParseResult<T> = Result<T, ParseError>;
 pub enum ParseError {
     ExpectedToken(Token),
     UnexpectedToken(Token),
+    InvalidStringLiteral,
     SyntaxError(LexerError),
 }
 
@@ -192,15 +193,37 @@ impl Parser {
                 &tokens[(close+1)..]
             ))
         }
+        else if tokens[0] == Token::StringBoundary {
+            // since strings can only be a single word, not a number
+            const STRING_VALUE: usize = 1;
+            const STRING_END: usize = 2;
+            const AFTER_STRING: usize = 3;
+
+            if tokens[STRING_END] != Token::StringBoundary {
+                Err(ParseError::ExpectedToken(Token::StringBoundary))
+            }
+            else if let Token::Symbol(ref value) = tokens[STRING_VALUE] {
+                Ok((ExprItem::SingleTerm(
+                    Term::StringLiteral(value.clone())
+                ), &tokens[AFTER_STRING..]))
+            }
+            else {
+                Err(ParseError::InvalidStringLiteral)
+            }
+        }
         else {
             Ok((ExprItem::SingleTerm(
-                try!(self.term(&tokens[0]))
+                try!(self.simple_term(&tokens[0]))
             ), &tokens[1..]))
         }
     }
 
-    fn term(&self, token: &Token) -> ParseResult<Term> {
-        Ok(Term::Symbol("ok".to_owned()))
+    fn simple_term(&self, token: &Token) -> ParseResult<Term> {
+        match *token {
+            Token::Symbol(ref s) => Ok(Term::Symbol(s.clone())),
+            Token::Number(ref n) => Ok(Term::Number(n.clone())),
+            _ => Err(ParseError::UnexpectedToken(token.clone())),
+        }
     }
 
     // partitions a function by its Equals token, returning None if no
