@@ -69,14 +69,15 @@ mod tests {
     #[test]
     fn complete_program() {
         let mut parser = parser_for(r#"
-defineUnit "km/h"
+        defineUnit "km/h"
 
-my_var = 30 km/h
-f x yy = x km/h * 2 + (my_var / -3.5) * (8 ** yy) - 1.3e-3
-print (f 30)
+        my_var = 30 km/h
+        f x yy = x km/h * 2 + (my_var / -3.5) * (8 ** yy) - 1.3e-3
+        print (f 30)
 
-operator INFIX 6 "$$" (\x y = x * y + x)
-"#);
+        operator INFIX 6 "$$" (\x y = x * y + x)
+        "#);
+
         let syntax_tree: Program = vec![
             Statement::Expression(vec![
                 ExprItem::SingleTerm(
