@@ -32,13 +32,13 @@ lazy_static! {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum TokenError {
+pub enum LexerError {
     UnrecognizedCharacter(char),
     UnexpectedEndOfInput,
     InvalidNumericLiteral,
 }
 
-pub type TokenResult = result::Result<Token, TokenError>;
+pub type TokenResult = result::Result<Token, LexerError>;
 
 pub struct Tokenizer {
     scanner: Scanner,
@@ -86,7 +86,7 @@ impl Tokenizer {
                 break;
             }
             else {
-                return Err(TokenError::UnrecognizedCharacter(c));
+                return Err(LexerError::UnrecognizedCharacter(c));
             }
 
             next_char = self.scanner.get_char();
@@ -157,20 +157,20 @@ impl Tokenizer {
                 break;
             }
             else {
-                return Err(TokenError::InvalidNumericLiteral);
+                return Err(LexerError::InvalidNumericLiteral);
             }
         }
 
         literal.parse::<f64>()
             .map(|value| Token::Number(value))
-            .map_err(|_| TokenError::InvalidNumericLiteral)
+            .map_err(|_| LexerError::InvalidNumericLiteral)
     }
 
     fn validate_symbol(&mut self, symbol: String) -> TokenResult {
         if symbol.len() == 0 {
             Err(match self.scanner.get_char() {
-                Some(c) => TokenError::UnrecognizedCharacter(c),
-                None => TokenError::UnexpectedEndOfInput,
+                Some(c) => LexerError::UnrecognizedCharacter(c),
+                None => LexerError::UnexpectedEndOfInput,
             })
         }
         else if symbol == "=" {
@@ -351,25 +351,25 @@ mod tests {
 
     #[test]
     fn disallows_symbols_starting_with_numbers() {
-        test_symbol_error("123abc~", TokenError::InvalidNumericLiteral);
+        test_symbol_error("123abc~", LexerError::InvalidNumericLiteral);
     }
 
     #[test]
     fn disallows_symbols_starting_with_numbers_and_minus() {
-        test_symbol_error("-123abc~", TokenError::InvalidNumericLiteral);
+        test_symbol_error("-123abc~", LexerError::InvalidNumericLiteral);
     }
 
     #[test]
     fn disallows_invalid_numbers() {
-        test_symbol_error("192.168.0.1", TokenError::InvalidNumericLiteral);
+        test_symbol_error("192.168.0.1", LexerError::InvalidNumericLiteral);
     }
 
     #[test]
     fn disallows_invalid_characters() {
-        test_symbol_error("]", TokenError::UnrecognizedCharacter(']'));
+        test_symbol_error("]", LexerError::UnrecognizedCharacter(']'));
 
         // Make sure invalid character is caught among valid characters too
-        test_symbol_error("a[$abc~", TokenError::UnrecognizedCharacter('['));
+        test_symbol_error("a[$abc~", LexerError::UnrecognizedCharacter('['));
     }
 
     #[test]
@@ -399,7 +399,7 @@ mod tests {
         assert!(tokenizer.next().is_none());
     }
 
-    fn test_symbol_error(symbol: &str, err: TokenError) {
+    fn test_symbol_error(symbol: &str, err: LexerError) {
         let mut tokenizer = tokenizer_for(symbol);
         assert_eq!(tokenizer.next().unwrap().unwrap_err(), err);
         // Behaviour of tokens after an error are undefined
