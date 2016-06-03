@@ -124,39 +124,44 @@ impl Parser {
         }
 
         // looking for either assignment or a named function
-        // both are a collection of symbols followed by equals
-        let mut lhs: Vec<Token> = Vec::new();
-        let mut rhs: Vec<Token> = Vec::new();
-        let mut found = false;
-        for token in &statement_tokens {
-            if found {
-                rhs.push(token.clone());
+        // both are a collection of only symbols followed by equals
+        let mut equals = None;
+        for (i, token) in statement_tokens.iter().enumerate() {
+            if *token == Token::Equals && i > 0 {
+                equals = Some(i);
+                break;
+            }
+            else if let Token::Symbol(_) = *token {
+                // Symbols are good, continue
+                // continue is unnecessary here but there is no `if !let`
+                // in Rust
                 continue;
-            }
-
-            if let Token::Symbol(_) = *token {
-                lhs.push(token.clone());
-            }
-            else if *token == Token::Equals && !lhs.is_empty() {
-                found = true;
             }
             else {
                 // Found something that is not a symbol, cannot be
-                // assignment or named function
+                // assignment or named function, stop
                 break;
             }
         }
 
-        if found {
-            match lhs.len() {
+        if equals.is_none() {
+            self.expr(statement_tokens)
+        }
+        else {
+            let equals = equals.unwrap();
+
+            // The 1 or many assumption being assumed in this
+            // match is only okay because of the i > 0 above
+            debug_assert!(equals > 0);
+
+            let lhs = statement_tokens[..equals].to_vec();
+            let rhs = statement_tokens[(equals+1)..].to_vec();
+            match equals {
                 // only one argument: name = ...
                 1 => self.assignment(lhs, rhs),
                 // more than one argument: name arg1 ... = ...
                 _ => self.named_function(lhs, rhs),
             }
-        }
-        else {
-            self.expr(statement_tokens)
         }
     }
 
