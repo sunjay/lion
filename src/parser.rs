@@ -118,11 +118,6 @@ impl Parser {
 
     fn dispatch_statement(&mut self, statement_tokens: Vec<Token>) -> ParseResult<Statement> {
         assert!(statement_tokens.len() > 0, "Got zero tokens to dispatch");
-
-        if statement_tokens[0] == Token::Backslash {
-            return self.anonymous_function(statement_tokens);
-        }
-
         // looking for either assignment or a named function
         // both are a collection of only symbols followed by equals
         let mut equals = None;
@@ -133,8 +128,11 @@ impl Parser {
             }
             else if let Token::Symbol(_) = *token {
                 // Symbols are good, continue
-                // continue is unnecessary here but there is no `if !let`
-                // in Rust
+                continue;
+            }
+            else if *token == Token::Backslash && i == 0 {
+                // Anonymous functions have backslashes,
+                // but only in the first position
                 continue;
             }
             else {
@@ -156,6 +154,11 @@ impl Parser {
 
             let lhs = statement_tokens[..equals].to_vec();
             let rhs = statement_tokens[(equals+1)..].to_vec();
+
+            if lhs[0] == Token::Backslash {
+                return self.anonymous_function(lhs, rhs);
+            }
+
             match equals {
                 // only one argument: name = ...
                 1 => self.assignment(lhs, rhs),
@@ -165,7 +168,7 @@ impl Parser {
         }
     }
 
-    fn anonymous_function(&mut self, tokens: Vec<Token>) -> ParseResult<Statement> {
+    fn anonymous_function(&mut self, lhs: Vec<Token>, rhs: Vec<Token>) -> ParseResult<Statement> {
         Ok(None)
     }
 
