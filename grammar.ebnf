@@ -4,7 +4,7 @@ Expr = AnonymousFunction | Term | "(" , Expr , ")" ,
 
 Assignment = Symbol , "=" , Expr ;
 
-AnonymousFunction = "\" FunctionRHS ;
+AnonymousFunction = "\" , FunctionRHS ;
 NamedFunction = Symbol , FunctionRHS ;
 
 FunctionRHS = FunctionParams , "=" , FunctionBody ;
