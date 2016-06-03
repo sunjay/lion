@@ -56,7 +56,23 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Program, ParseError> {
-        Err(ParseError::SyntaxError)
+        let mut lines: Program = Vec::new();
+
+        loop {
+            let line = try!(self.line());
+            if line.is_none() {
+                break;
+            }
+
+            let line = line.unwrap();
+            lines.push(line);
+        }
+
+        Ok(lines)
+    }
+
+    fn line(&mut self) -> Result<Option<Statement>, ParseError> {
+        Ok(None)
     }
 }
 
