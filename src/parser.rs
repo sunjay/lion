@@ -116,48 +116,20 @@ impl Parser {
 
     fn dispatch_statement(&self, statement_tokens: Vec<Token>) -> ParseResult<Statement> {
         assert!(statement_tokens.len() > 0, "Got zero tokens to dispatch");
-        // looking for either assignment or a named function
-        // both are a collection of only symbols followed by equals
-        let mut equals = None;
-        for (i, token) in statement_tokens.iter().enumerate() {
-            if *token == Token::Equals && i > 0 {
-                equals = Some(i);
-                break;
-            }
-            else if let Token::Symbol(_) = *token {
-                // Symbols are good, continue
-                continue;
-            }
-            else if *token == Token::Backslash && i == 0 {
-                // Anonymous functions have backslashes,
-                // but only in the first position
-                continue;
-            }
-            else {
-                // Found something that is not a symbol, cannot be
-                // assignment or named function, stop
-                break;
-            }
-        }
 
-        if equals.is_none() {
+        let function_parts = self.partition_function(&statement_tokens);
+
+        if function_parts.is_none() {
             Ok(Statement::Expression(try!(self.expr(&statement_tokens[..]))))
         }
         else {
-            let equals = equals.unwrap();
-
-            // The 1 or many assumption being assumed in this
-            // match is only okay because of the i > 0 above
-            debug_assert!(equals > 0);
-
-            let lhs = &statement_tokens[..equals];
-            let rhs = &statement_tokens[(equals+1)..];
+            let (lhs, rhs) = function_parts.unwrap();
 
             if lhs[0] == Token::Backslash {
                 return self.anonymous_function(lhs, rhs);
             }
 
-            match equals {
+            match lhs.len() {
                 // only one argument: name = ...
                 1 => self.assignment(lhs, rhs),
                 // more than one argument: name arg1 ... = ...
@@ -200,7 +172,44 @@ impl Parser {
     }
 
     fn expr(&self, tokens: &[Token]) -> ParseResult<Expr> {
-        Ok(Vec::new())
+        Ok(Expr::new())
+        //if tokens[0] == Token::Backslash {
+        //}
+    }
+
+    // partitions a function by its Equals token, returning None if no
+    // valid function is found
+    // Returns (lhs, rhs)
+    fn partition_function<'a>(&self, tokens: &'a [Token]) -> Option<(&'a [Token], &'a [Token])> {
+        // looking for either assignment or a named function
+        // both are a collection of only symbols followed by equals
+        let mut equals = None;
+        for (i, token) in tokens.iter().enumerate() {
+            if *token == Token::Equals && i > 0 {
+                equals = Some(i);
+                break;
+            }
+            else if let Token::Symbol(_) = *token {
+                // Symbols are good, continue
+                continue;
+            }
+            else if *token == Token::Backslash && i == 0 {
+                // Anonymous functions have backslashes,
+                // but only in the first position
+                continue;
+            }
+            else {
+                // Found something that is not a symbol, cannot be
+                // assignment or named function, stop
+                break;
+            }
+        }
+
+        // The 1 or many assumption being assumed in this
+        // is only okay because of the i > 0 above
+        debug_assert!(!equals.is_none() && equals.unwrap() > 0);
+
+        equals.map(|index| (&tokens[..index], &tokens[(index+1)..]))
     }
 }
 
