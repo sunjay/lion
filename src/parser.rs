@@ -173,10 +173,7 @@ impl Parser {
     }
 
     fn named_function(&self, lhs: &[Token], rhs: &[Token]) -> ParseResult<Statement> {
-        let name = match lhs[0] {
-            Token::Symbol(ref x) => x,
-            _ => panic!("Expected symbol as function name"),
-        };
+        let name = lhs[0].clone().unwrap_symbol();
 
         Ok(Statement::NamedFunction {
             name: name.clone(),
@@ -184,20 +181,22 @@ impl Parser {
         })
     }
 
-    fn function(&self, params: &[Token], rhs: &[Token]) -> Result<Function, ParseError> {
+    fn function(&self, params: &[Token], rhs: &[Token]) -> ParseResult<Function> {
         debug_assert!(params.len() > 0);
 
         Ok(Function {
-            params: params.into_iter().map(move |ref sym| match **sym {
-                Token::Symbol(ref x) => x.clone(),
-                _ => panic!("Expected parameters to all be symbols"),
-            }).collect(),
+            params: params.into_iter().map(|ref sym| (*sym).clone().unwrap_symbol()).collect(),
             body: try!(self.expr(rhs)),
         })
     }
 
     fn assignment(&self, lhs: &[Token], rhs: &[Token]) -> ParseResult<Statement> {
-        Err(ParseError::ExpectedToken(Token::EOL))
+        debug_assert!(lhs.len() == 1);
+
+        Ok(Statement::Assignment {
+            name: lhs[0].clone().unwrap_symbol(),
+            value: try!(self.expr(rhs)),
+        })
     }
 
     fn expr(&self, tokens: &[Token]) -> ParseResult<Expr> {
