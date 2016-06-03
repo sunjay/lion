@@ -1,5 +1,5 @@
 use token::Token;
-use tokenizer::Tokenizer;
+use tokenizer::{Tokenizer, LexerError};
 
 pub type Program = Vec<Statement>;
 
@@ -43,9 +43,14 @@ pub struct Parser {
     lexer: Tokenizer,
 }
 
+// Private type just for internal functions since the public interface
+// cannot return option
+type ParseResult<T> = Result<Option<T>, ParseError>;
+
 #[derive(PartialEq, Debug)]
 pub enum ParseError {
-    SyntaxError,
+    ExpectedToken(Token),
+    SyntaxError(LexerError),
 }
 
 impl Parser {
@@ -56,22 +61,56 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Program, ParseError> {
-        let mut lines: Program = Vec::new();
+        let mut statements: Program = Vec::new();
 
         loop {
-            let line = try!(self.line());
-            if line.is_none() {
+            let statement = try!(self.statement());
+            if statement.is_none() {
                 break;
             }
 
-            let line = line.unwrap();
-            lines.push(line);
+            let statement = statement.unwrap();
+            statements.push(statement);
         }
 
-        Ok(lines)
+        Ok(statements)
     }
 
-    fn line(&mut self) -> Result<Option<Statement>, ParseError> {
+    fn statement(&mut self) -> ParseResult<Statement> {
+        let line = try!(self.line());
+        if line.is_none() {
+            return Ok(None);
+        }
+
+        let line = line.unwrap();
+        self.dispatch_statement(line)
+    }
+
+    fn line(&mut self) -> ParseResult<Vec<Token>> {
+        let mut line_tokens: Vec<Token> = Vec::new();
+
+        let mut reached_eof = true;
+        for next_token in &mut self.lexer {
+            let next_token = try!(
+                next_token.map_err(|e| ParseError::SyntaxError(e))
+            );
+
+            if next_token == Token::EOL {
+                reached_eof = false;
+                break;
+            }
+
+            line_tokens.push(next_token);
+        }
+
+        if reached_eof && line_tokens.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(line_tokens))
+    }
+
+    fn dispatch_statement(&mut self, statement_tokens: Vec<Token>) -> ParseResult<Statement> {
         Ok(None)
     }
 }
