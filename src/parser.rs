@@ -130,6 +130,8 @@ mod tests {
         f x yy = x km/h * 2 + (my_var / -3.5) * (8 ** yy) - 1.3e-3
         print (f 30)
 
+        \q r = q / (r - 3)
+        doubleMe = \e = e * 2
         operator INFIX 6 "$$" (\x y = x * y + x)
         "#);
 
@@ -219,6 +221,47 @@ mod tests {
                     ),
                 ]),
             ]),
+            Statement::AnonymousFunction(Function {
+                params: vec!["q".to_owned(), "r".to_owned()],
+                body: vec![
+                    ExprItem::SingleTerm(
+                        Term::Symbol("q".to_owned())
+                    ),
+                    ExprItem::SingleTerm(
+                        Term::Symbol("/".to_owned())
+                    ),
+                    ExprItem::Group(vec![
+                        ExprItem::SingleTerm(
+                            Term::Symbol("r".to_owned())
+                        ),
+                        ExprItem::SingleTerm(
+                            Term::Symbol("-".to_owned())
+                        ),
+                        ExprItem::SingleTerm(
+                            Term::Number(3f64)
+                        ),
+                    ]),
+                ],
+            }),
+            Statement::Assignment {
+                name: "doubleMe".to_owned(),
+                value: vec![
+                    ExprItem::AnonymousFunction(Function {
+                        params: vec!["e".to_owned()],
+                        body: vec![
+                            ExprItem::SingleTerm(
+                                Term::Symbol("e".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("*".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Number(2f64)
+                            ),
+                        ],
+                    }),
+                ],
+            },
             Statement::Expression(vec![
                 ExprItem::SingleTerm(
                     Term::Symbol("operator".to_owned())
