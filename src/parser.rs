@@ -149,13 +149,14 @@ impl Parser {
 
         if found {
             match lhs.len() {
+                // only one argument: name = ...
                 1 => self.assignment(lhs, rhs),
+                // more than one argument: name arg1 ... = ...
                 _ => self.named_function(lhs, rhs),
             }
         }
         else {
-            //TODO
-            Ok(None)
+            self.expr(statement_tokens)
         }
     }
 
@@ -168,6 +169,10 @@ impl Parser {
     }
 
     fn named_function(&mut self, lhs: Vec<Token>, rhs: Vec<Token>) -> ParseResult<Statement> {
+        Ok(None)
+    }
+
+    fn expr(&mut self, tokens: Vec<Token>) -> ParseResult<Statement> {
         Ok(None)
     }
 }
