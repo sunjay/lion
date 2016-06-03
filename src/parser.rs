@@ -146,10 +146,61 @@ impl Parser {
     }
 
     fn expr(&self, tokens: &[Token]) -> ParseResult<Expr> {
-        Ok(Expr::new())
-        //if tokens[0] == Token::Backslash {
-        //    let (lhs, rhs) = try!(self.partition_function(tokens));
-        //}
+        let mut result = Expr::new();
+
+        let mut remaining = tokens;
+        loop {
+            let (item, leftover) = try!(self.expr_item(remaining));
+            remaining = leftover;
+
+            result.push(item);
+
+            if remaining.is_empty() {
+                break;
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn expr_item<'a>(&self, tokens: &'a [Token]) -> ParseResult<(ExprItem, &'a [Token])> {
+        debug_assert!(!tokens.is_empty());
+
+        if tokens[0] == Token::Backslash {
+            let (lhs, rhs) = try!(self.partition_function(tokens));
+
+            debug_assert!(lhs[0] == Token::Backslash);
+
+            Ok((
+                ExprItem::AnonymousFunction(
+                    try!(self.function(&lhs[1..], rhs))
+                ),
+                &[]
+            ))
+        }
+        else if tokens[0] == Token::ParenOpen {
+            let close = tokens.iter().position(|ref t| **t == Token::ParenClose);
+            if close.is_none() {
+                return Err(ParseError::ExpectedToken(Token::ParenClose));
+            }
+            let close = close.unwrap();
+
+            Ok((
+                ExprItem::Group(
+                    try!(self.expr(&tokens[1..close]))
+                ),
+                &tokens[(close+1)..]
+            ))
+        }
+        else {
+            Ok((ExprItem::SingleTerm(
+                try!(self.term(&tokens[0]))
+            ), &tokens[1..]))
+        }
+    }
+
+    fn term(&self, token: &Token) -> ParseResult<Term> {
+        Ok(Term::Symbol("ok".to_owned()))
     }
 
     // partitions a function by its Equals token, returning None if no
