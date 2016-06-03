@@ -43,9 +43,7 @@ pub struct Parser {
     lexer: Tokenizer,
 }
 
-// Private type just for internal functions since the public interface
-// cannot return option
-type ParseResult<T> = Result<Option<T>, ParseError>;
+pub type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(PartialEq, Debug)]
 pub enum ParseError {
@@ -60,7 +58,7 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Program, ParseError> {
+    pub fn parse(&mut self) -> ParseResult<Program> {
         let mut statements: Program = Vec::new();
 
         loop {
@@ -76,7 +74,7 @@ impl Parser {
         Ok(statements)
     }
 
-    fn statement(&mut self) -> ParseResult<Statement> {
+    fn statement(&mut self) -> ParseResult<Option<Statement>> {
         loop {
             let line = try!(self.line());
             if line.is_none() {
@@ -88,11 +86,11 @@ impl Parser {
                 continue;
             }
 
-            return self.dispatch_statement(line)
+            return Ok(Some(try!(self.dispatch_statement(line))));
         }
     }
 
-    fn line(&mut self) -> ParseResult<Vec<Token>> {
+    fn line(&mut self) -> ParseResult<Option<Vec<Token>>> {
         let mut line_tokens: Vec<Token> = Vec::new();
 
         let mut reached_eof = true;
@@ -116,7 +114,7 @@ impl Parser {
         Ok(Some(line_tokens))
     }
 
-    fn dispatch_statement(&mut self, statement_tokens: Vec<Token>) -> ParseResult<Statement> {
+    fn dispatch_statement(&self, statement_tokens: Vec<Token>) -> ParseResult<Statement> {
         assert!(statement_tokens.len() > 0, "Got zero tokens to dispatch");
         // looking for either assignment or a named function
         // both are a collection of only symbols followed by equals
@@ -143,7 +141,7 @@ impl Parser {
         }
 
         if equals.is_none() {
-            self.expr(statement_tokens)
+            Ok(Statement::Expression(try!(self.expr(&statement_tokens[..]))))
         }
         else {
             let equals = equals.unwrap();
@@ -152,8 +150,8 @@ impl Parser {
             // match is only okay because of the i > 0 above
             debug_assert!(equals > 0);
 
-            let lhs = statement_tokens[..equals].to_vec();
-            let rhs = statement_tokens[(equals+1)..].to_vec();
+            let lhs = &statement_tokens[..equals];
+            let rhs = &statement_tokens[(equals+1)..];
 
             if lhs[0] == Token::Backslash {
                 return self.anonymous_function(lhs, rhs);
@@ -168,20 +166,42 @@ impl Parser {
         }
     }
 
-    fn anonymous_function(&mut self, lhs: Vec<Token>, rhs: Vec<Token>) -> ParseResult<Statement> {
-        Ok(None)
+    fn anonymous_function(&self, lhs: &[Token], rhs: &[Token]) -> ParseResult<Statement> {
+        debug_assert!(lhs[0] == Token::Backslash);
+
+        Ok(Statement::AnonymousFunction(try!(self.function(&lhs[0..], rhs))))
     }
 
-    fn assignment(&mut self, lhs: Vec<Token>, rhs: Vec<Token>) -> ParseResult<Statement> {
-        Ok(None)
+    fn named_function(&self, lhs: &[Token], rhs: &[Token]) -> ParseResult<Statement> {
+        let name = match lhs[0] {
+            Token::Symbol(ref x) => x,
+            _ => panic!("Expected symbol as function name"),
+        };
+
+        Ok(Statement::NamedFunction {
+            name: name.clone(),
+            definition: try!(self.function(&lhs[0..], rhs)),
+        })
     }
 
-    fn named_function(&mut self, lhs: Vec<Token>, rhs: Vec<Token>) -> ParseResult<Statement> {
-        Ok(None)
+    fn function(&self, params: &[Token], rhs: &[Token]) -> Result<Function, ParseError> {
+        debug_assert!(params.len() > 0);
+
+        Ok(Function {
+            params: params.into_iter().map(move |ref sym| match **sym {
+                Token::Symbol(ref x) => x.clone(),
+                _ => panic!("Expected parameters to all be symbols"),
+            }).collect(),
+            body: try!(self.expr(rhs)),
+        })
     }
 
-    fn expr(&mut self, tokens: Vec<Token>) -> ParseResult<Statement> {
-        Ok(None)
+    fn assignment(&self, lhs: &[Token], rhs: &[Token]) -> ParseResult<Statement> {
+        Err(ParseError::ExpectedToken(Token::EOL))
+    }
+
+    fn expr(&self, tokens: &[Token]) -> ParseResult<Expr> {
+        Ok(Vec::new())
     }
 }
 
