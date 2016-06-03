@@ -276,8 +276,22 @@ mod tests {
     use tokenizer::Tokenizer;
 
     #[test]
+    fn call_function_with_string() {
+        test_statement(r#"defineUnit "km/h""#,
+            Statement::Expression(vec![
+                ExprItem::SingleTerm(
+                    Term::Symbol("defineUnit".to_owned())
+                ),
+                ExprItem::SingleTerm(
+                    Term::StringLiteral("km/h".to_owned())
+                ),
+            ])
+        );
+    }
+
+    #[test]
     fn complete_program() {
-        let mut parser = parser_for(r#"
+        let program = r#"
         defineUnit "km/h"
 
         my_var = 30 km/h
@@ -287,7 +301,7 @@ mod tests {
         \q r = q / (r - 3)
         doubleMe = \e = e * 2
         operator INFIX 6 "$$" (\x y = x * y + x)
-        "#);
+        "#;
 
         let syntax_tree: Program = vec![
             Statement::Expression(vec![
@@ -461,8 +475,19 @@ mod tests {
             ]),
         ];
 
+        test_program(program, syntax_tree);
+    }
+
+    fn test_program(string: &str, expected: Program) {
+        let mut parser = parser_for(string);
         let parsed = parser.parse().unwrap();
-        assert_eq!(parsed, syntax_tree);
+        assert_eq!(parsed, expected);
+    }
+
+    fn test_statement(string: &str, expected: Statement) {
+        let mut parser = parser_for(string);
+        let parsed = parser.parse().unwrap();
+        assert_eq!(parsed[0], expected);
     }
 
     fn parser_for(string: &str) -> Parser {
