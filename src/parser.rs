@@ -77,13 +77,19 @@ impl Parser {
     }
 
     fn statement(&mut self) -> ParseResult<Statement> {
-        let line = try!(self.line());
-        if line.is_none() {
-            return Ok(None);
-        }
+        loop {
+            let line = try!(self.line());
+            if line.is_none() {
+                return Ok(None);
+            }
 
-        let line = line.unwrap();
-        self.dispatch_statement(line)
+            let line = line.unwrap();
+            if line.is_empty() {
+                continue;
+            }
+
+            return self.dispatch_statement(line)
+        }
     }
 
     fn line(&mut self) -> ParseResult<Vec<Token>> {
@@ -111,6 +117,57 @@ impl Parser {
     }
 
     fn dispatch_statement(&mut self, statement_tokens: Vec<Token>) -> ParseResult<Statement> {
+        assert!(statement_tokens.len() > 0, "Got zero tokens to dispatch");
+
+        if statement_tokens[0] == Token::Backslash {
+            return self.anonymous_function(statement_tokens);
+        }
+
+        // looking for either assignment or a named function
+        // both are a collection of symbols followed by equals
+        let mut lhs: Vec<Token> = Vec::new();
+        let mut rhs: Vec<Token> = Vec::new();
+        let mut found = false;
+        for token in &statement_tokens {
+            if found {
+                rhs.push(token.clone());
+                continue;
+            }
+
+            if let Token::Symbol(_) = *token {
+                lhs.push(token.clone());
+            }
+            else if *token == Token::Equals && !lhs.is_empty() {
+                found = true;
+            }
+            else {
+                // Found something that is not a symbol, cannot be
+                // assignment or named function
+                break;
+            }
+        }
+
+        if found {
+            match lhs.len() {
+                1 => self.assignment(lhs, rhs),
+                _ => self.named_function(lhs, rhs),
+            }
+        }
+        else {
+            //TODO
+            Ok(None)
+        }
+    }
+
+    fn anonymous_function(&mut self, tokens: Vec<Token>) -> ParseResult<Statement> {
+        Ok(None)
+    }
+
+    fn assignment(&mut self, lhs: Vec<Token>, rhs: Vec<Token>) -> ParseResult<Statement> {
+        Ok(None)
+    }
+
+    fn named_function(&mut self, lhs: Vec<Token>, rhs: Vec<Token>) -> ParseResult<Statement> {
         Ok(None)
     }
 }
