@@ -6,6 +6,7 @@ extern crate lazy_static;
 mod scanner;
 mod token;
 mod tokenizer;
+mod ast;
 mod parser;
 
 //TODO: Make this not public
