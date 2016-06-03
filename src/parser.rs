@@ -48,6 +48,7 @@ pub type ParseResult<T> = Result<T, ParseError>;
 #[derive(PartialEq, Debug)]
 pub enum ParseError {
     ExpectedToken(Token),
+    UnexpectedToken(Token),
     SyntaxError(LexerError),
 }
 
@@ -119,22 +120,32 @@ impl Parser {
 
         let function_parts = self.partition_function(&statement_tokens);
 
-        if function_parts.is_none() {
-            Ok(Statement::Expression(try!(self.expr(&statement_tokens[..]))))
-        }
-        else {
-            let (lhs, rhs) = function_parts.unwrap();
+        match function_parts {
+            // no problem if we just expected equals, it is probably
+            // an expr
+            Err(ParseError::ExpectedToken(Token::Equals)) => {
+                Ok(Statement::Expression(
+                    try!(self.expr(&statement_tokens[..]))
+                ))
+            },
+            Err(e) => return Err(e),
+            Ok(parts) => {
+                let (lhs, rhs) = parts;
 
-            if lhs[0] == Token::Backslash {
-                return self.anonymous_function(lhs, rhs);
-            }
+                // partition_function is guarenteed to return non-empty slices
+                debug_assert!(!lhs.is_empty() && !rhs.is_empty());
 
-            match lhs.len() {
-                // only one argument: name = ...
-                1 => self.assignment(lhs, rhs),
-                // more than one argument: name arg1 ... = ...
-                _ => self.named_function(lhs, rhs),
-            }
+                if lhs[0] == Token::Backslash {
+                    return self.anonymous_function(lhs, rhs);
+                }
+
+                match lhs.len() {
+                    // only one argument: name = ...
+                    1 => self.assignment(lhs, rhs),
+                    // more than one argument: name arg1 ... = ...
+                    _ => self.named_function(lhs, rhs),
+                }
+            },
         }
     }
 
@@ -174,13 +185,14 @@ impl Parser {
     fn expr(&self, tokens: &[Token]) -> ParseResult<Expr> {
         Ok(Expr::new())
         //if tokens[0] == Token::Backslash {
+        //    let (lhs, rhs) = try!(self.partition_function(tokens));
         //}
     }
 
     // partitions a function by its Equals token, returning None if no
     // valid function is found
     // Returns (lhs, rhs)
-    fn partition_function<'a>(&self, tokens: &'a [Token]) -> Option<(&'a [Token], &'a [Token])> {
+    fn partition_function<'a>(&self, tokens: &'a [Token]) -> ParseResult<(&'a [Token], &'a [Token])> {
         // looking for either assignment or a named function
         // both are a collection of only symbols followed by equals
         let mut equals = None;
@@ -201,15 +213,22 @@ impl Parser {
             else {
                 // Found something that is not a symbol, cannot be
                 // assignment or named function, stop
-                break;
+                return Err(ParseError::UnexpectedToken(token.clone()));
             }
         }
 
-        // The 1 or many assumption being assumed in this
-        // is only okay because of the i > 0 above
-        debug_assert!(!equals.is_none() && equals.unwrap() > 0);
+        if equals.is_none() {
+            Err(ParseError::ExpectedToken(Token::Equals))
+        }
+        else {
+            let equals = equals.unwrap();
 
-        equals.map(|index| (&tokens[..index], &tokens[(index+1)..]))
+            // The 1 or many assumption being assumed in this
+            // is only okay because of the i > 0 above
+            debug_assert!(equals > 0);
+
+            Ok((&tokens[..equals], &tokens[(equals+1)..]))
+        }
     }
 }
 
