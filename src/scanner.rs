@@ -40,13 +40,12 @@ impl Scanner {
         None
     }
 
-    pub fn unget_char(&mut self) -> Option<()> {
+    pub fn unget_char(&mut self) {
         if self.position >= 0 {
             self.position -= 1;
-            Some(())
         }
         else {
-            None
+            panic!("No character to unget");
         }
     }
 }
@@ -111,9 +110,9 @@ mod tests {
 
         // 2. Unget back to before any character
         // position -> 0
-        scanner.unget_char().unwrap();
+        scanner.unget_char();
         // position -> -1
-        scanner.unget_char().unwrap();
+        scanner.unget_char();
 
         // 3. Get up to the end
         // position -> 0
@@ -125,9 +124,9 @@ mod tests {
 
         // 4. Unget back to the expected character
         // position -> 1
-        scanner.unget_char().unwrap();
+        scanner.unget_char();
         // position -> 0
-        scanner.unget_char().unwrap();
+        scanner.unget_char();
         // position -> 1
         let actual = scanner.get_char();
 
@@ -135,14 +134,23 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "unget")]
     fn cannot_unget_before_start() {
         let mut scanner = Scanner::from_str("T");
-        assert!(scanner.unget_char().is_none());
+        // panic
+        scanner.unget_char();
+    }
+
+    #[test]
+    #[should_panic(expected = "unget")]
+    fn cannot_unget_too_far() {
+        let mut scanner = Scanner::from_str("T");
+
         scanner.get_char();
-        assert!(!scanner.unget_char().is_none());
-        assert!(scanner.unget_char().is_none());
-        // Try again just in case
-        assert!(scanner.unget_char().is_none());
+        scanner.unget_char();
+
+        // panic
+        scanner.unget_char();
     }
 }
 
