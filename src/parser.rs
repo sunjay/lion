@@ -519,37 +519,35 @@ mod tests {
                 ExprItem::SingleTerm(
                     Term::Number(6f64)
                 ),
+                ExprItem::SingleTerm(
+                    Term::StringLiteral("$$".to_owned())
+                ),
                 ExprItem::Group(vec![
-                    ExprItem::SingleTerm(
-                        Term::StringLiteral("$$".to_owned())
+                    ExprItem::AnonymousFunction(
+                        Function {
+                            params: vec![
+                                "x".to_owned(),
+                                "y".to_owned()
+                            ],
+                            body: vec![
+                                ExprItem::SingleTerm(
+                                    Term::Symbol("x".to_owned())
+                                ),
+                                ExprItem::SingleTerm(
+                                    Term::Symbol("*".to_owned())
+                                ),
+                                ExprItem::SingleTerm(
+                                    Term::Symbol("y".to_owned())
+                                ),
+                                ExprItem::SingleTerm(
+                                    Term::Symbol("+".to_owned())
+                                ),
+                                ExprItem::SingleTerm(
+                                    Term::Symbol("x".to_owned())
+                                ),
+                            ],
+                        },
                     ),
-                    ExprItem::Group(vec![
-                        ExprItem::AnonymousFunction(
-                            Function {
-                                params: vec![
-                                    "x".to_owned(),
-                                    "y".to_owned()
-                                ],
-                                body: vec![
-                                    ExprItem::SingleTerm(
-                                        Term::Symbol("x".to_owned())
-                                    ),
-                                    ExprItem::SingleTerm(
-                                        Term::Symbol("*".to_owned())
-                                    ),
-                                    ExprItem::SingleTerm(
-                                        Term::Symbol("y".to_owned())
-                                    ),
-                                    ExprItem::SingleTerm(
-                                        Term::Symbol("+".to_owned())
-                                    ),
-                                    ExprItem::SingleTerm(
-                                        Term::Symbol("x".to_owned())
-                                    ),
-                                ],
-                            },
-                        ),
-                    ]),
                 ]),
             ]),
         ];
