@@ -84,39 +84,36 @@ impl Parser {
 
         let function_parts = self.partition_function(&statement_tokens);
 
-        match function_parts {
-            // no problem if we just expected equals, it is probably
-            // an expr
-            Err(ParseError::ExpectedToken(Token::Equals)) => {
-                Ok(Statement::Expression(
-                    try!(self.expr(&statement_tokens[..]))
-                ))
-            },
-            Err(e) => return Err(e),
-            Ok(parts) => {
-                let (lhs, rhs) = parts;
+        // Error here is okay and does not need to be propagated yet because
+        // it probably just means that this is an expression
+        if function_parts.is_err() {
+            Ok(Statement::Expression(
+                try!(self.expr(&statement_tokens[..]))
+            ))
+        }
+        else {
+            let (lhs, rhs) = function_parts.unwrap();
 
-                // partition_function is guarenteed to return non-empty slices
-                debug_assert!(!lhs.is_empty() && !rhs.is_empty());
+            // partition_function is guarenteed to return non-empty slices
+            debug_assert!(!lhs.is_empty() && !rhs.is_empty());
 
-                if lhs[0] == Token::Backslash {
-                    return self.anonymous_function(lhs, rhs);
-                }
+            if lhs[0] == Token::Backslash {
+                return self.anonymous_function(lhs, rhs);
+            }
 
-                match lhs.len() {
-                    // only one argument: name = ...
-                    1 => self.assignment(lhs, rhs),
-                    // more than one argument: name arg1 ... = ...
-                    _ => self.named_function(lhs, rhs),
-                }
-            },
+            match lhs.len() {
+                // only one argument: name = ...
+                1 => self.assignment(lhs, rhs),
+                // more than one argument: name arg1 ... = ...
+                _ => self.named_function(lhs, rhs),
+            }
         }
     }
 
     fn anonymous_function(&self, lhs: &[Token], rhs: &[Token]) -> ParseResult<Statement> {
         debug_assert!(lhs[0] == Token::Backslash);
 
-        Ok(Statement::AnonymousFunction(try!(self.function(&lhs[0..], rhs))))
+        Ok(Statement::AnonymousFunction(try!(self.function(&lhs[1..], rhs))))
     }
 
     fn named_function(&self, lhs: &[Token], rhs: &[Token]) -> ParseResult<Statement> {
