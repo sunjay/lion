@@ -2,6 +2,13 @@
 
 A very tiny, dynamic, loosely-typed language for doing calculations in a more intuitive way.
 
+- [x] scanner
+- [x] lexer/tokenizer
+- [x] parser
+- [ ] evaluator
+- [ ] version 1.0.0
+- [ ] further enhancements
+
 ## Examples
 
 ```
