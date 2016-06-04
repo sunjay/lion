@@ -287,28 +287,8 @@ mod tests {
     }
 
     #[test]
-    fn complete_program() {
-        let program = r#"
-        defineUnit "km/h"
-
-        my_var = 30 km/h
-        f x yy = x km/h * 2 + (my_var / -3.5) * (8 ** yy) - 1.3e-3
-        print (f 30)
-
-        \q r = q / (r - 3)
-        doubleMe = \e = e * 2
-        operator INFIX 6 "$$" (\x y = x * y + x)
-        "#;
-
-        let syntax_tree: Program = vec![
-            Statement::Expression(vec![
-                ExprItem::SingleTerm(
-                    Term::Symbol("defineUnit".to_owned())
-                ),
-                ExprItem::SingleTerm(
-                    Term::StringLiteral("km/h".to_owned())
-                ),
-            ]),
+    fn define_simple_variable() {
+        test_statement(r"my_var = 30 km/h",
             Statement::Assignment {
                 name: "my_var".to_owned(),
                 value: vec![
@@ -316,6 +296,12 @@ mod tests {
                     ExprItem::SingleTerm(Term::Symbol("km/h".to_owned())),
                 ],
             },
+        );
+    }
+
+    #[test]
+    fn named_function_complex_expression() {
+        test_statement(r"f x yy = x km/h * 2 + (my_var / -3.5) * (8 ** yy) - 1.3e-3",
             Statement::NamedFunction {
                 name: "f".to_owned(),
                 definition: Function {
@@ -373,6 +359,99 @@ mod tests {
                     ],
                 },
             },
+        );
+    }
+
+    #[test]
+    fn complete_program() {
+        let program = r#"
+        defineUnit "km/h"
+
+        my_var = 30 km/h
+        f x yy = x km/h * 2 + (my_var / -3.5) * (8 ** yy) - 1.3e-3
+        print (f 30)
+
+        \q r = q / (r - 3)
+        doubleMe = \e = e * 2
+        operator INFIX 6 "$$" (\x y = x * y + x)
+        "#;
+
+        let syntax_tree: Program = vec![
+            Statement::Expression(vec![
+                ExprItem::SingleTerm(
+                    Term::Symbol("defineUnit".to_owned())
+                ),
+                ExprItem::SingleTerm(
+                    Term::StringLiteral("km/h".to_owned())
+                ),
+            ]),
+
+            Statement::Assignment {
+                name: "my_var".to_owned(),
+                value: vec![
+                    ExprItem::SingleTerm(Term::Number(30f64)),
+                    ExprItem::SingleTerm(Term::Symbol("km/h".to_owned())),
+                ],
+            },
+
+            Statement::NamedFunction {
+                name: "f".to_owned(),
+                definition: Function {
+                    params: vec![
+                        "x".to_owned(),
+                        "yy".to_owned()
+                    ],
+                    body: vec![
+                        ExprItem::SingleTerm(
+                            Term::Symbol("x".to_owned())
+                        ),
+                        ExprItem::SingleTerm(
+                            Term::Symbol("km/h".to_owned())
+                        ),
+                        ExprItem::SingleTerm(
+                            Term::Symbol("*".to_owned())
+                        ),
+                        ExprItem::SingleTerm(
+                            Term::Number(2f64)
+                        ),
+                        ExprItem::SingleTerm(
+                            Term::Symbol("+".to_owned())
+                        ),
+                        ExprItem::Group(vec![
+                            ExprItem::SingleTerm(
+                                Term::Symbol("my_var".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("/".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Number(-3.5f64)
+                            ),
+                        ]),
+                        ExprItem::SingleTerm(
+                            Term::Symbol("*".to_owned())
+                        ),
+                        ExprItem::Group(vec![
+                            ExprItem::SingleTerm(
+                                Term::Number(8f64)
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("**".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("yy".to_owned())
+                            ),
+                        ]),
+                        ExprItem::SingleTerm(
+                            Term::Symbol("-".to_owned())
+                        ),
+                        ExprItem::SingleTerm(
+                            Term::Number(1.3e-3f64)
+                        ),
+                    ],
+                },
+            },
+
             Statement::Expression(vec![
                 ExprItem::SingleTerm(
                     Term::Symbol("print".to_owned())
@@ -386,6 +465,7 @@ mod tests {
                     ),
                 ]),
             ]),
+
             Statement::AnonymousFunction(Function {
                 params: vec!["q".to_owned(), "r".to_owned()],
                 body: vec![
@@ -408,6 +488,7 @@ mod tests {
                     ]),
                 ],
             }),
+
             Statement::Assignment {
                 name: "doubleMe".to_owned(),
                 value: vec![
@@ -427,6 +508,7 @@ mod tests {
                     }),
                 ],
             },
+
             Statement::Expression(vec![
                 ExprItem::SingleTerm(
                     Term::Symbol("operator".to_owned())
