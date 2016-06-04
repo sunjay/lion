@@ -121,7 +121,7 @@ impl Parser {
 
         Ok(Statement::NamedFunction {
             name: name.clone(),
-            definition: try!(self.function(&lhs[0..], rhs)),
+            definition: try!(self.function(&lhs[1..], rhs)),
         })
     }
 
