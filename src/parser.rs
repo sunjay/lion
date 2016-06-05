@@ -300,6 +300,64 @@ mod tests {
     }
 
     #[test]
+    fn nested_parenthesis_matching() {
+        test_statement(
+            r"(((x))) + (2 - (3 + (4 * 3))) % ((((75.4) - ((3 / 1e2)) + 77) * 4) / 2)",
+            Statement::Expression(vec![
+                ExprItem::Group(vec![
+                    ExprItem::Group(vec![
+                        ExprItem::Group(vec![
+                            ExprItem::SingleTerm(Term::Symbol("x".to_owned())),
+                        ]),
+                    ]),
+                ]),
+
+                ExprItem::SingleTerm(Term::Symbol("+".to_owned())),
+
+                ExprItem::Group(vec![
+                    ExprItem::SingleTerm(Term::Number(2f64)),
+                    ExprItem::SingleTerm(Term::Symbol("-".to_owned())),
+                    ExprItem::Group(vec![
+                        ExprItem::SingleTerm(Term::Number(3f64)),
+                        ExprItem::SingleTerm(Term::Symbol("+".to_owned())),
+                        ExprItem::Group(vec![
+                            ExprItem::SingleTerm(Term::Number(4f64)),
+                            ExprItem::SingleTerm(Term::Symbol("*".to_owned())),
+                            ExprItem::SingleTerm(Term::Number(3f64)),
+                        ]),
+                    ]),
+                ]),
+
+                ExprItem::SingleTerm(Term::Symbol("%".to_owned())),
+
+                ExprItem::Group(vec![
+                    ExprItem::Group(vec![
+                        ExprItem::Group(vec![
+                            ExprItem::Group(vec![
+                                ExprItem::SingleTerm(Term::Number(75.4f64)),
+                            ]),
+                            ExprItem::SingleTerm(Term::Symbol("-".to_owned())),
+                            ExprItem::Group(vec![
+                                ExprItem::Group(vec![
+                                    ExprItem::SingleTerm(Term::Number(3f64)),
+                                    ExprItem::SingleTerm(Term::Symbol("/".to_owned())),
+                                    ExprItem::SingleTerm(Term::Number(1e2f64)),
+                                ]),
+                            ]),
+                            ExprItem::SingleTerm(Term::Symbol("+".to_owned())),
+                            ExprItem::SingleTerm(Term::Number(77f64)),
+                        ]),
+                        ExprItem::SingleTerm(Term::Symbol("*".to_owned())),
+                        ExprItem::SingleTerm(Term::Number(4f64)),
+                    ]),
+                    ExprItem::SingleTerm(Term::Symbol("/".to_owned())),
+                    ExprItem::SingleTerm(Term::Number(2f64)),
+                ]),
+            ])
+        );
+    }
+
+    #[test]
     fn named_function_complex_expression() {
         test_statement(r"f x yy = x km/h * 2 + (my_var / -3.5) * (8 ** yy) - 1.3e-3",
             Statement::NamedFunction {
