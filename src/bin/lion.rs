@@ -1,5 +1,7 @@
 extern crate lion;
 
+use lion::parse;
+
 fn main() {
-    println!("test");
+    println!("{:?}", parse("(2 + 2) * (3 - 4)").unwrap());
 }
