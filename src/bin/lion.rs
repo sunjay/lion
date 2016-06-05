@@ -3,5 +3,7 @@ extern crate lion;
 use lion::parse;
 
 fn main() {
-    println!("{:?}", parse("(2 + 2) * (3 - 4)").unwrap());
+    let expr = "2 + (2 * (3 - 4))";
+    println!("Expression:\n{}\n\nAbstract Syntax Tree:\n", expr);
+    println!("{:#?}", parse(expr).unwrap());
 }
