@@ -177,11 +177,8 @@ impl Parser {
             ))
         }
         else if tokens[0] == Token::ParenOpen {
-            let close = tokens.iter().position(|ref t| **t == Token::ParenClose);
-            if close.is_none() {
-                return Err(ParseError::ExpectedToken(Token::ParenClose));
-            }
-            let close = close.unwrap();
+            // Need the +1 here so that we skip the opening parenthesis properly
+            let close = try!(self.find_matching_parens(&tokens[1..])) + 1;
 
             Ok((
                 ExprItem::Group(
@@ -221,6 +218,25 @@ impl Parser {
             Token::Number(ref n) => Ok(Term::Number(n.clone())),
             _ => Err(ParseError::UnexpectedToken(token.clone())),
         }
+    }
+
+    // tokens should be the tokens AFTER the first opening parenthesis
+    fn find_matching_parens(&self, tokens: &[Token]) -> ParseResult<usize> {
+        let mut still_open = 1;
+        for (i, token) in tokens.iter().enumerate() {
+            if *token == Token::ParenOpen {
+                still_open += 1;
+            }
+            else if *token == Token::ParenClose {
+                still_open -= 1;
+
+                if still_open == 0 {
+                    return Ok(i);
+                }
+            }
+        }
+
+        Err(ParseError::ExpectedToken(Token::ParenClose))
     }
 
     // partitions a function by its Equals token, returning None if no
@@ -419,6 +435,11 @@ mod tests {
             },
         );
     }
+
+    //TODO: Tests for failure cases like:
+    //TODO: * mismatched parenthesis both too many `(` and too many `)`
+    //TODO: * mismatched quotes on strings
+    //TODO: * multi-word strings
 
     #[test]
     fn complete_program() {
