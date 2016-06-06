@@ -1,6 +1,6 @@
 use token::Token;
 use tokenizer::{Tokenizer, LexerError};
-pub use ast::*;
+use ast::*;
 
 pub struct Parser {
     lexer: Tokenizer,
@@ -88,7 +88,7 @@ impl Parser {
         // it probably just means that this is an expression
         if function_parts.is_err() {
             Ok(Statement::Expression(
-                try!(self.expr(&statement_tokens[..]))
+                try!(self.expr(&statement_tokens))
             ))
         }
         else {
@@ -285,6 +285,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ast::*;
     use scanner::Scanner;
     use tokenizer::Tokenizer;
 
