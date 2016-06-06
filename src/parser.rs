@@ -441,6 +441,7 @@ mod tests {
     //TODO: * mismatched parenthesis both too many `(` and too many `)`
     //TODO: * mismatched quotes on strings
     //TODO: * multi-word strings
+    //TODO: * named functions within other statement types
 
     #[test]
     fn complete_program() {
