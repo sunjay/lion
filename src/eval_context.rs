@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use ast::*;
 use rich_number::RichNumber;
+use prelude::setup_prelude;
 
 pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
@@ -47,6 +48,12 @@ impl EvalContext {
         EvalContext {
             symbol_table: HashMap::new(),
         }
+    }
+
+    pub fn prelude() -> EvalContext {
+        let mut context = EvalContext::new();
+        setup_prelude(&mut context);
+        context
     }
 
     /// Gets a single value without evaluating it from the current context

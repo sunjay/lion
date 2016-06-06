@@ -8,6 +8,7 @@ mod token;
 mod tokenizer;
 mod parser;
 mod rich_number;
+mod prelude;
 mod eval_context;
 
 pub fn parse(string: &str) -> parser::ParseResult<ast::Program> {
