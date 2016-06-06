@@ -107,6 +107,8 @@ Defining an operator is as simple as calling the `operator` function and passing
 
 Function declaration syntax is syntatic sugar for defining a `PREFIX` operator with high precedence.
 
+TODO: Everything is left-associative right now, this may be changed in later versions to be configurable
+
 ### Examples
 ```
 $ operator INFIX 6 "$$" (\x y = x * y + x)
