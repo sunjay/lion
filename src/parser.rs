@@ -50,6 +50,14 @@ impl Parser {
             if line.is_empty() {
                 continue;
             }
+            else if line[0] == Token::Semicolon {
+                if line.len() >= 2 && line[1] == Token::Symbol("-".to_owned()) {
+                    continue;
+                }
+                else {
+                    return Err(ParseError::UnexpectedToken(Token::Semicolon));
+                }
+            }
 
             return Ok(Some(try!(self.dispatch_statement(line))));
         }
@@ -286,6 +294,7 @@ impl Parser {
 mod tests {
     use super::*;
     use ast::*;
+    use token::Token;
     use scanner::Scanner;
     use tokenizer::Tokenizer;
 
@@ -435,6 +444,62 @@ mod tests {
                 },
             },
         );
+    }
+
+    #[test]
+    fn ignores_comments() {
+        let program = r#"
+        ;- some comment
+        x
+            ;- Another comment but indented
+        1
+        4
+        ;- ;- ;- ;- doesn't matter what else is on the line
+        2
+        ;- sometimes the comment prefix is just on its own line:
+        ;-
+        ;- all characters should be allowed ~!@# $%^&*()_+"':';;;[]{}\|?></.,
+        "#;
+
+        let syntax_tree: Program = vec![
+            Statement::Expression(vec![
+                ExprItem::SingleTerm(
+                    Term::Symbol("x".to_owned())
+                ),
+            ]),
+            Statement::Expression(vec![
+                ExprItem::SingleTerm(
+                    Term::Symbol("1".to_owned())
+                ),
+            ]),
+            Statement::Expression(vec![
+                ExprItem::SingleTerm(
+                    Term::Symbol("4".to_owned())
+                ),
+            ]),
+            Statement::Expression(vec![
+                ExprItem::SingleTerm(
+                    Term::Symbol("2".to_owned())
+                ),
+            ]),
+        ];
+
+        test_program(program, syntax_tree);
+    }
+
+    #[test]
+    fn rejects_invalid_comment_beginnings() {
+        test_invalid_statement(";-something", ParseError::UnexpectedToken(Token::Semicolon));
+    }
+
+    #[test]
+    fn rejects_comment_elsewhere_on_line() {
+        test_invalid_statement("valid ;- something", ParseError::UnexpectedToken(Token::Semicolon));
+    }
+
+    #[test]
+    fn rejects_lone_comment_semicolon() {
+        test_invalid_statement(";", ParseError::UnexpectedToken(Token::Semicolon));
     }
 
     //TODO: Tests for failure cases like:
@@ -646,6 +711,12 @@ mod tests {
         let mut parser = parser_for(string);
         let parsed = parser.parse().unwrap();
         assert_eq!(parsed[0], expected);
+    }
+
+    fn test_invalid_statement(string: &str, expected_error: ParseError) {
+        let mut parser = parser_for(string);
+        let error = parser.parse().unwrap_err();
+        assert_eq!(error, expected_error);
     }
 
     fn parser_for(string: &str) -> Parser {

@@ -8,6 +8,7 @@ pub enum Token {
     StringBoundary,
     Number(f64),
     EOL,
+    Semicolon,
 }
 
 impl Token {
