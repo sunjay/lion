@@ -9,6 +9,8 @@ pub struct EvalContext {
 }
 
 const FUNCTION_PRECEDENCE: u8 = 9;
+const LOWEST_PRECEDENCE: u8 = 0;
+const HIGHEST_PRECEDENCE: u8 = 9;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
@@ -71,6 +73,8 @@ impl EvalContext {
 
     /// Defines a function in the context
     pub fn define(&mut self, name: &str, fixity: Fixity, precedence: u8, function: Function) {
+        debug_assert!(precedence >= LOWEST_PRECEDENCE && precedence <= HIGHEST_PRECEDENCE);
+
         self.set(name, ContextItem::Definition {
             fixity: fixity,
             precedence: precedence,
