@@ -8,6 +8,8 @@ pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
 }
 
+const FUNCTION_PRECEDENCE: u8 = 9;
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
     Number(RichNumber),
@@ -18,6 +20,7 @@ pub enum ContextItem {
         function: Function,
     },
     Constant(String),
+    Nothing,
 }
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -86,8 +89,22 @@ impl EvalContext {
     }
 
     pub fn apply(&mut self, statement: Statement) -> EvalResult {
-        // Builds symbol tree
-        // Performs beta reduction
+        match statement {
+            Statement::NamedFunction {name, definition} => {
+                self.define(&name, Fixity::Prefix, FUNCTION_PRECEDENCE, definition);
+                Ok(ContextItem::Nothing)
+            },
+            Statement::AnonymousFunction(function) => Ok(ContextItem::Nothing),
+            Statement::Assignment {name, value} => {
+                let value = try!(self.evaluate(value));
+                self.set(&name, value);
+                Ok(ContextItem::Nothing)
+            },
+            Statement::Expression(value) => self.evaluate(value),
+        }
+    }
+
+    pub fn evaluate(&mut self, expr: Expr) -> EvalResult {
         unimplemented!();
     }
 }
