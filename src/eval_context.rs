@@ -8,9 +8,9 @@ pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
 }
 
-const FUNCTION_PRECEDENCE: u8 = 9;
 const LOWEST_PRECEDENCE: u8 = 0;
 const HIGHEST_PRECEDENCE: u8 = 9;
+const FUNCTION_PRECEDENCE: u8 = HIGHEST_PRECEDENCE;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
