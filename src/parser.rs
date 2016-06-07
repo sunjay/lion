@@ -50,34 +50,45 @@ impl Parser {
             if line.is_empty() {
                 continue;
             }
-            else if line[0] == Token::Semicolon {
-                if line.len() >= 2 && line[1] == Token::Symbol("-".to_owned()) {
-                    continue;
-                }
-                else {
-                    return Err(ParseError::UnexpectedToken(Token::Semicolon));
-                }
-            }
 
             return Ok(Some(try!(self.dispatch_statement(line))));
         }
     }
 
     fn line(&mut self) -> ParseResult<Option<Vec<Token>>> {
+        lazy_static! {
+            static ref dash: Token = Token::Symbol("-".to_owned());
+        };
         let mut line_tokens: Vec<Token> = Vec::new();
 
+        let mut is_comment = false;
         let mut reached_eof = true;
         for next_token in &mut self.lexer {
-            let next_token = try!(
-                next_token.map_err(|e| ParseError::SyntaxError(e))
-            );
+            let next_token = match next_token {
+                Ok(token) => token,
+                Err(e) => {
+                    if is_comment {
+                        continue;
+                    }
+                    else {
+                        return Err(ParseError::SyntaxError(e));
+                    }
+                }
+            };
 
             if next_token == Token::EOL {
                 reached_eof = false;
                 break;
             }
 
-            line_tokens.push(next_token);
+            if !is_comment {
+                line_tokens.push(next_token);
+            }
+
+            if line_tokens.len() == 2 && line_tokens[0] == Token::Semicolon && line_tokens[1] == *dash {
+                is_comment = true;
+                line_tokens.clear();
+            }
         }
 
         if reached_eof && line_tokens.is_empty() {
@@ -469,17 +480,17 @@ mod tests {
             ]),
             Statement::Expression(vec![
                 ExprItem::SingleTerm(
-                    Term::Symbol("1".to_owned())
+                    Term::Number(1f64)
                 ),
             ]),
             Statement::Expression(vec![
                 ExprItem::SingleTerm(
-                    Term::Symbol("4".to_owned())
+                    Term::Number(4f64)
                 ),
             ]),
             Statement::Expression(vec![
                 ExprItem::SingleTerm(
-                    Term::Symbol("2".to_owned())
+                    Term::Number(2f64)
                 ),
             ]),
         ];
