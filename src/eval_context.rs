@@ -82,7 +82,7 @@ impl EvalContext {
 
     /// Adds to the current context (silently replaces if already present)
     pub fn set(&mut self, name: &str, value: ContextItem) {
-        unimplemented!();
+        self.symbol_table.insert(name.to_owned(), value);
     }
 
     pub fn apply(&mut self, statement: Statement) -> EvalResult {
