@@ -57,7 +57,7 @@ impl Parser {
 
     fn line(&mut self) -> ParseResult<Option<Vec<Token>>> {
         lazy_static! {
-            static ref dash: Token = Token::Symbol("-".to_owned());
+            static ref DASH: Token = Token::Symbol("-".to_owned());
         };
         let mut line_tokens: Vec<Token> = Vec::new();
 
@@ -85,7 +85,7 @@ impl Parser {
                 line_tokens.push(next_token);
             }
 
-            if line_tokens.len() == 2 && line_tokens[0] == Token::Semicolon && line_tokens[1] == *dash {
+            if line_tokens.len() == 2 && line_tokens[0] == Token::Semicolon && line_tokens[1] == *DASH {
                 is_comment = true;
                 line_tokens.clear();
             }
