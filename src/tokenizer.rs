@@ -10,6 +10,7 @@ const BACKSLASH_CHAR: char = '\\';
 const PAREN_OPEN_CHAR: char = '(';
 const PAREN_CLOSE_CHAR: char = ')';
 const STRING_BOUNDARY_CHAR: char = '"';
+const SEMICOLON: char = ';';
 
 lazy_static! {
     static ref SYMBOL_CHARS: HashSet<char> = vec![
@@ -28,6 +29,7 @@ lazy_static! {
         PAREN_OPEN_CHAR,
         PAREN_CLOSE_CHAR,
         STRING_BOUNDARY_CHAR,
+        SEMICOLON,
     ].into_iter().collect();
 }
 
@@ -208,6 +210,7 @@ impl Iterator for Tokenizer {
             PAREN_OPEN_CHAR => Token::ParenOpen,
             PAREN_CLOSE_CHAR => Token::ParenClose,
             STRING_BOUNDARY_CHAR => Token::StringBoundary,
+            SEMICOLON => Token::Semicolon,
             EOL_CHAR => Token::EOL,
             _ => return Some(self.match_advanced_token(c)),
         }))
@@ -252,6 +255,11 @@ mod tests {
     }
 
     #[test]
+    fn semicolon() {
+        test_single_token(";", Semicolon);
+    }
+
+    #[test]
     fn number() {
         test_number("-5394", -5394f64);
         test_number("0.5", 0.5f64);
@@ -285,6 +293,15 @@ mod tests {
     #[test]
     fn recognizes_symbols_containing_numbers() {
         test_symbol("ms^-2");
+    }
+
+    #[test]
+    fn separates_semicolon_from_the_rest() {
+        test_expected_tokens(";- abc", &[
+            Semicolon,
+            Symbol("-".to_owned()),
+            Symbol("abc".to_owned()),
+        ]);
     }
 
     #[test]
