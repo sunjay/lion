@@ -8,7 +8,7 @@ pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
     Number(RichNumber),
     Definition {
@@ -20,7 +20,7 @@ pub enum ContextItem {
     Constant(String),
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Fixity {
     Prefix,
     Infix,
@@ -58,12 +58,26 @@ impl EvalContext {
 
     /// Gets a single value without evaluating it from the current context
     pub fn get(&self, name: &str) -> Option<ContextItem> {
-        unimplemented!();
+        self.symbol_table.get(name).map(|item| (*item).clone())
     }
 
     /// Convenience method for setting a number in the context
     pub fn set_number(&mut self, name: &str, value: RichNumber) {
         self.set(name, ContextItem::Number(value))
+    }
+
+    /// Defines a function in the context
+    pub fn define(&mut self, name: &str, fixity: Fixity, precedence: u8, function: Function) {
+        self.set(name, ContextItem::Definition {
+            fixity: fixity,
+            precedence: precedence,
+            function: function,
+        })
+    }
+
+    /// Creates a constant value
+    pub fn set_constant(&mut self, name: &str, value: String) {
+        self.set(name, ContextItem::Constant(value));
     }
 
     /// Adds to the current context (silently replaces if already present)
@@ -82,6 +96,7 @@ impl EvalContext {
 mod tests {
     use super::*;
     use ast::*;
+    use api::parse;
     use rich_number::RichNumber;
 
     #[test]
@@ -110,10 +125,6 @@ mod tests {
         for statement in program {
             context.apply(statement);
         }
-    }
-
-    fn parse(string: &str) -> ::parser::ParseResult<Program> {
-        unimplemented!();
     }
 }
 

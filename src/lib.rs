@@ -11,11 +11,6 @@ mod rich_number;
 mod prelude;
 mod eval_context;
 
-pub fn parse(string: &str) -> parser::ParseResult<ast::Program> {
-    parser::Parser::new(
-        tokenizer::Tokenizer::new(
-            scanner::Scanner::from_str(string)
-        )
-    ).parse()
-}
+mod api;
 
+pub use api::*;
