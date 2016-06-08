@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use ast::{Function, Expr, ExprItem, Term, Statement};
+use ast::{Function, Expr, Statement};
 use rich_number::RichNumber;
+use eval_tree_node::EvalTreeNode;
 use prelude::setup_prelude;
 
 const LOWEST_PRECEDENCE: u8 = 0;
@@ -14,21 +15,6 @@ pub enum EvalError {
 }
 
 pub type EvalResult = Result<ContextItem, EvalError>;
-
-#[derive(Debug, Clone)]
-struct EvalTreeNode {
-    item: ContextItem,
-    children: Vec<EvalTreeNode>,
-}
-
-impl EvalTreeNode {
-    fn new(item: ContextItem) -> EvalTreeNode {
-        EvalTreeNode {
-            item: item,
-            children: Vec::new(),
-        }
-    }
-}
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Fixity {
@@ -53,6 +39,16 @@ pub enum ContextItem {
 }
 
 impl ContextItem {
+    /// Creates a Definition ContextItem from a function
+    /// with the defaults assumed for all functions
+    pub fn function_defaults(function: Function) -> ContextItem {
+        ContextItem::Definition {
+            precedence: FUNCTION_PRECEDENCE,
+            fixity: Fixity::Prefix,
+            function: function,
+        }
+    }
+
     pub fn unwrap_number(self) -> RichNumber {
         match self {
             ContextItem::Number(num) => num,
@@ -148,57 +144,17 @@ impl EvalContext {
     }
 
     fn evaluate(&mut self, expr: Expr) -> EvalResult {
-        let root = try!(self.build_eval_tree(expr));
+        let root = try!(EvalTreeNode::from_expr(self, expr));
 
         unimplemented!();
     }
 
     /// Builds an evaluation tree and returns the root node
     fn build_eval_tree(&self, expr: Expr) -> Result<EvalTreeNode, EvalError> {
-        let nodes = try!(self.convert_to_nodes(expr));
 
         unimplemented!();
     }
 
-    fn convert_to_nodes(&self, expr: Expr) -> Result<Vec<EvalTreeNode>, EvalError> {
-        let mut nodes: Vec<EvalTreeNode> = Vec::new();
-
-        for item in expr.into_iter() {
-            nodes.push(match item {
-                ExprItem::AnonymousFunction(function) => {
-                    EvalTreeNode::new(ContextItem::Definition {
-                        precedence: FUNCTION_PRECEDENCE,
-                        fixity: Fixity::Prefix,
-                        function: function,
-                    })
-                },
-                ExprItem::SingleTerm(term) => match term {
-                    Term::Symbol(sym) => {
-                        let item = self.get(&sym);
-                        if item.is_none() {
-                            return Err(EvalError::UnknownSymbol(sym));
-                        }
-                        EvalTreeNode::new(item.unwrap())
-                    },
-                    Term::Number(num) => {
-                        EvalTreeNode::new(
-                            ContextItem::Number(
-                                RichNumber::from(num)
-                            )
-                        )
-                    },
-                    Term::StringLiteral(value) => {
-                        EvalTreeNode::new(
-                            ContextItem::Constant(value)
-                        )
-                    },
-                },
-                ExprItem::Group(expr) => try!(self.build_eval_tree(expr)),
-            });
-        }
-
-        Ok(nodes)
-    }
 }
 
 #[cfg(test)]

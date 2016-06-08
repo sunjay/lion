@@ -9,6 +9,7 @@ mod tokenizer;
 mod parser;
 mod rich_number;
 mod prelude;
+mod eval_tree_node;
 mod eval_context;
 
 mod api;
