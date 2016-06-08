@@ -88,7 +88,17 @@ impl EvalContext {
             fixity: fixity,
             precedence: precedence,
             function: function,
-        })
+        });
+    }
+
+    /// Defines a function linked to actual code rather than an expression
+    pub fn define_builtin_method<F>(
+        &mut self,
+        name: &str,
+        method: fn(Vec<ContextItem>
+    ) -> EvalResult) {
+
+        self.set(name, ContextItem::BuiltInMethod(method));
     }
 
     /// Creates a constant value
