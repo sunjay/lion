@@ -1,16 +1,19 @@
 use std::collections::HashMap;
 
-use ast::*;
+use ast::{Function, Expr, Statement};
 use rich_number::RichNumber;
 use prelude::setup_prelude;
-
-pub struct EvalContext {
-    symbol_table: HashMap<String, ContextItem>,
-}
 
 const LOWEST_PRECEDENCE: u8 = 0;
 const HIGHEST_PRECEDENCE: u8 = 9;
 const FUNCTION_PRECEDENCE: u8 = HIGHEST_PRECEDENCE;
+
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub enum Fixity {
+    Prefix,
+    Infix,
+    Postfix,
+}
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
@@ -22,23 +25,28 @@ pub enum ContextItem {
         function: Function,
     },
     Constant(String),
+    Boolean(bool),
     Nothing,
-}
-
-#[derive(Eq, PartialEq, Debug, Clone)]
-pub enum Fixity {
-    Prefix,
-    Infix,
-    Postfix,
 }
 
 impl ContextItem {
     pub fn unwrap_number(self) -> RichNumber {
         match self {
             ContextItem::Number(num) => num,
-            _ => panic!("Expected to unwrap a number"),
+            _ => panic!("Expected to unwrap a Number"),
         }
     }
+
+    pub fn unwrap_boolean(self) -> bool {
+        match self {
+            ContextItem::Boolean(value) => value,
+            _ => panic!("Expected to unwrap a Boolean"),
+        }
+    }
+}
+
+pub struct EvalContext {
+    symbol_table: HashMap<String, ContextItem>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -87,6 +95,11 @@ impl EvalContext {
         self.set(name, ContextItem::Constant(value));
     }
 
+    /// Creates a boolean value
+    pub fn set_boolean(&mut self, name: &str, value: bool) {
+        self.set(name, ContextItem::Boolean(value));
+    }
+
     /// Adds to the current context (silently replaces if already present)
     pub fn set(&mut self, name: &str, value: ContextItem) {
         self.symbol_table.insert(name.to_owned(), value);
@@ -98,7 +111,7 @@ impl EvalContext {
                 self.define(&name, Fixity::Prefix, FUNCTION_PRECEDENCE, definition);
                 Ok(ContextItem::Nothing)
             },
-            Statement::AnonymousFunction(function) => Ok(ContextItem::Nothing),
+            Statement::AnonymousFunction(_) => Ok(ContextItem::Nothing),
             Statement::Assignment {name, value} => {
                 let value = try!(self.evaluate(value));
                 self.set(&name, value);
@@ -108,7 +121,7 @@ impl EvalContext {
         }
     }
 
-    pub fn evaluate(&mut self, expr: Expr) -> EvalResult {
+    fn evaluate(&mut self, expr: Expr) -> EvalResult {
         unimplemented!();
     }
 }
@@ -138,13 +151,38 @@ mod tests {
         assert_eq!(context.get("x").map(|n| n.unwrap_number()), Some(RichNumber::from(3f64)));
     }
 
+    #[test]
+    fn basic_operators_and_precedence() {
+        let result = apply_single("2 * 3 ** 2 - (100e-1 + -77.2) / 13").unwrap();
+        assert_eq!(result.unwrap_number(), RichNumber::from(23.1692307692f64));
+    }
+
+    fn test_single_boolean(string: &str, expected: bool) {
+        let result = apply_single(string).unwrap();
+        assert_eq!(result.unwrap_boolean(), expected);
+    }
+
+    fn apply_single(string: &str) -> EvalResult {
+        let mut context = EvalContext::new();
+        let statement = parse_statement(string);
+
+        context.apply(statement)
+    }
+
+    fn parse_statement(string: &str) -> Statement {
+        let mut parsed = parse(string).unwrap();
+        assert!(parsed.len() == 1, "parse_statement() was passed more than one statement");
+
+        parsed.pop().unwrap()
+    }
+
     fn apply_string(mut context: &mut EvalContext, string: &str) {
         apply_program(context, parse(string).unwrap());
     }
 
     fn apply_program(mut context: &mut EvalContext, program: Program) {
         for statement in program {
-            context.apply(statement);
+            context.apply(statement).expect("Error while applying statement");
         }
     }
 }
