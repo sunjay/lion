@@ -8,6 +8,13 @@ const LOWEST_PRECEDENCE: u8 = 0;
 const HIGHEST_PRECEDENCE: u8 = 9;
 const FUNCTION_PRECEDENCE: u8 = HIGHEST_PRECEDENCE;
 
+#[derive(PartialEq, Debug)]
+pub enum EvalError {
+    UnknownSymbol(String),
+}
+
+pub type EvalResult = Result<ContextItem, EvalError>;
+
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Fixity {
     Prefix,
@@ -24,6 +31,7 @@ pub enum ContextItem {
         fixity: Fixity,
         function: Function,
     },
+    BuiltInMethod(fn(Vec<ContextItem>) -> EvalResult),
     Constant(String),
     Boolean(bool),
     Nothing,
@@ -48,13 +56,6 @@ impl ContextItem {
 pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
 }
-
-#[derive(PartialEq, Debug)]
-pub enum EvalError {
-    NotFound(String),
-}
-
-pub type EvalResult = Result<ContextItem, EvalError>;
 
 impl EvalContext {
     pub fn new() -> EvalContext {
