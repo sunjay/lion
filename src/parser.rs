@@ -513,6 +513,53 @@ mod tests {
         test_invalid_statement(";", ParseError::UnexpectedToken(Token::Semicolon));
     }
 
+    #[test]
+    fn allows_immediately_evaluating_anonymous_functions() {
+        test_statement(r"(\x y z = x * y + z) 1 3.4 55",
+            Statement::Expression(vec![
+                ExprItem::Group(vec![
+                    ExprItem::AnonymousFunction(Function {
+                        params: vec![
+                            "x".to_owned(),
+                            "y".to_owned(),
+                            "z".to_owned(),
+                        ],
+
+                        body: vec![
+                            ExprItem::SingleTerm(
+                                Term::Symbol("x".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("*".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("y".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("+".to_owned())
+                            ),
+                            ExprItem::SingleTerm(
+                                Term::Symbol("z".to_owned())
+                            ),
+                        ],
+                    }),
+                ]),
+
+                ExprItem::SingleTerm(
+                    Term::Number(1f64)
+                ),
+
+                ExprItem::SingleTerm(
+                    Term::Number(3.4f64)
+                ),
+
+                ExprItem::SingleTerm(
+                    Term::Number(55f64)
+                ),
+            ])
+        );
+    }
+
     //TODO: Tests for failure cases like:
     //TODO: * mismatched parenthesis both too many `(` and too many `)`
     //TODO: * mismatched quotes on strings
