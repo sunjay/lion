@@ -91,6 +91,7 @@ $ add2cm (5 cm)
     * `!=`
     * `>=`
     * `<=`
+    * `neg` - for negating numbers (since `-` is infix)
     * Math functions such as `max`, `min`, `sin`, `cos`, `tan`, etc.
 
 ## Custom Operators
