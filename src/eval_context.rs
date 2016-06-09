@@ -9,14 +9,22 @@ const LOWEST_PRECEDENCE: u8 = 0;
 const HIGHEST_PRECEDENCE: u8 = 9;
 const FUNCTION_PRECEDENCE: u8 = HIGHEST_PRECEDENCE;
 
+const FUNCTION_FIXITY: Fixity = Fixity::Prefix;
+
 #[derive(PartialEq, Debug)]
 pub enum EvalError {
-    UnknownSymbol(String),
+    UndefinedSymbol(String),
+    UnexpectedSymbols,
+    ExpectedParams(usize),
+    InvalidSymbolDefinition {
+        expected_params: usize,
+        actual_params: usize,
+    },
 }
 
 pub type EvalResult = Result<ContextItem, EvalError>;
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub enum Fixity {
     Prefix,
     Infix,
@@ -32,7 +40,12 @@ pub enum ContextItem {
         fixity: Fixity,
         function: Function,
     },
-    BuiltInMethod(fn(Vec<ContextItem>) -> EvalResult),
+    BuiltInMethod {
+        precedence: u8,
+        fixity: Fixity,
+        params: usize,
+        function: fn(Vec<ContextItem>) -> EvalResult,
+    },
     Constant(String),
     Boolean(bool),
     Nothing,
@@ -44,7 +57,7 @@ impl ContextItem {
     pub fn function_defaults(function: Function) -> ContextItem {
         ContextItem::Definition {
             precedence: FUNCTION_PRECEDENCE,
-            fixity: Fixity::Prefix,
+            fixity: FUNCTION_FIXITY,
             function: function,
         }
     }
@@ -60,6 +73,42 @@ impl ContextItem {
         match self {
             ContextItem::Boolean(value) => value,
             _ => panic!("Expected to unwrap a Boolean"),
+        }
+    }
+
+    /// The most reliable way to get the precedence of any ContextItem
+    /// ContextItems with no defined precedence return None
+    pub fn resolve_precedence(&self) -> Option<&u8> {
+        match *self {
+            ContextItem::Definition { ref precedence, .. } => Some(precedence),
+            ContextItem::BuiltInMethod { ref precedence, .. } => Some(precedence),
+            _ => None,
+        }
+    }
+
+    /// The most reliable way to get the fixity of any ContextItem
+    /// ContextItems with no defined fixity return None
+    pub fn resolve_fixity(&self) -> Option<Fixity> {
+        match *self {
+            ContextItem::Definition { fixity, .. } => Some(fixity),
+            ContextItem::BuiltInMethod { fixity, .. } => Some(fixity),
+            _ => None,
+        }
+    }
+
+    /// The most reliable way to get the number of parameters of any ContextItem
+    /// ContextItems with no defined number of parameters return None
+    pub fn resolve_params(&self) -> Option<usize> {
+        match *self {
+            ContextItem::Definition {
+                function: Function {
+                    ref params,
+                    ..
+                },
+                ..
+            } => Some(params.len()),
+            ContextItem::BuiltInMethod { ref params, .. } => Some(*params),
+            _ => None,
         }
     }
 }
@@ -92,7 +141,13 @@ impl EvalContext {
     }
 
     /// Defines a function in the context
-    pub fn define(&mut self, name: &str, fixity: Fixity, precedence: u8, function: Function) {
+    pub fn define(
+        &mut self,
+        name: &str,
+        fixity: Fixity,
+        precedence: u8,
+        function: Function,
+    ) {
         debug_assert!(precedence >= LOWEST_PRECEDENCE && precedence <= HIGHEST_PRECEDENCE);
 
         self.set(name, ContextItem::Definition {
@@ -103,13 +158,21 @@ impl EvalContext {
     }
 
     /// Defines a function linked to actual code rather than an expression
-    pub fn define_builtin_method<F>(
+    pub fn define_builtin_method(
         &mut self,
         name: &str,
-        method: fn(Vec<ContextItem>
-    ) -> EvalResult) {
+        fixity: Fixity,
+        precedence: u8,
+        params: usize,
+        function: fn(Vec<ContextItem>) -> EvalResult,
+    ) {
 
-        self.set(name, ContextItem::BuiltInMethod(method));
+        self.set(name, ContextItem::BuiltInMethod {
+            fixity: fixity,
+            precedence: precedence,
+            params: params,
+            function: function,
+        });
     }
 
     /// Creates a constant value
@@ -130,7 +193,7 @@ impl EvalContext {
     pub fn apply(&mut self, statement: Statement) -> EvalResult {
         match statement {
             Statement::NamedFunction {name, definition} => {
-                self.define(&name, Fixity::Prefix, FUNCTION_PRECEDENCE, definition);
+                self.define(&name, FUNCTION_FIXITY, FUNCTION_PRECEDENCE, definition);
                 Ok(ContextItem::Nothing)
             },
             Statement::AnonymousFunction(_) => Ok(ContextItem::Nothing),

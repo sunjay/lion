@@ -1,6 +1,6 @@
 use ast::{Expr, ExprItem, Term};
 use rich_number::RichNumber;
-use eval_context::{EvalContext, EvalError, ContextItem};
+use eval_context::{EvalContext, EvalError, ContextItem, Fixity};
 
 #[derive(Debug, Clone)]
 pub struct EvalTreeNode {
@@ -17,9 +17,23 @@ impl EvalTreeNode {
     }
 
     pub fn from_expr(context: &EvalContext, expr: Expr) -> Result<EvalTreeNode, EvalError> {
-        let nodes = try!(EvalTreeNode::convert_to_nodes(context, expr));
+        let mut nodes = try!(EvalTreeNode::convert_to_nodes(context, expr));
 
-        unimplemented!();
+        while nodes.len() != 1 {
+            let node_index = EvalTreeNode::left_highest_precedence(&nodes);
+            if node_index.is_none() {
+                return Err(EvalError::UnexpectedSymbols);
+            }
+            let node_index = node_index.unwrap();
+
+            let params = try!(EvalTreeNode::drain_params(&mut nodes, node_index));
+
+            let mut node = &mut nodes[node_index];
+            node.children = params;
+        }
+
+        debug_assert!(nodes.len() == 1);
+        Ok(nodes.pop().unwrap())
     }
 
     fn convert_to_nodes(context: &EvalContext, expr: Expr) -> Result<Vec<EvalTreeNode>, EvalError> {
@@ -34,7 +48,7 @@ impl EvalTreeNode {
                     Term::Symbol(sym) => {
                         let item = context.get(&sym);
                         if item.is_none() {
-                            return Err(EvalError::UnknownSymbol(sym));
+                            return Err(EvalError::UndefinedSymbol(sym));
                         }
                         EvalTreeNode::new(item.unwrap())
                     },
@@ -56,6 +70,77 @@ impl EvalTreeNode {
         }
 
         Ok(nodes)
+    }
+
+    /// Returns the index of the leftmost node with the highest precedence
+    /// Only returns ContextItems with precedence
+    fn left_highest_precedence(nodes: &Vec<EvalTreeNode>) -> Option<usize> {
+        // (index, precedence)
+        let mut highest: Option<(usize, u8)> = None;
+
+        for (i, node) in nodes.iter().enumerate() {
+            // This node has already been taken care of
+            if !node.children.is_empty() {
+                continue;
+            }
+
+            let precedence = node.item.resolve_precedence();
+            if precedence.is_none() {
+                continue;
+            }
+            let precedence = *precedence.unwrap();
+
+            // This MUST be less than, NOT less than or equal to to get the
+            // leftmost item
+            if highest.is_none() || highest.unwrap().1 < precedence {
+                highest = Some((i, precedence));
+            }
+        }
+
+        highest.map(|x| x.0)
+    }
+
+    // Removes the nodes adjacent to the node_index (but not including the
+    // node_index) that correspond to the number of parameters expected
+    // by that node in the direction specified by that node's fixity
+    fn drain_params(mut nodes: &mut Vec<EvalTreeNode>, node_index: usize) -> Result<Vec<EvalTreeNode>, EvalError> {
+        let fixity;
+        let params;
+        {
+            let node = &nodes[node_index];
+
+            // unwrap() is safe here because node item should be a definition or built in
+            fixity = node.item.resolve_fixity().unwrap();
+            params = node.item.resolve_params().unwrap();
+            debug_assert!(params != 0);
+        }
+        
+        Ok(match fixity {
+            Fixity::Prefix => {
+                nodes.drain((node_index - params)..node_index).collect()
+            },
+            Fixity::Infix => {
+                // Infix functions MUST have 2 parameters
+                if params != 2 {
+                    return Err(EvalError::InvalidSymbolDefinition {
+                        expected_params: 2,
+                        actual_params: params,
+                    });
+                }
+
+                // It is vital that the second remove happen before the
+                // first because this operation shifts all indexes to the left
+                let second = nodes.remove(node_index + 1);
+                let first = nodes.remove(node_index - 1);
+
+                vec![first, second]
+            },
+            Fixity::Postfix => {
+                // The +1 in the end of the range is because ranges stop
+                // at the index 1 before the end
+                nodes.drain((node_index + 1)..(node_index + params + 1)).collect()
+            },
+        })
     }
 }
 
