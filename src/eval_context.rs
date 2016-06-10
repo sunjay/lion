@@ -62,6 +62,17 @@ impl ContextItem {
         }
     }
 
+    /// Creates a BuiltInMethod ContextItem from a function
+    /// with the defaults assumed for all functions
+    pub fn built_in_defaults(function: fn(Vec<ContextItem>) -> EvalResult, params: usize) -> ContextItem {
+        ContextItem::BuiltInMethod {
+            precedence: FUNCTION_PRECEDENCE,
+            fixity: FUNCTION_FIXITY,
+            params: params,
+            function: function,
+        }
+    }
+
     pub fn unwrap_number(self) -> RichNumber {
         match self {
             ContextItem::Number(num) => num,
