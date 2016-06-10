@@ -116,9 +116,6 @@ impl EvalTreeNode {
         }
         
         Ok(match fixity {
-            Fixity::Prefix => {
-                nodes.drain((node_index - params)..node_index).collect()
-            },
             Fixity::Infix => {
                 // Infix functions MUST have 2 parameters
                 if params != 2 {
@@ -135,10 +132,23 @@ impl EvalTreeNode {
 
                 vec![first, second]
             },
+            Fixity::Prefix => {
+                let start = node_index - params;
+                let end = node_index;
+                if start < 0 || end >= nodes.len() {
+                    return Err(EvalError::ExpectedParams(params));
+                }
+                nodes.drain(start..end).collect()
+            },
             Fixity::Postfix => {
                 // The +1 in the end of the range is because ranges stop
                 // at the index 1 before the end
-                nodes.drain((node_index + 1)..(node_index + params + 1)).collect()
+                let start = node_index + 1;
+                let end = node_index + params + 1;
+                if start < 0 || end >= nodes.len() {
+                    return Err(EvalError::ExpectedParams(params));
+                }
+                nodes.drain(start..end).collect()
             },
         })
     }
