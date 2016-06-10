@@ -21,6 +21,18 @@ impl RichNumber {
         RichNumber::from(0f64)
     }
 
+    pub fn is_unit_units(&self) -> bool {
+        self.unit == U_UNITS
+    }
+
+    pub fn pow(&self, other: RichNumber) -> RichNumber {
+        //TODO: Need to raise units to the power of somehow
+        assert!(self.is_unit_units());
+        assert!(other.is_unit_units());
+
+        RichNumber::from(self.value.powf(other.value))
+    }
+
     /// Attempts to coerce two values into a common unit
     /// Returns (converted self, converted other, common unit)
     fn coerce(&self, other: &RichNumber) -> (f64, f64, usize) {
