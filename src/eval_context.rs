@@ -1,3 +1,5 @@
+use std::fmt;
+use std::rc::Rc;
 use std::collections::HashMap;
 
 use ast::{Function, Expr, Statement};
@@ -25,6 +27,15 @@ pub enum EvalError {
 pub type EvalResult = Result<ContextItem, EvalError>;
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub struct BuiltInFunction(Rc<Fn(Vec<ContextItem>) -> EvalResult>);
+
+impl fmt::Debug for BuiltInFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<built-in function>")
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub enum Fixity {
     Prefix,
     Infix,
@@ -44,7 +55,7 @@ pub enum ContextItem {
         precedence: u8,
         fixity: Fixity,
         params: usize,
-        function: fn(Vec<ContextItem>) -> EvalResult,
+        function: BuiltInFunction,
     },
     Constant(String),
     Boolean(bool),
@@ -64,7 +75,7 @@ impl ContextItem {
 
     /// Creates a BuiltInMethod ContextItem from a function
     /// with the defaults assumed for all functions
-    pub fn built_in_defaults(function: fn(Vec<ContextItem>) -> EvalResult, params: usize) -> ContextItem {
+    pub fn built_in_defaults(function: BuiltInFunction, params: usize) -> ContextItem {
         ContextItem::BuiltInMethod {
             precedence: FUNCTION_PRECEDENCE,
             fixity: FUNCTION_FIXITY,
@@ -175,7 +186,7 @@ impl EvalContext {
         fixity: Fixity,
         precedence: u8,
         params: usize,
-        function: fn(Vec<ContextItem>) -> EvalResult,
+        function: BuiltInFunction,
     ) {
 
         self.set(name, ContextItem::BuiltInMethod {
