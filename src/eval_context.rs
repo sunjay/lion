@@ -209,15 +209,10 @@ impl EvalContext {
     fn evaluate(&mut self, expr: Expr) -> EvalResult {
         let root = try!(EvalTreeNode::from_expr(self, expr));
 
-        unimplemented!();
-    }
-
-    /// Builds an evaluation tree and returns the root node
-    fn build_eval_tree(&self, expr: Expr) -> Result<EvalTreeNode, EvalError> {
+        println!("{:#?}", root);
 
         unimplemented!();
     }
-
 }
 
 #[cfg(test)]
