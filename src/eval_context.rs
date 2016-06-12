@@ -46,6 +46,7 @@ pub enum ContextItem {
         params: usize,
         function: fn(Vec<ContextItem>) -> EvalResult,
     },
+    Unit(usize),
     Constant(String),
     Boolean(bool),
     Nothing,
@@ -124,11 +125,11 @@ impl ContextItem {
     }
 }
 
-pub type ConversionTable = HashMap<(String, String), Function>;
+// (from unit, to unit) : Function definition
+pub type ConversionTable = HashMap<(usize, usize), Function>;
 
 pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
-    // (from unit, to unit) : Function definition
     conversion_table: ConversionTable,
 }
 
