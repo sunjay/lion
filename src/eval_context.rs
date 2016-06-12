@@ -124,14 +124,19 @@ impl ContextItem {
     }
 }
 
+pub type ConversionTable = HashMap<(String, String), Function>;
+
 pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
+    // (from unit, to unit) : Function definition
+    conversion_table: ConversionTable,
 }
 
 impl EvalContext {
     pub fn new() -> EvalContext {
         EvalContext {
             symbol_table: HashMap::new(),
+            conversion_table: HashMap::new(),
         }
     }
 
