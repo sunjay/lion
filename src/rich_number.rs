@@ -1,81 +1,76 @@
+use eval_context::ConversionTable;
+
 use std::ops::{Add, Sub, Mul, Div, Rem};
 
-// Predefined unit constants
-const U_UNITS: usize = 1;
+pub type Unit = usize;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RichNumber {
     value: f64,
-    unit: usize,
+    unit: Option<Unit>,
 }
 
 impl RichNumber {
-    pub fn new(value: f64, unit: usize) -> RichNumber {
+    pub fn new(value: f64, unit: Option<Unit>) -> RichNumber {
         RichNumber {
-            value: value as f64,
+            value: value,
             unit: unit,
         }
+    }
+
+    pub fn from_unit(value: f64, unit: Unit) -> RichNumber {
+        RichNumber::new(value, Some(unit))
     }
 
     pub fn zero() -> RichNumber {
         RichNumber::from(0f64)
     }
 
-    pub fn is_unit_units(&self) -> bool {
-        self.unit == U_UNITS
+    pub fn is_dimensionless(&self) -> bool {
+        self.unit.is_none()
     }
 
     pub fn pow(&self, other: RichNumber) -> RichNumber {
-        //TODO: Need to raise units to the power of somehow
-        assert!(self.is_unit_units());
-        assert!(other.is_unit_units());
+        assert!(self.is_dimensionless() && other.is_dimensionless(),
+            "Applying exponents to quantities with units is not supported yet, only raise dimensionless/scalar quantities to dimensionless/scalar exponents");
 
         RichNumber::from(self.value.powf(other.value))
     }
 
     /// Attempts to coerce two values into a common unit
-    /// Returns (converted self, converted other, common unit)
-    fn coerce(&self, other: &RichNumber) -> (f64, f64, usize) {
+    /// Returns (converted self, converted other)
+    fn coerce(&self, other: &RichNumber, conversions: &ConversionTable) -> (RichNumber, RichNumber) {
         //TODO: Convert between units
-        (self.value, other.value, U_UNITS)
+        (self.clone(), other.clone())
     }
 
-    /// Applies an operator to two values given the values and their common unit
-    fn apply_operator<F, R>(self, other: RichNumber, operator: F) -> R
-        where F: FnOnce(f64, f64, usize) -> R {
+    /// Applies an operator to two values given the values and what the resulting unit should be
+    fn apply_operator<F>(self, other: RichNumber, operator: F, unit: Option<Unit>) -> RichNumber
+        where F: FnOnce(f64, f64) -> f64 {
 
-        let (value, other_value, unit) = self.coerce(&other);
-        operator(value, other_value, unit)
-    }
-
-    /// Converts self and other into a common or compatible unit and then performs the given operation
-    /// operator is given the two values in order and the common unit
-    /// Returns a RichNumber with the new value and the common unit
-    fn apply_numeric_operator<F>(self, other: RichNumber, operator: F) -> RichNumber
-        where F: FnOnce(f64, f64, usize) -> f64 {
-
-        let (value, other_value, unit) = self.coerce(&other);
-        RichNumber::new(operator(value, other_value, unit), unit)
+        let value = operator(self.value, other.value);
+        RichNumber::new(value, unit)
     }
 }
 
 impl From<i64> for RichNumber {
     fn from(number: i64) -> RichNumber {
-        RichNumber::new(number as f64, U_UNITS)
+        RichNumber::from(number as f64)
     }
 }
 
 impl From<f64> for RichNumber {
     fn from(number: f64) -> RichNumber {
-        RichNumber::new(number, U_UNITS)
+        RichNumber::new(number, None)
     }
 }
 
 impl PartialEq for RichNumber {
     fn eq(&self, other: &RichNumber) -> bool {
-        let (value, other_value, _) = self.coerce(other);
+        assert!(self.unit == other.unit,
+            "Cannot compare values with different units");
 
-        (value - other_value).abs() < 1e-10
+        (self.value - other.value).abs() < 1e-10
     }
 }
 
@@ -83,7 +78,9 @@ impl Add for RichNumber {
     type Output = RichNumber;
 
     fn add(self, other: RichNumber) -> Self::Output {
-        self.apply_numeric_operator(other, |a, b, _| a + b)
+        assert!(self.unit == other.unit,
+            "Cannot add values with different units");
+        self.apply_operator(other, |a, b| a + b, self.unit)
     }
 }
 
@@ -91,7 +88,9 @@ impl Sub for RichNumber {
     type Output = RichNumber;
 
     fn sub(self, other: RichNumber) -> Self::Output {
-        self.apply_numeric_operator(other, |a, b, _| a - b)
+        assert!(self.unit == other.unit,
+            "Cannot subtract values with different units");
+        self.apply_operator(other, |a, b| a - b, self.unit)
     }
 }
 
@@ -99,7 +98,18 @@ impl Mul for RichNumber {
     type Output = RichNumber;
 
     fn mul(self, other: RichNumber) -> Self::Output {
-        self.apply_numeric_operator(other, |a, b, _| a * b)
+        let unit;
+        if self.is_dimensionless() {
+            unit = other.unit;
+        }
+        else if other.is_dimensionless() {
+            unit = self.unit;
+        }
+        else {
+            panic!("Multiplying units is not supported yet. Try a dimensionaless/scalar value");
+        }
+
+        self.apply_operator(other, |a, b| a * b, unit)
     }
 }
 
@@ -107,7 +117,18 @@ impl Div for RichNumber {
     type Output = RichNumber;
 
     fn div(self, other: RichNumber) -> Self::Output {
-        self.apply_numeric_operator(other, |a, b, _| a / b)
+        let unit;
+        if other.is_dimensionless() {
+            unit = self.unit;
+        }
+        else if self.unit == other.unit {
+            unit = None;
+        }
+        else {
+            panic!("Dividing units is not supported yet. Use two values with the same unit or multiply by a dimensionless/scalar value");
+        }
+
+        self.apply_operator(other, |a, b| a / b, unit)
     }
 }
 
@@ -115,7 +136,18 @@ impl Rem for RichNumber {
     type Output = RichNumber;
 
     fn rem(self, other: RichNumber) -> Self::Output {
-        self.apply_numeric_operator(other, |a, b, _| a % b)
+        let unit;
+        if other.is_dimensionless() {
+            unit = self.unit;
+        }
+        else if self.unit == other.unit {
+            unit = None;
+        }
+        else {
+            panic!("Taking the remainder of quantities with units is not supported. Use two values with the same unit or multiply by a dimensionless/scalar value");
+        }
+
+        self.apply_operator(other, |a, b| a % b, unit)
     }
 }
 

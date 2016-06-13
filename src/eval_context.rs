@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ast::{Function, Expr, Statement};
-use rich_number::RichNumber;
+use rich_number::{Unit, RichNumber};
 use eval_tree_node::EvalTreeNode;
 use prelude::setup_prelude;
 
@@ -46,7 +46,7 @@ pub enum ContextItem {
         params: usize,
         function: fn(Vec<ContextItem>) -> EvalResult,
     },
-    Unit(usize),
+    Unit(Unit),
     Constant(String),
     Boolean(bool),
     Nothing,
@@ -126,7 +126,7 @@ impl ContextItem {
 }
 
 // (from unit, to unit) : Function definition
-pub type ConversionTable = HashMap<(usize, usize), Function>;
+pub type ConversionTable = HashMap<(Unit, Unit), Function>;
 
 pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
