@@ -1,5 +1,6 @@
 extern crate lion;
 
+use lion::ast;
 use lion::parse;
 
 fn main() {

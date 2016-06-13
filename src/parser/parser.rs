@@ -1,5 +1,5 @@
-use token::Token;
-use tokenizer::{Tokenizer, LexerError};
+use grammar::token::Token;
+use parser::tokenizer::{Tokenizer, LexerError};
 use ast::*;
 
 pub struct Parser {
@@ -305,9 +305,9 @@ impl Parser {
 mod tests {
     use super::*;
     use ast::*;
-    use token::Token;
-    use scanner::Scanner;
-    use tokenizer::Tokenizer;
+    use grammar::token::Token;
+    use parser::scanner::Scanner;
+    use parser::tokenizer::Tokenizer;
 
     #[test]
     fn call_function_with_string() {

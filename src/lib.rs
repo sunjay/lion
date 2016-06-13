@@ -1,17 +1,30 @@
 #[macro_use]
 extern crate lazy_static;
 
-pub mod ast;
+mod grammar {
+    pub mod token;
+}
 
-mod scanner;
-mod token;
-mod tokenizer;
-mod parser;
-mod rich_number;
+mod parser {
+    pub mod ast;
+
+    pub mod scanner;
+    pub mod tokenizer;
+    pub mod parser;
+}
+
+mod math {
+    pub mod rich_number;
+}
+
+mod eval {
+    pub mod eval_tree_node;
+    pub mod eval_context;
+}
+
 mod prelude;
-mod eval_tree_node;
-mod eval_context;
-
 mod api;
 
+pub use parser::ast;
 pub use api::*;
+

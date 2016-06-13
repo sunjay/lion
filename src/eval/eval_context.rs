@@ -1,9 +1,9 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use ast::{Function, Expr, Statement};
-use rich_number::{Unit, RichNumber};
-use eval_tree_node::EvalTreeNode;
+use parser::ast::{Function, Expr, Statement};
+use math::rich_number::{Unit, RichNumber};
+use eval::eval_tree_node::EvalTreeNode;
 use prelude::setup_prelude;
 
 const LOWEST_PRECEDENCE: u8 = 0;
@@ -263,9 +263,10 @@ mod defaults {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast::*;
     use api::parse;
-    use rich_number::RichNumber;
+
+    use ast::*;
+    use math::rich_number::RichNumber;
 
     #[test]
     fn get_set_in_context() {

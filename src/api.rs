@@ -1,7 +1,7 @@
 use ast::Program;
-use parser::{Parser, ParseResult};
-use tokenizer::Tokenizer;
-use scanner::Scanner;
+use parser::parser::{Parser, ParseResult};
+use parser::tokenizer::Tokenizer;
+use parser::scanner::Scanner;
 
 pub fn parse(string: &str) -> ParseResult<Program> {
     Parser::new(

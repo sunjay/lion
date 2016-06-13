@@ -2,8 +2,8 @@ use std::iter::Iterator;
 use std::result;
 use std::collections::HashSet;
 
-use token::Token;
-use scanner::Scanner;
+use grammar::token::Token;
+use parser::scanner::Scanner;
 
 const EOL_CHAR: char = '\n';
 const BACKSLASH_CHAR: char = '\\';
@@ -220,9 +220,9 @@ impl Iterator for Tokenizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::Token;
-    use token::Token::*;
-    use scanner::Scanner;
+    use grammar::token::Token;
+    use grammar::token::Token::*;
+    use parser::scanner::Scanner;
 
     #[test]
     fn backslash() {
