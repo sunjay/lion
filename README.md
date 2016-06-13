@@ -98,6 +98,7 @@ $ add2cm (5 cm)
 All the basic operators will be defined in lion syntax in a special prelude module. 
 
 Defining an operator is as simple as calling the `operator` function and passing in its three parameters:
+
 1. The fixity of your operator, one of: `PREFIX`, `POSTFIX`, `INFIX`
 2. The precedence, a number from 0 to 9 where 9 is the highest precedence
 3. The name of the operator in double-quotes (example: `"$$"`)

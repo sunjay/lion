@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::collections::HashMap;
 
 use ast::{Function, Expr, Statement};
@@ -31,6 +32,8 @@ pub enum Fixity {
     Postfix,
 }
 
+pub type BuiltInFunction = Rc<Fn(Vec<ContextItem>) -> EvalResult>;
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
     Number(RichNumber),
@@ -44,7 +47,7 @@ pub enum ContextItem {
         precedence: u8,
         fixity: Fixity,
         params: usize,
-        function: fn(Vec<ContextItem>) -> EvalResult,
+        function: BuiltInFunction,
     },
     Unit(Unit),
     Constant(String),
@@ -65,7 +68,7 @@ impl ContextItem {
 
     /// Creates a BuiltInMethod ContextItem from a function
     /// with the defaults assumed for all functions
-    pub fn built_in_defaults(function: fn(Vec<ContextItem>) -> EvalResult, params: usize) -> ContextItem {
+    pub fn built_in_defaults(function: BuiltInFunction, params: usize) -> ContextItem {
         ContextItem::BuiltInMethod {
             precedence: FUNCTION_PRECEDENCE,
             fixity: FUNCTION_FIXITY,
@@ -141,8 +144,25 @@ impl EvalContext {
         }
     }
 
-    pub fn prelude() -> EvalContext {
+    /// Defines a reasonble set of default builtin methods
+    pub fn defaults() -> EvalContext {
         let mut context = EvalContext::new();
+
+        context.define_builtin_method(
+            "operator",
+            FUNCTION_FIXITY,
+            FUNCTION_PRECEDENCE,
+            4,
+            defaults::define_operator(&context),
+        );
+
+        context
+    }
+
+    /// Defines a context with all the defaults as well as definitions
+    /// for common operators and units
+    pub fn prelude() -> EvalContext {
+        let mut context = EvalContext::defaults();
         setup_prelude(&mut context);
         context
     }
@@ -181,7 +201,7 @@ impl EvalContext {
         fixity: Fixity,
         precedence: u8,
         params: usize,
-        function: fn(Vec<ContextItem>) -> EvalResult,
+        function: BuiltInFunction,
     ) {
 
         self.set(name, ContextItem::BuiltInMethod {
@@ -229,6 +249,14 @@ impl EvalContext {
         println!("{:#?}", root);
 
         unimplemented!();
+    }
+}
+
+mod defaults {
+    use super::{EvalContext, ContextItem, BuiltInFunction};
+
+    pub fn define_operator(context: &mut EvalContext) -> BuiltInFunction {
+        Box::new(|args| Ok(ContextItem::Nothing))
     }
 }
 
