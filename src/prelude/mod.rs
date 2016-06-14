@@ -4,7 +4,8 @@
 /// performing basic operations and special math functions
 
 use math::rich_number::RichNumber;
-use eval::eval_context::{ContextItem, EvalContext, EvalResult};
+use eval::context_item::ContextItem;
+use eval::eval_context::{EvalContext, EvalResult};
 use eval::built_in_function::BuiltInFunction;
 
 pub fn setup_prelude(mut context: &mut EvalContext) {

@@ -1,6 +1,8 @@
 use ast::{Expr, ExprItem, Term};
 use math::rich_number::RichNumber;
-use eval::eval_context::{EvalContext, EvalError, ContextItem, Fixity};
+use eval::fixity::Fixity;
+use eval::context_item::ContextItem;
+use eval::eval_context::{EvalContext, EvalError};
 
 #[derive(Debug, Clone)]
 pub struct EvalTreeNode {

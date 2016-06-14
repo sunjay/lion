@@ -1,7 +1,8 @@
 use std::rc::Rc;
 use std::fmt;
 
-use eval::eval_context::{EvalContext, ContextItem, EvalResult};
+use eval::context_item::ContextItem;
+use eval::eval_context::{EvalContext, EvalResult};
 
 #[derive(Clone)]
 pub struct BuiltInFunction {

@@ -4,16 +4,12 @@ use std::collections::HashMap;
 use parser::ast::{Function, Expr, Statement};
 use math::rich_number::{Unit, RichNumber};
 
-use eval::eval_tree_node::EvalTreeNode;
+use eval::fixity::Fixity;
+use eval::context_item::ContextItem;
 use eval::built_in_function::BuiltInFunction;
+use eval::eval_tree_node::EvalTreeNode;
 
 use prelude::setup_prelude;
-
-const LOWEST_PRECEDENCE: u8 = 0;
-const HIGHEST_PRECEDENCE: u8 = 9;
-const FUNCTION_PRECEDENCE: u8 = HIGHEST_PRECEDENCE;
-
-const FUNCTION_FIXITY: Fixity = Fixity::Prefix;
 
 #[derive(PartialEq, Debug)]
 pub enum EvalError {
@@ -27,129 +23,6 @@ pub enum EvalError {
 }
 
 pub type EvalResult = Result<ContextItem, EvalError>;
-
-#[derive(Eq, PartialEq, Debug, Clone, Copy)]
-pub enum Fixity {
-    Prefix,
-    Infix,
-    Postfix,
-}
-
-//TODO: Move Fixity into its own module and replace these string literals with `const` declarations
-impl Fixity {
-    fn from_string(string: String) -> Option<Self> {
-        Some(match string.as_ref() {
-            "PREFIX" => Fixity::Prefix,
-            "INFIX" => Fixity::Infix,
-            "POSTFIX" => Fixity::Postfix,
-            _ => return None,
-        })
-    }
-}
-
-impl ToString for Fixity {
-    fn to_string(&self) -> String {
-        String::from(match *self {
-            Fixity::Prefix => "PREFIX",
-            Fixity::Infix => "INFIX",
-            Fixity::Postfix => "POSTFIX",
-        })
-    }
-}
-
-#[derive(PartialEq, Debug, Clone)]
-pub enum ContextItem {
-    Number(RichNumber),
-    Definition {
-        // number from 0 to 9 where 9 is the highest precedence
-        precedence: u8,
-        fixity: Fixity,
-        function: Function,
-    },
-    BuiltInMethod {
-        precedence: u8,
-        fixity: Fixity,
-        params: usize,
-        function: BuiltInFunction,
-    },
-    Unit(Unit),
-    Constant(String),
-    Boolean(bool),
-    Nothing,
-}
-
-impl ContextItem {
-    /// Creates a Definition ContextItem from a function
-    /// with the defaults assumed for all functions
-    pub fn function_defaults(function: Function) -> ContextItem {
-        ContextItem::Definition {
-            precedence: FUNCTION_PRECEDENCE,
-            fixity: FUNCTION_FIXITY,
-            function: function,
-        }
-    }
-
-    /// Creates a BuiltInMethod ContextItem from a function
-    /// with the defaults assumed for all functions
-    pub fn built_in_defaults(function: BuiltInFunction, params: usize) -> ContextItem {
-        ContextItem::BuiltInMethod {
-            precedence: FUNCTION_PRECEDENCE,
-            fixity: FUNCTION_FIXITY,
-            params: params,
-            function: function,
-        }
-    }
-
-    pub fn unwrap_number(self) -> RichNumber {
-        match self {
-            ContextItem::Number(num) => num,
-            _ => panic!("Expected to unwrap a Number"),
-        }
-    }
-
-    pub fn unwrap_boolean(self) -> bool {
-        match self {
-            ContextItem::Boolean(value) => value,
-            _ => panic!("Expected to unwrap a Boolean"),
-        }
-    }
-
-    /// The most reliable way to get the precedence of any ContextItem
-    /// ContextItems with no defined precedence return None
-    pub fn resolve_precedence(&self) -> Option<&u8> {
-        match *self {
-            ContextItem::Definition { ref precedence, .. } => Some(precedence),
-            ContextItem::BuiltInMethod { ref precedence, .. } => Some(precedence),
-            _ => None,
-        }
-    }
-
-    /// The most reliable way to get the fixity of any ContextItem
-    /// ContextItems with no defined fixity return None
-    pub fn resolve_fixity(&self) -> Option<Fixity> {
-        match *self {
-            ContextItem::Definition { fixity, .. } => Some(fixity),
-            ContextItem::BuiltInMethod { fixity, .. } => Some(fixity),
-            _ => None,
-        }
-    }
-
-    /// The most reliable way to get the number of parameters of any ContextItem
-    /// ContextItems with no defined number of parameters return None
-    pub fn resolve_params(&self) -> Option<usize> {
-        match *self {
-            ContextItem::Definition {
-                function: Function {
-                    ref params,
-                    ..
-                },
-                ..
-            } => Some(params.len()),
-            ContextItem::BuiltInMethod { ref params, .. } => Some(*params),
-            _ => None,
-        }
-    }
-}
 
 // (from unit, to unit) : Function definition
 pub type ConversionTable = HashMap<(Unit, Unit), Function>;
@@ -167,7 +40,7 @@ impl EvalContext {
         }
     }
 
-    /// Defines a reasonble set of default builtin methods
+    /// Defines a reasonble set of default built_in methods
     pub fn defaults() -> EvalContext {
         let mut context = EvalContext::new();
 
@@ -175,10 +48,8 @@ impl EvalContext {
         context.set_constant("INFIX", Fixity::Infix.to_string());
         context.set_constant("POSTFIX", Fixity::Postfix.to_string());
 
-        context.define_builtin_method(
+        context.define_built_in_method_defaults(
             "operator",
-            FUNCTION_FIXITY,
-            FUNCTION_PRECEDENCE,
             4,
             BuiltInFunction::new(defaults::define_operator),
         );
@@ -212,17 +83,20 @@ impl EvalContext {
         precedence: u8,
         function: Function,
     ) {
-        debug_assert!(precedence >= LOWEST_PRECEDENCE && precedence <= HIGHEST_PRECEDENCE);
+        self.set(name, ContextItem::new_definition(fixity, precedence, function));
+    }
 
-        self.set(name, ContextItem::Definition {
-            fixity: fixity,
-            precedence: precedence,
-            function: function,
-        });
+    /// Defines a function in the context with defaults for precedence and fixity
+    pub fn define_defaults(
+        &mut self,
+        name: &str,
+        function: Function,
+    ) {
+        self.set(name, ContextItem::function_defaults(function));
     }
 
     /// Defines a function linked to actual code rather than an expression
-    pub fn define_builtin_method(
+    pub fn define_built_in_method(
         &mut self,
         name: &str,
         fixity: Fixity,
@@ -237,6 +111,16 @@ impl EvalContext {
             params: params,
             function: function,
         });
+    }
+
+    /// Defines a built-in function in the context with defaults for precedence and fixity
+    pub fn define_built_in_method_defaults(
+        &mut self,
+        name: &str,
+        params: usize,
+        function: BuiltInFunction,
+    ) {
+        self.set(name, ContextItem::built_in_defaults(function, params));
     }
 
     /// Creates a constant value
@@ -257,7 +141,7 @@ impl EvalContext {
     pub fn apply(&mut self, statement: Statement) -> EvalResult {
         match statement {
             Statement::NamedFunction {name, definition} => {
-                self.define(&name, FUNCTION_FIXITY, FUNCTION_PRECEDENCE, definition);
+                self.define_defaults(&name, definition);
                 Ok(ContextItem::Nothing)
             },
             Statement::AnonymousFunction(_) => Ok(ContextItem::Nothing),
@@ -282,7 +166,8 @@ impl EvalContext {
 mod defaults {
     use std::rc::Rc;
 
-    use super::{EvalContext, ContextItem, EvalResult, EvalError};
+    use super::{EvalContext, EvalResult, EvalError};
+    use eval::context_item::ContextItem;
     use eval::built_in_function::BuiltInFunction;
 
     pub fn define_operator(context: &mut EvalContext, args: Vec<ContextItem>) -> EvalResult {

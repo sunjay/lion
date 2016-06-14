@@ -18,6 +18,8 @@ mod math {
 }
 
 mod eval {
+    pub mod fixity;
+    pub mod context_item;
     pub mod built_in_function;
     pub mod eval_tree_node;
     pub mod eval_context;
