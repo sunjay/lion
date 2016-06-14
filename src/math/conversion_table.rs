@@ -62,11 +62,6 @@ impl ConversionTable {
             }
 
             for next_unit in self.associations.get(&unit).unwrap() {
-                if seen.contains(&next_unit) {
-                    continue;
-                }
-                seen.insert(*next_unit);
-
                 let mut next_path = path.clone();
                 next_path.push(*next_unit);
 
@@ -169,17 +164,10 @@ mod tests {
         assert_eq!(table.conversion_steps(mm, m).unwrap(), vec![cm, m]);
         assert_eq!(table.conversion_steps(mm, km).unwrap(), vec![cm, m, km]);
 
-        assert_eq!(table.conversion_steps(cm, mm), None);
         assert_eq!(table.conversion_steps(cm, m).unwrap(), vec![m]);
         assert_eq!(table.conversion_steps(cm, km).unwrap(), vec![m, km]);
 
-        assert_eq!(table.conversion_steps(m, mm), None);
-        assert_eq!(table.conversion_steps(m, cm), None);
         assert_eq!(table.conversion_steps(m, km).unwrap(), vec![km]);
-
-        assert_eq!(table.conversion_steps(km, mm), None);
-        assert_eq!(table.conversion_steps(km, cm), None);
-        assert_eq!(table.conversion_steps(km, m), None);
 
         // Test backward conversions
         assert_eq!(table.conversion_steps(km, m).unwrap(), vec![m]);
