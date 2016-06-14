@@ -18,5 +18,12 @@ impl ConversionTable {
             associations: HashMap::new(),
         }
     }
+
+    pub fn define_conversion(&mut self, from: Unit, to: Unit, converter: Function) {
+        self.converters.insert((from, to), converter);
+
+        let assoc = self.associations.entry(from).or_insert(Vec::new());
+        assoc.push(to);
+    }
 }
 
