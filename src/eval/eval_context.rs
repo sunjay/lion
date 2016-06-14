@@ -35,6 +35,28 @@ pub enum Fixity {
     Postfix,
 }
 
+//TODO: Move Fixity into its own module and replace these string literals with `const` declarations
+impl Fixity {
+    fn from_string(string: String) -> Option<Self> {
+        Some(match string.as_ref() {
+            "PREFIX" => Fixity::Prefix,
+            "INFIX" => Fixity::Infix,
+            "POSTFIX" => Fixity::Postfix,
+            _ => return None,
+        })
+    }
+}
+
+impl ToString for Fixity {
+    fn to_string(&self) -> String {
+        String::from(match *self {
+            Fixity::Prefix => "PREFIX",
+            Fixity::Infix => "INFIX",
+            Fixity::Postfix => "POSTFIX",
+        })
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
     Number(RichNumber),
@@ -149,6 +171,10 @@ impl EvalContext {
     pub fn defaults() -> EvalContext {
         let mut context = EvalContext::new();
 
+        context.set_constant("PREFIX", Fixity::Prefix.to_string());
+        context.set_constant("INFIX", Fixity::Infix.to_string());
+        context.set_constant("POSTFIX", Fixity::Postfix.to_string());
+
         context.define_builtin_method(
             "operator",
             FUNCTION_FIXITY,
@@ -256,11 +282,24 @@ impl EvalContext {
 mod defaults {
     use std::rc::Rc;
 
-    use super::{EvalContext, ContextItem, EvalResult};
+    use super::{EvalContext, ContextItem, EvalResult, EvalError};
     use eval::built_in_function::BuiltInFunction;
 
     pub fn define_operator(context: &mut EvalContext, args: Vec<ContextItem>) -> EvalResult {
+        try!(expect_args(&args, 4));
+        
+        //TODO: Unpack each argument form its context item and Err if it isn't the expected type
+
         Ok(ContextItem::Nothing)
+    }
+    
+    fn expect_args(args: &Vec<ContextItem>, nargs: usize) -> Result<(), EvalError> {
+        if args.len() != nargs {
+            Err(EvalError::ExpectedParams(nargs))
+        }
+        else {
+            Ok(())
+        }
     }
 }
 
