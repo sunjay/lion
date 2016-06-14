@@ -134,6 +134,12 @@ impl EvalTreeNode {
                     });
                 }
 
+                // if either of these conditions is true, the following calculation
+                // would result in either overflow or an index error
+                if node_index == 0 || node_index >= nodes.len() - 1 {
+                    return Err(EvalError::ExpectedParams(params));
+                }
+
                 // It is vital that the second remove happen before the
                 // first because this operation shifts all indexes to the left
                 let second = nodes.remove(node_index + 1);
