@@ -234,23 +234,23 @@ mod tests {
             let nleaf = |n| EvalTreeNode::new(ContextItem::Number(RichNumber::from(n)));
             let lookup = |name| context.get(name).unwrap();
 
-            EvalTreeNode::with_children(lookup("-"), vec![
-                EvalTreeNode::with_children(lookup("+"), vec![
-                    EvalTreeNode::with_children(lookup("f"), vec![
-                        nleaf(3),
-                    ]),
+            EvalTreeNode::with_children(lookup("+"), vec![
+                EvalTreeNode::with_children(lookup("-"), vec![
                     EvalTreeNode::with_children(lookup("+"), vec![
-                        EvalTreeNode::with_children(lookup("*"), vec![
-                            nleaf(4),
-                            nleaf(8),
+                        EvalTreeNode::with_children(lookup("f"), vec![
+                            nleaf(3),
                         ]),
                         EvalTreeNode::with_children(lookup("-"), vec![
-                            nleaf(99),
+                            EvalTreeNode::with_children(lookup("+"), vec![
+                                EvalTreeNode::with_children(lookup("*"), vec![
+                                    nleaf(4),
+                                    nleaf(8),
+                                ]),
+                                nleaf(99),
+                            ]),
                             EvalTreeNode::new(lookup("x")),
                         ]),
                     ]),
-                ]),
-                EvalTreeNode::with_children(lookup("+"), vec![
                     EvalTreeNode::with_children(lookup("/"), vec![
                         nleaf(67),
                         EvalTreeNode::with_children(lookup("-"), vec![
@@ -260,17 +260,12 @@ mod tests {
                             ]),
                         ]),
                     ]),
-                    nleaf(32),
                 ]),
+                nleaf(32),
             ])
         };
 
         let tree = EvalTreeNode::from_expr(&mut context, expr).unwrap();
-
-        println!("expected:");
-        print_tree(&expected_tree);
-        println!("result:");
-        print_tree(&tree);
 
         assert_eq!(tree, expected_tree);
     }
@@ -307,7 +302,8 @@ mod tests {
         context
     }
 
-    fn print_tree(tree: &EvalTreeNode) {
+    /// Useful method for debugging trees
+    fn _debug_print_tree(tree: &EvalTreeNode) {
         _print_tree(tree, 0);
     }
 
