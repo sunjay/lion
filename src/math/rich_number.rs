@@ -1,5 +1,3 @@
-use math::conversion_table::ConversionTable;
-
 use std::ops::{Add, Sub, Mul, Div, Rem};
 
 //TODO: Refactor Unit into its own newtype

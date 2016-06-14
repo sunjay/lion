@@ -3,16 +3,15 @@
 /// These special functions allow for things like defining operators,
 /// performing basic operations and special math functions
 
-use math::rich_number::RichNumber;
 use eval::context_item::ContextItem;
-use eval::eval_context::{EvalContext, EvalResult};
+use eval::eval_context::EvalContext;
 use eval::built_in_function::BuiltInFunction;
 
-pub fn setup_prelude(mut context: &mut EvalContext) {
+pub fn setup_prelude(context: &mut EvalContext) {
     define_math(context);
 }
 
-fn define_math(mut context: &mut EvalContext) {
+fn define_math(context: &mut EvalContext) {
 }
 
 fn define_built_in(

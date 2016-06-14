@@ -105,7 +105,7 @@ impl EvalTreeNode {
     // Removes the nodes adjacent to the node_index (but not including the
     // node_index) that correspond to the number of parameters expected
     // by that node in the direction specified by that node's fixity
-    fn drain_params(mut nodes: &mut Vec<EvalTreeNode>, node_index: usize) -> Result<Vec<EvalTreeNode>, EvalError> {
+    fn drain_params(nodes: &mut Vec<EvalTreeNode>, node_index: usize) -> Result<Vec<EvalTreeNode>, EvalError> {
         let fixity;
         let params;
         {
@@ -135,19 +135,26 @@ impl EvalTreeNode {
                 vec![first, second]
             },
             Fixity::Prefix => {
-                let start = node_index - params;
+                let start;
                 let end = node_index;
-                if start < 0 || end >= nodes.len() {
+
+                // params > node_index would result in a negative sum
+                if params > node_index || end >= nodes.len() {
                     return Err(EvalError::ExpectedParams(params));
                 }
+                // need to declare this here to avoid overflow
+                start = node_index - params;
+
                 nodes.drain(start..end).collect()
             },
             Fixity::Postfix => {
+                // No need to worry about node_index being less than zero because we
+                // are adding 1 here
+                let start = node_index + 1;
                 // The +1 in the end of the range is because ranges stop
                 // at the index 1 before the end
-                let start = node_index + 1;
                 let end = node_index + params + 1;
-                if start < 0 || end >= nodes.len() {
+                if end >= nodes.len() {
                     return Err(EvalError::ExpectedParams(params));
                 }
                 nodes.drain(start..end).collect()

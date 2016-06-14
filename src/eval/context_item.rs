@@ -1,5 +1,5 @@
 use parser::ast::{Function};
-use math::rich_number::{Unit, RichNumber};
+use math::rich_number::RichNumber;
 
 use eval::fixity::Fixity;
 use eval::built_in_function::BuiltInFunction;

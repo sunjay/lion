@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::collections::HashMap;
 
 use parser::ast::{Function, Expr, Statement};
@@ -190,11 +189,9 @@ impl EvalContext {
 }
 
 mod defaults {
-    use std::rc::Rc;
-
     use super::{EvalContext, EvalResult, EvalError};
 
-    use math::rich_number::{RichNumber, Unit};
+    use math::rich_number::RichNumber;
     use eval::context_item::ContextItem;
     use eval::built_in_function::BuiltInFunction;
 
@@ -292,11 +289,11 @@ mod tests {
         parsed.pop().unwrap()
     }
 
-    fn apply_string(mut context: &mut EvalContext, string: &str) {
+    fn apply_string(context: &mut EvalContext, string: &str) {
         apply_program(context, parse(string).unwrap());
     }
 
-    fn apply_program(mut context: &mut EvalContext, program: Program) {
+    fn apply_program(context: &mut EvalContext, program: Program) {
         for statement in program {
             context.apply(statement).expect("Error while applying statement");
         }
