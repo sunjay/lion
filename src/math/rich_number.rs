@@ -6,8 +6,8 @@ pub type Unit = usize;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RichNumber {
-    value: f64,
-    unit: Option<Unit>,
+    pub value: f64,
+    pub unit: Option<Unit>,
 }
 
 impl RichNumber {

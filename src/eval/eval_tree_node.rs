@@ -267,6 +267,11 @@ mod tests {
 
         let tree = EvalTreeNode::from_expr(&mut context, expr).unwrap();
 
+        println!("expected:");
+        print_tree(&expected_tree);
+        println!("result:");
+        print_tree(&tree);
+
         assert_eq!(tree, expected_tree);
     }
 
@@ -300,6 +305,39 @@ mod tests {
         context.define("%", Fixity::Infix, 7, fake_binary.clone());
 
         context
+    }
+
+    fn print_tree(tree: &EvalTreeNode) {
+        _print_tree(tree, 0);
+    }
+
+    fn _print_tree(tree: &EvalTreeNode, depth: usize) {
+        _print_item(&tree.item, depth);
+        
+        for child in &tree.children {
+            _print_tree(child, depth + 1);
+        }
+    }
+
+    fn _print_item(item: &ContextItem, depth: usize) {
+        use std::iter;
+
+        let tab: String = iter::repeat("    ").take(depth).collect();
+        let formatted = match *item {
+            ContextItem::Definition {
+                ref precedence,
+                function: Function {
+                    ref params,
+                    ..
+                },
+                ..
+            } => format!("def: params: {}, precedence: {}", params.len(), precedence),
+            ContextItem::Number(num) => format!("{}", num.value),
+            _ => format!("{:?}", *item),
+        };
+        for line in formatted.lines() {
+            println!("{}{}", tab, formatted);
+        }
     }
 }
 
