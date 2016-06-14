@@ -3,7 +3,10 @@ use std::collections::HashMap;
 
 use parser::ast::{Function, Expr, Statement};
 use math::rich_number::{Unit, RichNumber};
+
 use eval::eval_tree_node::EvalTreeNode;
+use eval::built_in_function::BuiltInFunction;
+
 use prelude::setup_prelude;
 
 const LOWEST_PRECEDENCE: u8 = 0;
@@ -31,8 +34,6 @@ pub enum Fixity {
     Infix,
     Postfix,
 }
-
-pub type BuiltInFunction = Rc<Fn(Vec<ContextItem>) -> EvalResult>;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContextItem {
@@ -153,7 +154,7 @@ impl EvalContext {
             FUNCTION_FIXITY,
             FUNCTION_PRECEDENCE,
             4,
-            defaults::define_operator(&context),
+            BuiltInFunction::new(defaults::define_operator),
         );
 
         context
@@ -253,10 +254,13 @@ impl EvalContext {
 }
 
 mod defaults {
-    use super::{EvalContext, ContextItem, BuiltInFunction};
+    use std::rc::Rc;
 
-    pub fn define_operator(context: &mut EvalContext) -> BuiltInFunction {
-        Box::new(|args| Ok(ContextItem::Nothing))
+    use super::{EvalContext, ContextItem, EvalResult};
+    use eval::built_in_function::BuiltInFunction;
+
+    pub fn define_operator(context: &mut EvalContext, args: Vec<ContextItem>) -> EvalResult {
+        Ok(ContextItem::Nothing)
     }
 }
 
