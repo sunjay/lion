@@ -18,6 +18,13 @@ impl EvalTreeNode {
         }
     }
 
+    pub fn with_children(item: ContextItem, children: Vec<EvalTreeNode>) -> EvalTreeNode {
+        let mut node = EvalTreeNode::new(item);
+        node.children = children;
+
+        node
+    }
+
     pub fn from_expr(context: &EvalContext, expr: Expr) -> Result<EvalTreeNode, EvalError> {
         let mut nodes = try!(EvalTreeNode::convert_to_nodes(context, expr));
 
@@ -160,6 +167,113 @@ impl EvalTreeNode {
                 nodes.drain(start..end).collect()
             },
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ast::*;
+
+    use eval::fixity::Fixity;
+    use eval::context_item::ContextItem;
+    use eval::eval_context::EvalContext;
+    use math::rich_number::RichNumber;
+
+    #[test]
+    fn creates_tree_with_correct_precedence() {
+        // f 3 + (4 * 8 + 99) - ((67)) / (x - g 4) + 32
+        let expr: Expr = vec![
+            ExprItem::SingleTerm(Term::Symbol("f".to_owned())),
+            ExprItem::SingleTerm(Term::Number(3f64)),
+            ExprItem::SingleTerm(Term::Symbol("+".to_owned())),
+            ExprItem::Group(vec![
+                ExprItem::SingleTerm(Term::Number(4f64)),
+                ExprItem::SingleTerm(Term::Symbol("*".to_owned())),
+                ExprItem::SingleTerm(Term::Number(8f64)),
+                ExprItem::SingleTerm(Term::Symbol("+".to_owned())),
+                ExprItem::SingleTerm(Term::Number(99f64)),
+            ]),
+            ExprItem::SingleTerm(Term::Symbol("-".to_owned())),
+            ExprItem::Group(vec![
+                ExprItem::Group(vec![
+                    ExprItem::SingleTerm(Term::Number(67f64)),
+                ])
+            ]),
+            ExprItem::SingleTerm(Term::Symbol("/".to_owned())),
+            ExprItem::Group(vec![
+                ExprItem::SingleTerm(Term::Symbol("x".to_owned())),
+                ExprItem::SingleTerm(Term::Symbol("-".to_owned())),
+                ExprItem::SingleTerm(Term::Symbol("g".to_owned())),
+                ExprItem::SingleTerm(Term::Number(4f64)),
+            ]),
+            ExprItem::SingleTerm(Term::Symbol("+".to_owned())),
+            ExprItem::SingleTerm(Term::Number(32f64)),
+        ];
+
+        let mut context = basic_context();
+
+        let nleaf = |n| EvalTreeNode::new(ContextItem::Number(RichNumber::from(n)));
+        let lookup = |name| context.get(name).unwrap();
+
+        let expected_tree = EvalTreeNode::with_children(lookup("-"), vec![
+            EvalTreeNode::with_children(lookup("+"), vec![
+                EvalTreeNode::with_children(lookup("f"), vec![
+                    nleaf(3),
+                ]),
+                EvalTreeNode::with_children(lookup("+"), vec![
+                    EvalTreeNode::with_children(lookup("*"), vec![
+                        nleaf(4),
+                        nleaf(8),
+                    ]),
+                    nleaf(99),
+                ]),
+            ]),
+            EvalTreeNode::with_children(lookup("+"), vec![
+                EvalTreeNode::with_children(lookup("/"), vec![
+                    nleaf(67),
+                    EvalTreeNode::with_children(lookup("-"), vec![
+                        EvalTreeNode::new(lookup("x")),
+                        EvalTreeNode::with_children(lookup("g"), vec![
+                            nleaf(4),
+                        ]),
+                    ]),
+                ]),
+                nleaf(32),
+            ]),
+        ]);
+    }
+
+    /// Defines a basic context with the operators: + - / * %
+    /// with their normal, mathematical precedence
+    /// as well as two functions f and g as well as a number x
+    /// None of these definitions have a real, evaluatable function
+    fn basic_context() -> EvalContext {
+        let mut context = EvalContext::new();
+
+        let fake_unary: Function = Function {
+            params: vec!["a".to_owned()],
+            body: Expr::new(),
+        };
+
+        let fake_binary: Function = Function {
+            params: vec!["a".to_owned(), "b".to_owned()],
+            body: Expr::new(),
+        };
+
+        context.set_number("x", RichNumber::from(3875f64));
+
+        context.define_defaults("f", fake_unary.clone());
+        context.define_defaults("g", fake_unary.clone());
+
+        context.define("+", Fixity::Infix, 6, fake_binary.clone());
+        context.define("-", Fixity::Infix, 6, fake_binary.clone());
+
+        context.define("*", Fixity::Infix, 7, fake_binary.clone());
+        context.define("/", Fixity::Infix, 7, fake_binary.clone());
+        context.define("%", Fixity::Infix, 7, fake_binary.clone());
+
+        context
     }
 }
 
