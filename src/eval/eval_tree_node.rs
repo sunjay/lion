@@ -4,7 +4,7 @@ use eval::fixity::Fixity;
 use eval::context_item::ContextItem;
 use eval::eval_context::{EvalContext, EvalError};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EvalTreeNode {
     item: ContextItem,
     children: Vec<EvalTreeNode>,
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn creates_tree_with_correct_precedence() {
-        // f 3 + (4 * 8 + 99) - ((67)) / (x - g 4) + 32
+        // f 3 + (4 * 8 + 99 - x) - ((67)) / (x - g 4) + 32
         let expr: Expr = vec![
             ExprItem::SingleTerm(Term::Symbol("f".to_owned())),
             ExprItem::SingleTerm(Term::Number(3f64)),
@@ -193,6 +193,8 @@ mod tests {
                 ExprItem::SingleTerm(Term::Number(8f64)),
                 ExprItem::SingleTerm(Term::Symbol("+".to_owned())),
                 ExprItem::SingleTerm(Term::Number(99f64)),
+                ExprItem::SingleTerm(Term::Symbol("-".to_owned())),
+                ExprItem::SingleTerm(Term::Symbol("x".to_owned())),
             ]),
             ExprItem::SingleTerm(Term::Symbol("-".to_owned())),
             ExprItem::Group(vec![
@@ -213,35 +215,44 @@ mod tests {
 
         let mut context = basic_context();
 
-        let nleaf = |n| EvalTreeNode::new(ContextItem::Number(RichNumber::from(n)));
-        let lookup = |name| context.get(name).unwrap();
+        let expected_tree = {
+            let nleaf = |n| EvalTreeNode::new(ContextItem::Number(RichNumber::from(n)));
+            let lookup = |name| context.get(name).unwrap();
 
-        let expected_tree = EvalTreeNode::with_children(lookup("-"), vec![
-            EvalTreeNode::with_children(lookup("+"), vec![
-                EvalTreeNode::with_children(lookup("f"), vec![
-                    nleaf(3),
-                ]),
+            EvalTreeNode::with_children(lookup("-"), vec![
                 EvalTreeNode::with_children(lookup("+"), vec![
-                    EvalTreeNode::with_children(lookup("*"), vec![
-                        nleaf(4),
-                        nleaf(8),
+                    EvalTreeNode::with_children(lookup("f"), vec![
+                        nleaf(3),
                     ]),
-                    nleaf(99),
-                ]),
-            ]),
-            EvalTreeNode::with_children(lookup("+"), vec![
-                EvalTreeNode::with_children(lookup("/"), vec![
-                    nleaf(67),
-                    EvalTreeNode::with_children(lookup("-"), vec![
-                        EvalTreeNode::new(lookup("x")),
-                        EvalTreeNode::with_children(lookup("g"), vec![
+                    EvalTreeNode::with_children(lookup("+"), vec![
+                        EvalTreeNode::with_children(lookup("*"), vec![
                             nleaf(4),
+                            nleaf(8),
+                        ]),
+                        EvalTreeNode::with_children(lookup("-"), vec![
+                            nleaf(99),
+                            EvalTreeNode::new(lookup("x")),
                         ]),
                     ]),
                 ]),
-                nleaf(32),
-            ]),
-        ]);
+                EvalTreeNode::with_children(lookup("+"), vec![
+                    EvalTreeNode::with_children(lookup("/"), vec![
+                        nleaf(67),
+                        EvalTreeNode::with_children(lookup("-"), vec![
+                            EvalTreeNode::new(lookup("x")),
+                            EvalTreeNode::with_children(lookup("g"), vec![
+                                nleaf(4),
+                            ]),
+                        ]),
+                    ]),
+                    nleaf(32),
+                ]),
+            ])
+        };
+
+        let tree = EvalTreeNode::from_expr(&mut context, expr).unwrap();
+
+        assert_eq!(tree, expected_tree);
     }
 
     /// Defines a basic context with the operators: + - / * %
