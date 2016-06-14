@@ -39,13 +39,6 @@ impl RichNumber {
         RichNumber::from(self.value.powf(other.value))
     }
 
-    /// Attempts to coerce two values into a common unit
-    /// Returns (converted self, converted other)
-    fn coerce(&self, other: &RichNumber, conversions: &ConversionTable) -> (RichNumber, RichNumber) {
-        //TODO: Convert between units
-        (self.clone(), other.clone())
-    }
-
     /// Applies an operator to two values given the values and what the resulting unit should be
     fn apply_operator<F>(self, other: RichNumber, operator: F, unit: Option<Unit>) -> RichNumber
         where F: FnOnce(f64, f64) -> f64 {
