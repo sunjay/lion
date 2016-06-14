@@ -2,7 +2,8 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use parser::ast::{Function, Expr, Statement};
-use math::rich_number::{Unit, RichNumber};
+use math::rich_number::RichNumber;
+use math::conversion_table::ConversionTable;
 
 use eval::fixity::Fixity;
 use eval::context_item::ContextItem;
@@ -24,9 +25,6 @@ pub enum EvalError {
 
 pub type EvalResult = Result<ContextItem, EvalError>;
 
-// (from unit, to unit) : Function definition
-pub type ConversionTable = HashMap<(Unit, Unit), Function>;
-
 pub struct EvalContext {
     symbol_table: HashMap<String, ContextItem>,
     conversion_table: ConversionTable,
@@ -36,7 +34,7 @@ impl EvalContext {
     pub fn new() -> EvalContext {
         EvalContext {
             symbol_table: HashMap::new(),
-            conversion_table: HashMap::new(),
+            conversion_table: ConversionTable::new(),
         }
     }
 

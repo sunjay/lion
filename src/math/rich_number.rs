@@ -1,4 +1,4 @@
-use eval::eval_context::ConversionTable;
+use math::conversion_table::ConversionTable;
 
 use std::ops::{Add, Sub, Mul, Div, Rem};
 

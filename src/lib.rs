@@ -15,6 +15,7 @@ mod parser {
 
 mod math {
     pub mod rich_number;
+    pub mod conversion_table;
 }
 
 mod eval {
