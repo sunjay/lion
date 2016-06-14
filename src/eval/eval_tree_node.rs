@@ -35,9 +35,9 @@ impl EvalTreeNode {
             }
             let node_index = node_index.unwrap();
 
-            let params = try!(EvalTreeNode::drain_params(&mut nodes, node_index));
+            let (node_index, params) = try!(EvalTreeNode::drain_params(&mut nodes, node_index));
 
-            let mut node = &mut nodes[node_index];
+            let node = &mut nodes[node_index];
             node.children = params;
         }
 
@@ -112,7 +112,10 @@ impl EvalTreeNode {
     // Removes the nodes adjacent to the node_index (but not including the
     // node_index) that correspond to the number of parameters expected
     // by that node in the direction specified by that node's fixity
-    fn drain_params(nodes: &mut Vec<EvalTreeNode>, node_index: usize) -> Result<Vec<EvalTreeNode>, EvalError> {
+    // Returns the (node_index, parameter nodes)
+    // Needs to return node_index because that index may change
+    // due to this operation
+    fn drain_params(nodes: &mut Vec<EvalTreeNode>, node_index: usize) -> Result<(usize, Vec<EvalTreeNode>), EvalError> {
         let fixity;
         let params;
         {
@@ -136,7 +139,7 @@ impl EvalTreeNode {
 
                 // if either of these conditions is true, the following calculation
                 // would result in either overflow or an index error
-                if node_index == 0 || node_index >= nodes.len() - 1 {
+                if node_index == 0 || node_index >= nodes.len() {
                     return Err(EvalError::ExpectedParams(params));
                 }
 
@@ -145,32 +148,38 @@ impl EvalTreeNode {
                 let second = nodes.remove(node_index + 1);
                 let first = nodes.remove(node_index - 1);
 
-                vec![first, second]
+                // node_index shifts to where the first argument was
+                (node_index - 1, vec![first, second])
             },
-            Fixity::Prefix => {
+            Fixity::Postfix => {
                 let start;
                 let end = node_index;
 
                 // params > node_index would result in a negative sum
-                if params > node_index || end >= nodes.len() {
+                if params > node_index || end > nodes.len() {
                     return Err(EvalError::ExpectedParams(params));
                 }
                 // need to declare this here to avoid overflow
                 start = node_index - params;
 
-                nodes.drain(start..end).collect()
+                // node_index shifts to where the start used to be after
+                // all the params are drained
+                (start, nodes.drain(start..end).collect())
             },
-            Fixity::Postfix => {
+            Fixity::Prefix => {
                 // No need to worry about node_index being less than zero because we
                 // are adding 1 here
                 let start = node_index + 1;
                 // The +1 in the end of the range is because ranges stop
                 // at the index 1 before the end
                 let end = node_index + params + 1;
-                if end >= nodes.len() {
+                if end > nodes.len() {
                     return Err(EvalError::ExpectedParams(params));
                 }
-                nodes.drain(start..end).collect()
+
+                // node_index remains the same here because the params
+                // are after the node
+                (node_index, nodes.drain(start..end).collect())
             },
         })
     }
