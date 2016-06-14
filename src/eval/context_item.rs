@@ -25,7 +25,6 @@ pub enum ContextItem {
         params: usize,
         function: BuiltInFunction,
     },
-    Unit(Unit),
     Constant(String),
     Boolean(bool),
     Nothing,

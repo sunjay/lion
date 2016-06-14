@@ -2,6 +2,8 @@ use math::conversion_table::ConversionTable;
 
 use std::ops::{Add, Sub, Mul, Div, Rem};
 
+//TODO: Refactor Unit into its own newtype
+//TODO: Define a `.next()` method that returns the next unit from a given unit (use this in EvalContext) instead of manually incrementing the unit in create_unit
 pub type Unit = usize;
 
 #[derive(Debug, Clone, Copy)]

@@ -25,5 +25,9 @@ impl ConversionTable {
         let assoc = self.associations.entry(from).or_insert(Vec::new());
         assoc.push(to);
     }
+
+    pub fn conversion_steps(&mut self, from: Unit, to: Unit) -> Option<Vec<Unit>> {
+        unimplemented!();
+    }
 }
 

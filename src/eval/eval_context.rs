@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 use parser::ast::{Function, Expr, Statement};
-use math::rich_number::RichNumber;
+use math::rich_number::{Unit, RichNumber};
 use math::conversion_table::ConversionTable;
 
 use eval::fixity::Fixity;
@@ -26,7 +26,12 @@ pub enum EvalError {
 pub type EvalResult = Result<ContextItem, EvalError>;
 
 pub struct EvalContext {
+    // Symbol name to context item definition
     symbol_table: HashMap<String, ContextItem>,
+    // Unit to Symbol name
+    units: HashMap<Unit, String>,
+    // Used to define new units
+    next_unit: Unit,
     conversion_table: ConversionTable,
 }
 
@@ -34,6 +39,8 @@ impl EvalContext {
     pub fn new() -> EvalContext {
         EvalContext {
             symbol_table: HashMap::new(),
+            units: HashMap::new(),
+            next_unit: 1,
             conversion_table: ConversionTable::new(),
         }
     }
@@ -121,6 +128,19 @@ impl EvalContext {
         self.set(name, ContextItem::built_in_defaults(function, params));
     }
 
+    /// Creates a unique identifier for the given unit name
+    /// Calling this more than once for the same unit name will end up
+    /// with some duplicate definitons, should not be a huge deal but may
+    /// lead to problems later on
+    pub fn create_unit(&mut self, name: &str) -> Unit {
+        let unit = self.next_unit;
+        self.next_unit += 1;
+
+        self.units.insert(unit, name.to_owned());
+
+        unit
+    }
+
     /// Creates a constant value
     pub fn set_constant(&mut self, name: &str, value: String) {
         self.set(name, ContextItem::Constant(value));
@@ -134,6 +154,14 @@ impl EvalContext {
     /// Adds to the current context (silently replaces if already present)
     pub fn set(&mut self, name: &str, value: ContextItem) {
         self.symbol_table.insert(name.to_owned(), value);
+    }
+
+    /// Converts the value to the given unit by doing appropriate
+    /// transformations as prescribed by the conversion table
+    /// Returns Err if no appropriate conversion is found
+    pub fn convert(&self, value: RichNumber, unit: Unit) -> EvalResult {
+        //TODO: Use the units table to lookup the units returned by the conversion table and then apply those functions to perform the conversion
+        unimplemented!();
     }
 
     pub fn apply(&mut self, statement: Statement) -> EvalResult {
@@ -165,6 +193,8 @@ mod defaults {
     use std::rc::Rc;
 
     use super::{EvalContext, EvalResult, EvalError};
+
+    use math::rich_number::{RichNumber, Unit};
     use eval::context_item::ContextItem;
     use eval::built_in_function::BuiltInFunction;
 
@@ -172,10 +202,35 @@ mod defaults {
         try!(expect_args(&args, 4));
         
         //TODO: Unpack each argument form its context item and Err if it isn't the expected type
+        unimplemented!();
 
         Ok(ContextItem::Nothing)
     }
-    
+
+    pub fn define_unit(context: &mut EvalContext, args: Vec<ContextItem>) -> EvalResult {
+        try!(expect_args(&args, 1));
+
+        //TODO: Unpack argument into string
+        let unit_name: &str = unimplemented!();
+
+        let unit = context.create_unit(unit_name);
+
+        context.define_built_in_method_defaults(
+            unit_name,
+            1,
+            BuiltInFunction::new(move |context, args| {
+                try!(expect_args(&args, 1));
+
+                //TODO: Unpack argument into RichNumber
+                let value: RichNumber = unimplemented!();
+
+                context.convert(value, unit)
+            }),
+        );
+
+        Ok(ContextItem::Nothing)
+    }
+
     fn expect_args(args: &Vec<ContextItem>, nargs: usize) -> Result<(), EvalError> {
         if args.len() != nargs {
             Err(EvalError::ExpectedParams(nargs))
