@@ -20,6 +20,10 @@ pub enum EvalError {
         expected_params: usize,
         actual_params: usize,
     },
+    ConversionUndefined {
+        start: Unit,
+        target: Unit,
+    },
 }
 
 pub type EvalResult = Result<ContextItem, EvalError>;
@@ -158,9 +162,50 @@ impl EvalContext {
     /// Converts the value to the given unit by doing appropriate
     /// transformations as prescribed by the conversion table
     /// Returns Err if no appropriate conversion is found
-    pub fn convert(&self, value: RichNumber, unit: Unit) -> EvalResult {
-        //TODO: Use the units table to lookup the units returned by the conversion table and then apply those functions to perform the conversion
-        unimplemented!();
+    pub fn convert(&self, value: RichNumber, unit: Option<Unit>) -> EvalResult {
+        if value.unit.is_none() || unit.is_none() {
+            Ok(ContextItem::Number(RichNumber::new(value.value, unit)))
+        }
+        else {
+            let start = value.unit.unwrap();
+            let unit = unit.unwrap();
+
+            let conversions = self.conversion_table.conversion_steps(start, unit);
+
+            if conversions.is_none() {
+                Err(EvalError::ConversionUndefined {
+                    start: start,
+                    target: unit,
+                })
+            }
+            else {
+                let conversions = conversions.unwrap();
+
+                let mut current = ContextItem::Number(value);
+                for next_unit in conversions {
+                    //TODO: unwrap_number() here may not be completely safe
+                    //TODO: because it is dependent on the result of applying the converter
+                    let current_number = current.unwrap_number();
+
+                    // unwrap() is safe here because we used conversion_steps
+                    let converter = self.conversion_table.get_converter(
+                        current_number.unit.unwrap(),
+                        next_unit
+                    ).unwrap();
+
+                    current = try!(self.apply_function(converter, vec![
+                        ContextItem::Number(current_number.without_units()),
+                    ]));
+                }
+
+                debug_assert!({
+                    let c = current.clone().unwrap_number().unit;
+                    !c.is_none() && c.unwrap() == unit
+                });
+
+                Ok(current)
+            }
+        }
     }
 
     pub fn apply(&mut self, statement: Statement) -> EvalResult {
@@ -184,6 +229,11 @@ impl EvalContext {
 
         println!("{:#?}", root);
 
+        unimplemented!();
+    }
+
+    /// Applies the given arguments to the given function
+    fn apply_function(&self, function: Function, args: Vec<ContextItem>) -> EvalResult {
         unimplemented!();
     }
 }
@@ -221,7 +271,7 @@ mod defaults {
                 //TODO: Unpack argument into RichNumber
                 let value: RichNumber = unimplemented!();
 
-                context.convert(value, unit)
+                context.convert(value, Some(unit))
             }),
         );
 

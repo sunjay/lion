@@ -6,6 +6,7 @@ pub type Unit = usize;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RichNumber {
+    //TODO: These should not be public as modifying them may not always force strict adherence to mathematical laws
     pub value: f64,
     pub unit: Option<Unit>,
 }
@@ -28,6 +29,10 @@ impl RichNumber {
 
     pub fn is_dimensionless(&self) -> bool {
         self.unit.is_none()
+    }
+
+    pub fn without_units(&self) -> RichNumber {
+        RichNumber::new(self.value, None)
     }
 
     pub fn pow(&self, other: RichNumber) -> RichNumber {

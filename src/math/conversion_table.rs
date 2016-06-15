@@ -36,7 +36,7 @@ impl ConversionTable {
         }
     }
 
-    pub fn conversion_steps(&mut self, start: Unit, target: Unit) -> Option<Vec<Unit>> {
+    pub fn conversion_steps(&self, start: Unit, target: Unit) -> Option<Vec<Unit>> {
         // Technically this is a valid conversion, there are just no steps to take
         if start == target {
             return Some(vec![]);
