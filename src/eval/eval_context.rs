@@ -9,6 +9,8 @@ use eval::context_item::ContextItem;
 use eval::built_in_function::BuiltInFunction;
 use eval::eval_tree_node::EvalTreeNode;
 
+use eval::defaults as default_functions;
+
 use prelude::setup_prelude;
 
 #[derive(PartialEq, Debug)]
@@ -59,7 +61,43 @@ impl EvalContext {
         context.define_built_in_method_defaults(
             "operator",
             4,
-            BuiltInFunction::new(defaults::define_operator),
+            BuiltInFunction::new(default_functions::operator),
+        );
+
+        context.define_built_in_method_defaults(
+            "defineUnit",
+            1,
+            BuiltInFunction::new(default_functions::define_unit),
+        );
+
+        context.define_built_in_method_defaults(
+            "convert",
+            2,
+            BuiltInFunction::new(default_functions::convert),
+        );
+
+        context.define_built_in_method_defaults(
+            "unitFor",
+            1,
+            BuiltInFunction::new(default_functions::unit_for),
+        );
+
+        context.define_built_in_method_defaults(
+            "valueOf",
+            1,
+            BuiltInFunction::new(default_functions::value_of),
+        );
+
+        context.define_built_in_method_defaults(
+            "conversion",
+            3,
+            BuiltInFunction::new(default_functions::conversion),
+        );
+
+        context.define_built_in_method_defaults(
+            "if",
+            3,
+            BuiltInFunction::new(default_functions::if_condition),
         );
 
         context
@@ -235,56 +273,6 @@ impl EvalContext {
     /// Applies the given arguments to the given function
     fn apply_function(&self, function: Function, args: Vec<ContextItem>) -> EvalResult {
         unimplemented!();
-    }
-}
-
-mod defaults {
-    use super::{EvalContext, EvalResult, EvalError};
-
-    use math::rich_number::RichNumber;
-    use eval::context_item::ContextItem;
-    use eval::built_in_function::BuiltInFunction;
-
-    pub fn define_operator(context: &mut EvalContext, args: Vec<ContextItem>) -> EvalResult {
-        try!(expect_args(&args, 4));
-        
-        //TODO: Unpack each argument form its context item and Err if it isn't the expected type
-        unimplemented!();
-
-        Ok(ContextItem::Nothing)
-    }
-
-    pub fn define_unit(context: &mut EvalContext, args: Vec<ContextItem>) -> EvalResult {
-        try!(expect_args(&args, 1));
-
-        //TODO: Unpack argument into string
-        let unit_name: &str = unimplemented!();
-
-        let unit = context.create_unit(unit_name);
-
-        context.define_built_in_method_defaults(
-            unit_name,
-            1,
-            BuiltInFunction::new(move |context, args| {
-                try!(expect_args(&args, 1));
-
-                //TODO: Unpack argument into RichNumber
-                let value: RichNumber = unimplemented!();
-
-                context.convert(value, Some(unit))
-            }),
-        );
-
-        Ok(ContextItem::Nothing)
-    }
-
-    fn expect_args(args: &Vec<ContextItem>, nargs: usize) -> Result<(), EvalError> {
-        if args.len() != nargs {
-            Err(EvalError::ExpectedParams(nargs))
-        }
-        else {
-            Ok(())
-        }
     }
 }
 
