@@ -61,12 +61,6 @@ pub fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalRe
     unimplemented!();
 }
 
-pub fn if_condition(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
-    try!(expect_params(&params, 3));
-
-    unimplemented!();
-}
-
 fn expect_params(params: &Vec<ContextItem>, nparams: usize) -> Result<(), EvalError> {
     if params.len() != nparams {
         Err(EvalError::ExpectedParams(nparams))

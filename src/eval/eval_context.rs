@@ -94,12 +94,6 @@ impl EvalContext {
             BuiltInFunction::new(default_functions::conversion),
         );
 
-        context.define_built_in_method_defaults(
-            "if",
-            3,
-            BuiltInFunction::new(default_functions::if_condition),
-        );
-
         context
     }
 
