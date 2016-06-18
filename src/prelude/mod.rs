@@ -90,32 +90,30 @@ mod tests {
     fn math_operators() {
         let mut context = EvalContext::prelude();
 
-        // add (1 (sub (mul 2 (pow 4 3)) (div (mod 7 3) 10)))
+        // add 1 (sub (mul 2 (pow 4 3)) (div (mod 7 3) 10))
         // 1 + ((2 * (4 ** 3)) - ((7 % 3) / 10)
         assert_eq!(context.apply(Statement::Expression(vec![
             ExprItem::SingleTerm(Term::Symbol("add".to_owned())),
+            ExprItem::SingleTerm(Term::Number(1f64)),
             ExprItem::Group(vec![
-                ExprItem::SingleTerm(Term::Number(1f64)),
+                ExprItem::SingleTerm(Term::Symbol("sub".to_owned())),
                 ExprItem::Group(vec![
-                    ExprItem::SingleTerm(Term::Symbol("sub".to_owned())),
+                    ExprItem::SingleTerm(Term::Symbol("mul".to_owned())),
+                    ExprItem::SingleTerm(Term::Number(2f64)),
                     ExprItem::Group(vec![
-                        ExprItem::SingleTerm(Term::Symbol("mul".to_owned())),
-                        ExprItem::SingleTerm(Term::Number(2f64)),
-                        ExprItem::Group(vec![
-                            ExprItem::SingleTerm(Term::Symbol("pow".to_owned())),
-                            ExprItem::SingleTerm(Term::Number(4f64)),
-                            ExprItem::SingleTerm(Term::Number(3f64)),
-                        ]),
+                        ExprItem::SingleTerm(Term::Symbol("pow".to_owned())),
+                        ExprItem::SingleTerm(Term::Number(4f64)),
+                        ExprItem::SingleTerm(Term::Number(3f64)),
                     ]),
+                ]),
+                ExprItem::Group(vec![
+                    ExprItem::SingleTerm(Term::Symbol("div".to_owned())),
                     ExprItem::Group(vec![
-                        ExprItem::SingleTerm(Term::Symbol("div".to_owned())),
-                        ExprItem::Group(vec![
-                            ExprItem::SingleTerm(Term::Symbol("mod".to_owned())),
-                            ExprItem::SingleTerm(Term::Number(7f64)),
-                            ExprItem::SingleTerm(Term::Number(3f64)),
-                        ]),
-                        ExprItem::SingleTerm(Term::Number(10f64)),
+                        ExprItem::SingleTerm(Term::Symbol("mod".to_owned())),
+                        ExprItem::SingleTerm(Term::Number(7f64)),
+                        ExprItem::SingleTerm(Term::Number(3f64)),
                     ]),
+                    ExprItem::SingleTerm(Term::Number(10f64)),
                 ]),
             ]),
         ])).unwrap().unwrap_number(), RichNumber::from(128.9f64));
