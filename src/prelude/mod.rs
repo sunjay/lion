@@ -91,7 +91,7 @@ mod tests {
         let mut context = EvalContext::prelude();
 
         // add 1 (sub (mul 2 (pow 4 3)) (div (mod 7 3) 10))
-        // 1 + ((2 * (4 ** 3)) - ((7 % 3) / 10)
+        // 1 + ((2 * (4 ** 3)) - ((7 % 3) / 10))
         assert_eq!(context.apply(Statement::Expression(vec![
             ExprItem::SingleTerm(Term::Symbol("add".to_owned())),
             ExprItem::SingleTerm(Term::Number(1f64)),
