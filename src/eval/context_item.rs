@@ -81,6 +81,13 @@ impl ContextItem {
         }
     }
 
+    pub fn is_number(&self) -> bool {
+        match *self {
+            ContextItem::Number(_) => true,
+            _ => false,
+        }
+    }
+
     /// The most reliable way to get the precedence of any ContextItem
     /// ContextItems with no defined precedence return None
     pub fn resolve_precedence(&self) -> Option<&u8> {

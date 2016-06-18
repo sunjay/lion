@@ -26,6 +26,7 @@ pub enum EvalError {
         start: Unit,
         target: Unit,
     },
+    InvalidParams(String),
 }
 
 pub type EvalResult = Result<ContextItem, EvalError>;
@@ -308,7 +309,7 @@ mod tests {
     }
 
     fn apply_single(string: &str) -> EvalResult {
-        let mut context = EvalContext::new();
+        let mut context = EvalContext::prelude();
         let statement = parse_statement(string);
 
         context.apply(statement)
