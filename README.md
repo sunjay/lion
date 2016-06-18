@@ -5,7 +5,11 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
 - [x] scanner
 - [x] lexer/tokenizer
 - [x] parser
-- [ ] evaluator
+- [x] ast to evaluation tree
+- [ ] prelude
+    - [x] math
+    - [ ] units
+- [ ] evaluator (&beta; reducer)
 - [ ] version 1.0.0
 - [ ] further enhancements
 
