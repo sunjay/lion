@@ -25,7 +25,7 @@ fn define_math(context: &mut EvalContext) {
     define_boolean_binary_op(context, "eq", |a, b| a == b, true);
     define_boolean_binary_op(context, "ne", |a, b| a != b, true);
 
-    //TODO: ge, le, gt, lt
+    //TODO: ge, le, gt, lt, neg, not, sin, cos, tan, etc.
 }
 
 fn define_boolean_binary_op<F: 'static>(context: &mut EvalContext, name: &str, operator: F, coerce_first: bool)
