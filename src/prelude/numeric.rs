@@ -1,4 +1,4 @@
-use prelude::define_built_in;
+use prelude::{define_built_in, apply_program};
 
 use math::rich_number::RichNumber;
 
@@ -17,6 +17,8 @@ pub fn define_math(context: &mut EvalContext) {
 
     define_boolean_binary_op(context, "eq", |a, b| a == b, true);
     define_boolean_binary_op(context, "ne", |a, b| a != b, true);
+
+    apply_program(context, include_str!("math.lion"));
 
     //TODO: ge, le, gt, lt, neg, not, sin, cos, tan, etc.
 }
