@@ -10,6 +10,7 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
     - [x] math
     - [ ] units
 - [ ] evaluator (&beta; reducer)
+- [ ] simple cli (repl)
 - [ ] version 1.0.0
 - [ ] further enhancements
 
