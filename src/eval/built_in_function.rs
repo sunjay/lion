@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::rc::Rc;
 use std::fmt;
 
@@ -16,6 +17,10 @@ impl BuiltInFunction {
         BuiltInFunction {
             f: Rc::new(f),
         }
+    }
+
+    pub fn call(&self, context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+        (*self.f)(context, params)
     }
 }
 

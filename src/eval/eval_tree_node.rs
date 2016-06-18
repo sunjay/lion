@@ -6,8 +6,8 @@ use eval::eval_context::{EvalContext, EvalError};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct EvalTreeNode {
-    item: ContextItem,
-    children: Vec<EvalTreeNode>,
+    pub item: ContextItem,
+    pub children: Vec<EvalTreeNode>,
 }
 
 impl EvalTreeNode {

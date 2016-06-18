@@ -195,7 +195,7 @@ impl EvalContext {
     /// Converts the value to the given unit by doing appropriate
     /// transformations as prescribed by the conversion table
     /// Returns Err if no appropriate conversion is found
-    pub fn convert(&self, value: RichNumber, unit: Option<Unit>) -> EvalResult {
+    pub fn convert(&mut self, value: RichNumber, unit: Option<Unit>) -> EvalResult {
         if value.unit.is_none() || unit.is_none() {
             Ok(ContextItem::Number(RichNumber::new(value.value, unit)))
         }
@@ -260,13 +260,29 @@ impl EvalContext {
     fn evaluate(&mut self, expr: Expr) -> EvalResult {
         let root = try!(EvalTreeNode::from_expr(self, expr));
 
-        println!("{:#?}", root);
-
-        unimplemented!();
+        self.reduce(root)
     }
 
-    /// Applies the given arguments to the given function
-    fn apply_function(&self, function: Function, args: Vec<ContextItem>) -> EvalResult {
+    fn reduce(&mut self, node: EvalTreeNode) -> EvalResult {
+        let EvalTreeNode {
+            item,
+            children,
+        } = node;
+
+        let mut params = Vec::new();
+        for child in children {
+            params.push(try!(self.reduce(child)));
+        }
+
+        match item {
+            ContextItem::BuiltInMethod { function, .. } => function.call(self, params),
+            ContextItem::Definition { function, .. } => self.apply_function(function, params),
+            otherwise => Ok(otherwise),
+        }
+    }
+
+    /// Applies the given parameters to the given function
+    fn apply_function(&mut self, function: Function, params: Vec<ContextItem>) -> EvalResult {
         unimplemented!();
     }
 }
