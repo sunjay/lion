@@ -111,11 +111,12 @@ mod tests {
     fn conversion_to_same_unit() {
         let unit: Unit = Default::default();
 
-        let mut table = ConversionTable::new();
+        let table = ConversionTable::new();
         assert_eq!(table.conversion_steps(unit, unit).unwrap(), vec![]);
     }
 
     #[test]
+    #[allow(non_upper_case_globals)]
     fn varying_conversion_steps() {
         // These numbers are arbitrary
         const mm: Unit = 3;

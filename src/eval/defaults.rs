@@ -10,7 +10,7 @@ pub fn operator(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResu
     //TODO: Unpack each argument form its context item and Err if it isn't the expected type
     unimplemented!();
 
-    Ok(ContextItem::Nothing)
+    //Ok(ContextItem::Nothing)
 }
 
 pub fn define_unit(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {

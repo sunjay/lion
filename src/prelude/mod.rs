@@ -6,7 +6,7 @@
 use math::rich_number::RichNumber;
 
 use eval::context_item::ContextItem;
-use eval::eval_context::{EvalContext, EvalResult, EvalError};
+use eval::eval_context::{EvalContext, EvalError};
 use eval::built_in_function::BuiltInFunction;
 
 pub fn setup_prelude(context: &mut EvalContext) {
@@ -82,8 +82,6 @@ fn define_built_in(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use ast::*;
     use eval::eval_context::EvalContext;
     use math::rich_number::RichNumber;
