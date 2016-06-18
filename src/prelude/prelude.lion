@@ -9,8 +9,8 @@ operator INFIX 6 "-" (\x y = sub x y)
 
 operator INFIX 4 "==" (\x y = eq x y)
 operator INFIX 4 "!=" (\x y = ne x y)
-operator INFIX 4 ">=" (\x y = ge x y)
-operator INFIX 4 "<=" (\x y = le x y)
-operator INFIX 4 ">" (\x y = gt x y)
-operator INFIX 4 "<" (\x y = lt x y)
+;- operator INFIX 4 ">=" (\x y = ge x y)
+;- operator INFIX 4 "<=" (\x y = le x y)
+;- operator INFIX 4 ">" (\x y = gt x y)
+;- operator INFIX 4 "<" (\x y = lt x y)
 
