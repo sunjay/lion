@@ -5,8 +5,6 @@
 
 mod numeric;
 
-use std::io::prelude::*;
-
 use api::parse;
 
 use eval::context_item::ContextItem;
@@ -33,7 +31,7 @@ pub fn apply_program(context: &mut EvalContext, string: &str) {
     let prog = parse(string).expect("Parse error");
 
     for statement in prog {
-        context.apply(statement);
+        context.apply(statement).expect("Failed to apply prelude program");
     }
 }
 
