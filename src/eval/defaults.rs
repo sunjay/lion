@@ -91,22 +91,27 @@ fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResu
     Ok(ContextItem::Nothing)
 }
 
-fn define_unit(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
-    //TODO: Unpack argument into string
-    let unit_name: &str = unimplemented!();
+    try!(expect_param_is(params[0].is_constant(),
+        "Name of the unit must be a string literal"));
+
+    let unit_name = &params.remove(0).unwrap_constant();
+    debug_assert!(params.is_empty(), "Not parameters used");
 
     let unit = context.create_unit(unit_name);
 
     context.define_built_in_method_defaults(
         unit_name,
         1,
-        BuiltInFunction::new(move |context, params| {
+        BuiltInFunction::new(move |context, mut params| {
             try!(expect_params(&params, 1));
+            try!(expect_param_is(params[0].is_number(),
+                "Value to convert must be numeric"));
 
-            //TODO: Unpack argument into RichNumber
-            let value: RichNumber = unimplemented!();
+            let value = params.remove(0).unwrap_number();
+            debug_assert!(params.is_empty(), "Not parameters used");
 
             context.convert(value, Some(unit))
         }),
