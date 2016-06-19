@@ -1,7 +1,7 @@
 extern crate lion;
+extern crate readline;
 
-use std::io;
-use std::io::prelude::*;
+use readline::{readline, add_history, Error as ReadlineError};
 
 use lion::parse;
 use lion::eval::eval_context::EvalContext;
@@ -9,23 +9,16 @@ use lion::eval::eval_context::EvalContext;
 fn main() {
     let mut context = EvalContext::prelude();
 
-    let stdin = io::stdin();
-    let mut lines = stdin.lock().lines();
-
     loop {
-        print!("\u{03BB} ");
-        io::stdout().flush().expect("Error while flushing stdout");
-
-        let line = lines.next();
-        if line.is_none() {
-            break;
-        }
-        let line = line.unwrap();
-
-        if line.is_err() {
-            panic!("{}", line.unwrap_err());
-        }
-        let line = line.unwrap();
+        let line = match readline("\u{03BB} ") {
+            Ok(data) => data,
+            Err(ReadlineError::EndOfFile) => break,
+            Err(e) => {
+                println!("{}", e);
+                break;
+            },
+        };
+        add_history(&line).expect("Error adding line to history");
 
         let program = parse(&line);
         if program.is_err() {

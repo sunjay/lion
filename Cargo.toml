@@ -10,4 +10,5 @@ license = "MIT"
 [dependencies]
 lazy_static = "0.2.1"
 rand = "0.3"
+readline = "0.0.12"
 
