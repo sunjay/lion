@@ -4,6 +4,7 @@
 /// performing basic operations and special math functions
 
 mod numeric;
+mod units;
 
 use api::parse;
 
@@ -12,9 +13,11 @@ use eval::eval_context::EvalContext;
 use eval::built_in_function::BuiltInFunction;
 
 use prelude::numeric::define_math;
+use prelude::units::define_units;
 
 pub fn setup_prelude(context: &mut EvalContext) {
     define_math(context);
+    define_units(context);
 }
 
 pub fn define_built_in(
