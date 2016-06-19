@@ -321,12 +321,25 @@ impl EvalContext {
             .map(|n| (n.clone(), format!("{}{}", munge, n)))
             .collect::<HashMap<String, String>>();
 
-        let body: Expr = self.munge_expr(&function.body, reserved_names);
+        let body: Expr = self.munge_expr(&function.body, &reserved_names);
 
-        unimplemented!();
+        // Temporarily add names
+        for (i, name) in param_names.iter().enumerate() {
+            let reserve = reserved_names.get(name).unwrap();
+            self.set(reserve, params[i].clone());
+        }
+
+        let result = self.evaluate(body);
+
+        for name in param_names {
+            let reserve = reserved_names.get(name).unwrap();
+            self.remove(reserve);
+        }
+
+        result
     }
 
-    fn munge_expr(&self, expr: &Expr, reserved_names: HashMap<String, String>) -> Expr {
+    fn munge_expr(&self, expr: &Expr, reserved_names: &HashMap<String, String>) -> Expr {
         expr.iter().map(|x| {
             if let ExprItem::SingleTerm(Term::Symbol(ref name)) = *x {
                 if reserved_names.contains_key(name) {
