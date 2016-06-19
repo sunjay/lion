@@ -274,28 +274,25 @@ impl EvalContext {
             params.push(try!(self.reduce(child)));
         }
 
+        // Special case: when no parameters are provided, return
+        // the function itself.
+        // Added to support (f) and anonymous syntax
+        if item.is_function() && params.is_empty() {
+            return Ok(item.clone())
+        }
+
         match item {
             ContextItem::BuiltInMethod { ref function, params: ref pn, .. } => {
+                debug_assert!(!params.is_empty());
+
                 debug_assert!(*pn != 0,
                     "Functions cannot have zero parameters");
 
-                // Special case: when no parameters are provided, return
-                // the function itself.
-                // Added to support (f) and anonymous syntax
-                if params.len() == 0 {
-                    Ok(item.clone())
-                }
-                else {
-                    function.call(self, params)
-                }
+                function.call(self, params)
             },
             ContextItem::Definition { ref function, .. } => {
-                if params.len() == 0 {
-                    Ok(item.clone())
-                }
-                else {
-                    self.apply_function(function, params)
-                }
+                debug_assert!(!params.is_empty());
+                self.apply_function(function, params)
             },
             otherwise => Ok(otherwise),
         }

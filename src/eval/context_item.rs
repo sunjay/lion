@@ -88,6 +88,23 @@ impl ContextItem {
         }
     }
 
+    pub fn is_function(&self) -> bool {
+        self.is_definition() || self.is_built_in()
+    }
+
+    pub fn is_definition(&self) -> bool {
+        match *self {
+            ContextItem::Definition { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_built_in(&self) -> bool {
+        match *self {
+            ContextItem::BuiltInMethod { .. } => true,
+            _ => false,
+        }
+    }
     /// The most reliable way to get the precedence of any ContextItem
     /// ContextItems with no defined precedence return None
     pub fn resolve_precedence(&self) -> Option<&u8> {

@@ -169,7 +169,7 @@ impl Tokenizer {
     }
 
     fn validate_symbol(&mut self, symbol: String) -> TokenResult {
-        if symbol.len() == 0 {
+        if symbol.is_empty() {
             Err(match self.scanner.get_char() {
                 Some(c) => LexerError::UnrecognizedCharacter(c),
                 None => LexerError::UnexpectedEndOfInput,
