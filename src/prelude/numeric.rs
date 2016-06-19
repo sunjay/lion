@@ -7,6 +7,9 @@ use eval::eval_context::{EvalContext, EvalError};
 use eval::built_in_function::BuiltInFunction;
 
 pub fn define_math(context: &mut EvalContext) {
+    context.set_boolean("true", true);
+    context.set_boolean("false", false);
+
     define_numeric_binary_op(context, "pow", |a, b| a.pow(b), false);
     define_numeric_binary_op(context, "mul", |a, b| a * b, false);
 
