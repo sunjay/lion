@@ -7,3 +7,4 @@ fn main() {
     println!("Expression:\n{}\n\nAbstract Syntax Tree:\n", expr);
     println!("{:#?}", parse(expr).unwrap());
 }
+

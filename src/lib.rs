@@ -20,7 +20,7 @@ mod math {
     pub mod conversion_table;
 }
 
-mod eval {
+pub mod eval {
     pub mod fixity;
     pub mod context_item;
     pub mod built_in_function;
@@ -32,6 +32,7 @@ mod eval {
 mod prelude;
 mod api;
 
+pub use math::rich_number::RichNumber;
 pub use parser::ast;
 pub use api::*;
 
