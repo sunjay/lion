@@ -10,7 +10,7 @@ pub enum Fixity {
 }
 
 impl Fixity {
-    fn from_str(string: &str) -> Option<Self> {
+    pub fn from_str(string: &str) -> Option<Self> {
         Some(match string {
             PREFIX_STRING => Fixity::Prefix,
             INFIX_STRING => Fixity::Infix,

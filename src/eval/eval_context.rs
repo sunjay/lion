@@ -26,7 +26,7 @@ pub enum EvalError {
         start: Unit,
         target: Unit,
     },
-    InvalidParams(String),
+    InvalidParam(String),
 }
 
 pub type EvalResult = Result<ContextItem, EvalError>;

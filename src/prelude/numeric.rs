@@ -51,7 +51,7 @@ fn define_binary_op<F: 'static>(context: &mut EvalContext, name: &str, operator:
             }
 
             if !params[0].is_number() || !params[1].is_number() {
-                return Err(EvalError::InvalidParams("Expected two numbers".to_owned()));
+                return Err(EvalError::InvalidParam("Expecting numeric argument".to_owned()));
             }
 
             let mut rhs = params.pop().unwrap().unwrap_number();

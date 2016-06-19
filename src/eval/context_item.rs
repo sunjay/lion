@@ -74,6 +74,13 @@ impl ContextItem {
         }
     }
 
+    pub fn unwrap_constant(self) -> String {
+        match self {
+            ContextItem::Constant(value) => value,
+            _ => panic!("Expected to unwrap a Constant"),
+        }
+    }
+
     pub fn unwrap_boolean(self) -> bool {
         match self {
             ContextItem::Boolean(value) => value,
@@ -105,6 +112,28 @@ impl ContextItem {
             _ => false,
         }
     }
+
+    pub fn is_constant(&self) -> bool {
+        match *self {
+            ContextItem::Constant(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_boolean(&self) -> bool {
+        match *self {
+            ContextItem::Constant(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_nothing(&self) -> bool {
+        match *self {
+            ContextItem::Nothing => true,
+            _ => false,
+        }
+    }
+
     /// The most reliable way to get the precedence of any ContextItem
     /// ContextItems with no defined precedence return None
     pub fn resolve_precedence(&self) -> Option<&u8> {

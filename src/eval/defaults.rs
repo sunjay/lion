@@ -1,16 +1,52 @@
 use math::rich_number::RichNumber;
 
+use eval::fixity::Fixity;
 use eval::context_item::ContextItem;
 use eval::built_in_function::BuiltInFunction;
 use eval::eval_context::{EvalContext, EvalResult, EvalError};
 
-pub fn operator(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+pub fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 4));
     
-    //TODO: Unpack each argument form its context item and Err if it isn't the expected type
-    unimplemented!();
+    try!(expect_param_is(params[0].is_constant(),
+        "Fixity must be one of the constants PREFIX, INFIX, or POSTFIX"));
+    try!(expect_param_is(params[1].is_number(),
+        "Precedence must be a numeric value"));
+    try!(expect_param_is(params[2].is_constant(),
+        "Name of the operator must be a string literal"));
+    try!(expect_param_is(params[3].is_function(),
+        "Function definition must be either an existing function or an anonymous function"));
 
-    //Ok(ContextItem::Nothing)
+    let fixity = {
+        let fx = Fixity::from_str(&params.remove(0).unwrap_constant());
+        try!(expect_param_is(fx.is_some(),
+            "Fixity must be one of the constants PREFIX, INFIX, or POSTFIX"));
+        fx.unwrap()
+    };
+
+    let precedence = {
+        let p = params.remove(0).unwrap_number();
+        try!(expect_param_is(p.is_dimensionless(),
+            "Precedence cannot have a unit"));
+        p.value as u8
+    };
+
+    let name = &params.remove(0).unwrap_constant();
+    let function = params.remove(0);
+
+    debug_assert!(params.is_empty(), "Not parameters used");
+    
+    match function {
+        ContextItem::Definition { function, .. } => {
+            context.define(name, fixity, precedence, function);
+        },
+        ContextItem::BuiltInMethod { function, params, .. } => {
+            context.define_built_in_method(name, fixity, precedence, params, function)
+        },
+        _ => unreachable!(),
+    };
+
+    Ok(ContextItem::Nothing)
 }
 
 pub fn define_unit(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
@@ -67,6 +103,15 @@ fn expect_params(params: &Vec<ContextItem>, nparams: usize) -> Result<(), EvalEr
     }
     else {
         Ok(())
+    }
+}
+
+fn expect_param_is(cond: bool, message: &str) -> Result<(), EvalError> {
+    if cond {
+        Ok(())
+    }
+    else {
+        Err(EvalError::InvalidParam(message.to_owned()))
     }
 }
 
