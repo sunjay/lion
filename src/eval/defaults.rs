@@ -6,9 +6,7 @@ use eval::built_in_function::BuiltInFunction;
 use eval::eval_context::{EvalContext, EvalResult, EvalError};
 
 pub fn setup_defaults(context: &mut EvalContext) {
-    context.set_constant("PREFIX", Fixity::Prefix.to_string());
-    context.set_constant("INFIX", Fixity::Infix.to_string());
-    context.set_constant("POSTFIX", Fixity::Postfix.to_string());
+    setup_fixity_constants(context);
 
     context.define_built_in_method_defaults(
         "operator",
@@ -47,7 +45,13 @@ pub fn setup_defaults(context: &mut EvalContext) {
     );
 }
 
-fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
+pub fn setup_fixity_constants(context: &mut EvalContext) {
+    context.set_constant("PREFIX", Fixity::Prefix.to_string());
+    context.set_constant("INFIX", Fixity::Infix.to_string());
+    context.set_constant("POSTFIX", Fixity::Postfix.to_string());
+}
+
+pub fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 4));
     
     try!(expect_param_is(params[0].is_constant(),
@@ -91,7 +95,7 @@ fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResu
     Ok(ContextItem::Nothing)
 }
 
-fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
+pub fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     try!(expect_param_is(params[0].is_constant(),
@@ -120,25 +124,25 @@ fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalR
     Ok(ContextItem::Nothing)
 }
 
-fn convert(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+pub fn convert(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 2));
 
     unimplemented!();
 }
 
-fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+pub fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     unimplemented!();
 }
 
-fn value_of(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+pub fn value_of(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     unimplemented!();
 }
 
-fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+pub fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 3));
 
     unimplemented!();
@@ -159,6 +163,26 @@ fn expect_param_is(cond: bool, message: &str) -> Result<(), EvalError> {
     }
     else {
         Err(EvalError::InvalidParam(message.to_owned()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    use eval::fixity::Fixity;
+    use eval::eval_context::EvalContext;
+
+    #[test]
+    fn fixity_constants() {
+        let mut context = EvalContext::new();
+        setup_fixity_constants(&mut context);
+
+        let lookup_fixity = |name| Fixity::from_str(&context.get(name).unwrap().unwrap_constant()).unwrap();
+
+        assert_eq!(lookup_fixity("PREFIX"), Fixity::Prefix);
+        assert_eq!(lookup_fixity("INFIX"), Fixity::Infix);
+        assert_eq!(lookup_fixity("POSTFIX"), Fixity::Postfix);
     }
 }
 
