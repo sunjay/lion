@@ -172,7 +172,7 @@ $ (20 cm + 2 m) m
 This is equivalent to:
 
 ```
-$ convert (20 cm + 2 m) (m)
+$ convert (20 cm + 2 m) "m"
 = 2.2 m
 ```
 
@@ -184,7 +184,7 @@ To define a conversion between two units, use the `conversion` function.
 The `conversion` function takes the two units to convert from and to as well as a function to convert from the first argument to the second one. This conversion definition is **one way**. No equivalence is automatically defined.
 
 ```
-$ conversion cm m (\x = x / 100)
+$ conversion "cm" "m" (\x = x / 100)
 ```
 
 ## Implementation Notes
