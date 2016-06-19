@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use parser::ast::{Function, Expr, Statement};
+use rand::random;
+
+use parser::ast::{Function, Expr, ExprItem, Term, Statement};
 use math::rich_number::{Unit, RichNumber};
 use math::conversion_table::ConversionTable;
 
@@ -192,6 +194,11 @@ impl EvalContext {
         self.symbol_table.insert(name.to_owned(), value);
     }
 
+    /// Removes a name from the context, does nothing if name is not there
+    pub fn remove(&mut self, name: &str) {
+        self.symbol_table.remove(name);
+    }
+
     /// Converts the value to the given unit by doing appropriate
     /// transformations as prescribed by the conversion table
     /// Returns Err if no appropriate conversion is found
@@ -305,13 +312,35 @@ impl EvalContext {
             return Err(EvalError::ExpectedParams(param_names.len()));
         }
 
-        let name_mapping = param_names.iter()
-            .zip(params.iter())
-            .collect::<Vec<_>>();
-            //.collect::<HashMap<String, ContextItem>>();
-        println!("{:?}", name_mapping);
+        // need to munge parameter names
+        // one day this will be replaced with a true stack
+        // using characters that couldn't possibly be in any other symbol
+        let munge = format!("[[{}]]", random::<u64>());
+
+        let reserved_names = param_names.iter()
+            .map(|n| (n.clone(), format!("{}{}", munge, n)))
+            .collect::<HashMap<String, String>>();
+
+        let body: Expr = self.munge_expr(&function.body, reserved_names);
 
         unimplemented!();
+    }
+
+    fn munge_expr(&self, expr: &Expr, reserved_names: HashMap<String, String>) -> Expr {
+        expr.iter().map(|x| {
+            if let ExprItem::SingleTerm(Term::Symbol(ref name)) = *x {
+                if reserved_names.contains_key(name) {
+                    let new_name = reserved_names.get(name).unwrap().clone();
+                    ExprItem::SingleTerm(Term::Symbol(new_name))
+                }
+                else {
+                    x.clone()
+                }
+            }
+            else {
+                x.clone()
+            }
+        }).collect()
     }
 }
 
