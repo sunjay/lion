@@ -23,10 +23,6 @@ impl RichNumber {
         RichNumber::new(value, Some(unit))
     }
 
-    pub fn zero() -> RichNumber {
-        RichNumber::from(0f64)
-    }
-
     pub fn is_dimensionless(&self) -> bool {
         self.unit.is_none()
     }
