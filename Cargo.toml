@@ -1,7 +1,11 @@
 [package]
 name = "lion"
-version = "0.0.1"
+version = "0.0.0"
 authors = ["Sunjay Varma <varma.sunjay@gmail.com>"]
+description = "LION"
+repository = "https://github.com/sunjay/lion"
+readme = "README.md"
+license = "MIT"
 
 [dependencies]
 lazy_static = "0.2.1"
