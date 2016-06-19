@@ -332,7 +332,7 @@ mod tests {
             _ => format!("{:?}", *item),
         };
         for line in formatted.lines() {
-            println!("{}{}", tab, formatted);
+            println!("{}{}", tab, line);
         }
     }
 }
