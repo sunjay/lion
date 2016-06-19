@@ -226,7 +226,7 @@ impl EvalContext {
                         next_unit
                     ).unwrap();
 
-                    current = try!(self.apply_function(converter, vec![
+                    current = try!(self.apply_function(&converter, vec![
                         ContextItem::Number(current_number.without_units()),
                     ]));
                 }
@@ -275,14 +275,45 @@ impl EvalContext {
         }
 
         match item {
-            ContextItem::BuiltInMethod { function, .. } => function.call(self, params),
-            ContextItem::Definition { function, .. } => self.apply_function(function, params),
+            ContextItem::BuiltInMethod { ref function, params: ref pn, .. } => {
+                debug_assert!(*pn != 0,
+                    "Functions cannot have zero parameters");
+
+                // Special case: when no parameters are provided, return
+                // the function itself.
+                // Added to support (f) and anonymous syntax
+                if params.len() == 0 {
+                    Ok(item.clone())
+                }
+                else {
+                    function.call(self, params)
+                }
+            },
+            ContextItem::Definition { ref function, .. } => {
+                if params.len() == 0 {
+                    Ok(item.clone())
+                }
+                else {
+                    self.apply_function(function, params)
+                }
+            },
             otherwise => Ok(otherwise),
         }
     }
 
     /// Applies the given parameters to the given function
-    fn apply_function(&mut self, function: Function, params: Vec<ContextItem>) -> EvalResult {
+    fn apply_function(&mut self, function: &Function, params: Vec<ContextItem>) -> EvalResult {
+        let param_names = &function.params;
+        if params.len() != param_names.len() {
+            return Err(EvalError::ExpectedParams(param_names.len()));
+        }
+
+        let name_mapping = param_names.iter()
+            .zip(params.iter())
+            .collect::<Vec<_>>();
+            //.collect::<HashMap<String, ContextItem>>();
+        println!("{:?}", name_mapping);
+
         unimplemented!();
     }
 }
