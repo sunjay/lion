@@ -1,5 +1,3 @@
-use math::rich_number::RichNumber;
-
 use eval::fixity::Fixity;
 use eval::context_item::ContextItem;
 use eval::built_in_function::BuiltInFunction;
@@ -45,13 +43,13 @@ pub fn setup_defaults(context: &mut EvalContext) {
     );
 }
 
-pub fn setup_fixity_constants(context: &mut EvalContext) {
+fn setup_fixity_constants(context: &mut EvalContext) {
     context.set_constant("PREFIX", Fixity::Prefix.to_string());
     context.set_constant("INFIX", Fixity::Infix.to_string());
     context.set_constant("POSTFIX", Fixity::Postfix.to_string());
 }
 
-pub fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
+fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 4));
     
     try!(expect_param_is(params[0].is_constant(),
@@ -95,7 +93,7 @@ pub fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> Eval
     Ok(ContextItem::Nothing)
 }
 
-pub fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
+fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     try!(expect_param_is(params[0].is_constant(),
@@ -124,25 +122,25 @@ pub fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> E
     Ok(ContextItem::Nothing)
 }
 
-pub fn convert(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn convert(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 2));
 
     unimplemented!();
 }
 
-pub fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     unimplemented!();
 }
 
-pub fn value_of(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn value_of(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     unimplemented!();
 }
 
-pub fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 3));
 
     unimplemented!();
@@ -169,20 +167,71 @@ fn expect_param_is(cond: bool, message: &str) -> Result<(), EvalError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use ast::*;
+
+    use math::rich_number::RichNumber;
     
     use eval::fixity::Fixity;
+    use eval::context_item::ContextItem;
     use eval::eval_context::EvalContext;
 
     #[test]
     fn fixity_constants() {
         let mut context = EvalContext::new();
-        setup_fixity_constants(&mut context);
+        setup_defaults(&mut context);
 
         let lookup_fixity = |name| Fixity::from_str(&context.get(name).unwrap().unwrap_constant()).unwrap();
 
         assert_eq!(lookup_fixity("PREFIX"), Fixity::Prefix);
         assert_eq!(lookup_fixity("INFIX"), Fixity::Infix);
         assert_eq!(lookup_fixity("POSTFIX"), Fixity::Postfix);
+    }
+
+    #[test]
+    fn can_define_operators_with_different_fixities() {
+        let mut context = EvalContext::new();
+        setup_defaults(&mut context);
+
+        let fixity = Fixity::Prefix;
+        let precedence: u8 = 0;
+        let name = "foo".to_owned();
+
+        let params = vec!["x".to_owned()];
+        let function_body: Expr = vec![
+            ExprItem::SingleTerm(Term::Symbol("x".to_owned())),
+        ];
+
+        assert_eq!(context.call("operator", vec![
+            ContextItem::Constant(fixity.to_string()),
+            ContextItem::Number(RichNumber::from(precedence as f64)),
+            ContextItem::Constant(name.clone()),
+            ContextItem::new_definition(
+                // must be different from the other values for these
+                Fixity::Postfix,
+                precedence + 1,
+                Function {
+                    params: params.clone(),
+                    body: function_body.clone(),
+                },
+            ),
+        ]).unwrap().unwrap(), ContextItem::Nothing);
+
+        let defined = context.get(&name).unwrap();
+        
+        match defined {
+            ContextItem::Definition {
+                precedence: dprecedence,
+                fixity: dfixity,
+                function,
+            } => {
+                assert_eq!(dprecedence, precedence);
+                assert_eq!(dfixity, fixity);
+                assert_eq!(function.params, params);
+                assert_eq!(function.body, function_body);
+            },
+            _ => panic!("operator did not define a function"),
+        }
     }
 }
 

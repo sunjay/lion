@@ -86,6 +86,7 @@ impl EvalContext {
         precedence: u8,
         function: Function,
     ) {
+        assert!(fixity != Fixity::Infix || function.params.len() == 2);
         self.set(name, ContextItem::new_definition(fixity, precedence, function));
     }
 
@@ -107,6 +108,7 @@ impl EvalContext {
         params: usize,
         function: BuiltInFunction,
     ) {
+        assert!(fixity != Fixity::Infix || params == 2);
 
         self.set(name, ContextItem::BuiltInMethod {
             fixity: fixity,
@@ -157,6 +159,27 @@ impl EvalContext {
     /// Removes a name from the context, does nothing if name is not there
     pub fn remove(&mut self, name: &str) {
         self.symbol_table.remove(name);
+    }
+
+    /// Calls the function with the given name in the context
+    /// Panics if the value at this name is not a function
+    /// Returns the result or None if the name was not found
+    pub fn call(&mut self, name: &str, params: Vec<ContextItem>) -> Option<EvalResult> {
+        assert!(!params.is_empty(),
+            "Attempt to call function without passing any arguments");
+
+        self.get(name).map(|f| match f {
+            ContextItem::BuiltInMethod { ref function, params: ref pn, .. } => {
+                debug_assert!(*pn != 0,
+                    "Functions cannot be defined with zero parameters");
+
+                function.call(self, params)
+            },
+            ContextItem::Definition { ref function, .. } => {
+                self.apply_function(function, params)
+            },
+            _ => panic!("Attempt to call non-function '{}'", name),
+        })
     }
 
     /// Converts the value to the given unit by doing appropriate
@@ -253,7 +276,7 @@ impl EvalContext {
                 debug_assert!(!params.is_empty());
 
                 debug_assert!(*pn != 0,
-                    "Functions cannot have zero parameters");
+                    "Functions cannot be defined with zero parameters");
 
                 function.call(self, params)
             },
