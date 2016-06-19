@@ -6,10 +6,10 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
 - [x] lexer/tokenizer
 - [x] parser
 - [x] ast to evaluation tree
+- [x] evaluator (&beta; reducer)
 - [ ] prelude
     - [x] math
     - [ ] units
-- [ ] evaluator (&beta; reducer)
 - [ ] simple cli (repl)
 - [ ] version 1.0.0
 - [ ] further enhancements
