@@ -11,7 +11,7 @@ use eval::context_item::ContextItem;
 use eval::built_in_function::BuiltInFunction;
 use eval::eval_tree_node::EvalTreeNode;
 
-use eval::defaults as default_functions;
+use eval::defaults::setup_defaults;
 
 use prelude::setup_prelude;
 
@@ -56,47 +56,7 @@ impl EvalContext {
     /// Defines a reasonble set of default built_in methods
     pub fn defaults() -> EvalContext {
         let mut context = EvalContext::new();
-
-        context.set_constant("PREFIX", Fixity::Prefix.to_string());
-        context.set_constant("INFIX", Fixity::Infix.to_string());
-        context.set_constant("POSTFIX", Fixity::Postfix.to_string());
-
-        context.define_built_in_method_defaults(
-            "operator",
-            4,
-            BuiltInFunction::new(default_functions::operator),
-        );
-
-        context.define_built_in_method_defaults(
-            "defineUnit",
-            1,
-            BuiltInFunction::new(default_functions::define_unit),
-        );
-
-        context.define_built_in_method_defaults(
-            "convert",
-            2,
-            BuiltInFunction::new(default_functions::convert),
-        );
-
-        context.define_built_in_method_defaults(
-            "unitFor",
-            1,
-            BuiltInFunction::new(default_functions::unit_for),
-        );
-
-        context.define_built_in_method_defaults(
-            "valueOf",
-            1,
-            BuiltInFunction::new(default_functions::value_of),
-        );
-
-        context.define_built_in_method_defaults(
-            "conversion",
-            3,
-            BuiltInFunction::new(default_functions::conversion),
-        );
-
+        setup_defaults(&mut context);
         context
     }
 

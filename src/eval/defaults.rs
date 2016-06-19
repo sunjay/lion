@@ -5,7 +5,49 @@ use eval::context_item::ContextItem;
 use eval::built_in_function::BuiltInFunction;
 use eval::eval_context::{EvalContext, EvalResult, EvalError};
 
-pub fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
+pub fn setup_defaults(context: &mut EvalContext) {
+    context.set_constant("PREFIX", Fixity::Prefix.to_string());
+    context.set_constant("INFIX", Fixity::Infix.to_string());
+    context.set_constant("POSTFIX", Fixity::Postfix.to_string());
+
+    context.define_built_in_method_defaults(
+        "operator",
+        4,
+        BuiltInFunction::new(operator),
+    );
+
+    context.define_built_in_method_defaults(
+        "defineUnit",
+        1,
+        BuiltInFunction::new(define_unit),
+    );
+
+    context.define_built_in_method_defaults(
+        "convert",
+        2,
+        BuiltInFunction::new(convert),
+    );
+
+    context.define_built_in_method_defaults(
+        "unitFor",
+        1,
+        BuiltInFunction::new(unit_for),
+    );
+
+    context.define_built_in_method_defaults(
+        "valueOf",
+        1,
+        BuiltInFunction::new(value_of),
+    );
+
+    context.define_built_in_method_defaults(
+        "conversion",
+        3,
+        BuiltInFunction::new(conversion),
+    );
+}
+
+fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 4));
     
     try!(expect_param_is(params[0].is_constant(),
@@ -49,7 +91,7 @@ pub fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> Eval
     Ok(ContextItem::Nothing)
 }
 
-pub fn define_unit(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn define_unit(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     //TODO: Unpack argument into string
@@ -73,25 +115,25 @@ pub fn define_unit(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalR
     Ok(ContextItem::Nothing)
 }
 
-pub fn convert(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn convert(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 2));
 
     unimplemented!();
 }
 
-pub fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     unimplemented!();
 }
 
-pub fn value_of(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn value_of(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     unimplemented!();
 }
 
-pub fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 3));
 
     unimplemented!();
