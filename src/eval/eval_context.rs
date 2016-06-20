@@ -318,7 +318,7 @@ impl EvalContext {
             .map(|n| (n.clone(), format!("{}{}", munge, n)))
             .collect::<HashMap<String, String>>();
 
-        let body: Expr = self.munge_expr(&function.body, &reserved_names);
+        let body: Expr = self.munge_expr(&function.body, &reserved_names, &Vec::new());
 
         // Temporarily add names
         for (i, name) in param_names.iter().enumerate() {
@@ -336,20 +336,32 @@ impl EvalContext {
         result
     }
 
-    fn munge_expr(&self, expr: &Expr, reserved_names: &HashMap<String, String>) -> Expr {
-        expr.iter().map(|x| {
-            if let ExprItem::SingleTerm(Term::Symbol(ref name)) = *x {
-                if reserved_names.contains_key(name) {
+    /// munges the given expression using the given reserved names
+    /// reserved_names maps names to their munged forms
+    /// exceptions was added to allow munging of inner functions without messing up their arguments accidentally
+    fn munge_expr(&self, expr: &Expr, reserved_names: &HashMap<String, String>, exceptions: &Vec<String>) -> Expr {
+        expr.iter().map(|x| match *x {
+            ExprItem::AnonymousFunction(Function { ref params, ref body }) => {
+                ExprItem::AnonymousFunction(Function {
+                    params: params.clone(),
+                    body: self.munge_expr(body, reserved_names, params),
+                })
+            },
+            ExprItem::SingleTerm(Term::Symbol(ref name)) => {
+                if reserved_names.contains_key(name) && !exceptions.contains(name) {
                     let new_name = reserved_names.get(name).unwrap().clone();
                     ExprItem::SingleTerm(Term::Symbol(new_name))
                 }
                 else {
                     x.clone()
                 }
-            }
-            else {
+            },
+            ExprItem::SingleTerm(_) => {
                 x.clone()
             }
+            ExprItem::Group(ref expr) => {
+                ExprItem::Group(self.munge_expr(expr, reserved_names, &Vec::new()))
+            },
         }).collect()
     }
 }
@@ -386,9 +398,16 @@ mod tests {
         assert_eq!(result.unwrap_number(), RichNumber::from(23.1692307692f64));
     }
 
-    fn test_single_boolean(string: &str, expected: bool) {
-        let result = apply_single(string).unwrap();
-        assert_eq!(result.unwrap_boolean(), expected);
+    #[test]
+    fn evaluates_functions_with_nested_groups() {
+        let result = apply_single(r"(\a b c = (-1 * b + b ** 2 - 4 * a * c) / (-2 * a)) 1 2 3").unwrap();
+        assert_eq!(result.unwrap_number(), RichNumber::from(5f64));
+    }
+
+    #[test]
+    fn allows_nesting_functions_with_same_parameter_names() {
+        let result = apply_single(r"(\x y = (\x = x * y) 3) 1 2").unwrap();
+        assert_eq!(result.unwrap_number(), RichNumber::from(6f64));
     }
 
     fn apply_single(string: &str) -> EvalResult {
