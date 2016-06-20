@@ -27,6 +27,10 @@ impl RichNumber {
         self.unit.is_none()
     }
 
+    pub fn has_units(&self) -> bool {
+        !self.is_dimensionless()
+    }
+
     pub fn without_units(&self) -> RichNumber {
         RichNumber::new(self.value, None)
     }

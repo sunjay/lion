@@ -122,7 +122,7 @@ impl ContextItem {
 
     pub fn is_boolean(&self) -> bool {
         match *self {
-            ContextItem::Constant(_) => true,
+            ContextItem::Boolean(_) => true,
             _ => false,
         }
     }
@@ -170,4 +170,8 @@ impl ContextItem {
         }
     }
 }
+
+//TODO: Test wishlist:
+//TODO: * Tests for each is_*() function (assuming these work has caused major problems before)
+//TODO: * Test basic assumptions, so test that unwrapping results in the correct values, etc.
 
