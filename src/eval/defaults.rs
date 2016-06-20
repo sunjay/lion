@@ -3,6 +3,8 @@ use eval::context_item::ContextItem;
 use eval::built_in_function::BuiltInFunction;
 use eval::eval_context::{EvalContext, EvalResult, EvalError};
 
+const UNIT_PRECEDENCE: u8 = 9;
+
 pub fn setup_defaults(context: &mut EvalContext) {
     setup_fixity_constants(context);
 
@@ -10,6 +12,14 @@ pub fn setup_defaults(context: &mut EvalContext) {
         "operator",
         4,
         BuiltInFunction::new(operator),
+    );
+
+    context.define_built_in_method(
+        "units",
+        Fixity::Postfix,
+        UNIT_PRECEDENCE,
+        1,
+        BuiltInFunction::new(remove_unit),
     );
 
     context.define_built_in_method_defaults(
@@ -33,7 +43,7 @@ pub fn setup_defaults(context: &mut EvalContext) {
     context.define_built_in_method_defaults(
         "valueOf",
         1,
-        BuiltInFunction::new(value_of),
+        BuiltInFunction::new(remove_unit),
     );
 
     context.define_built_in_method_defaults(
@@ -93,6 +103,18 @@ fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResu
     Ok(ContextItem::Nothing)
 }
 
+fn remove_unit(_: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
+    try!(expect_params(&params, 1));
+
+    try!(expect_param_is(params[0].is_number(),
+        "Value to convert must be numeric"));
+
+    let value = params.remove(0).unwrap_number();
+    debug_assert!(params.is_empty(), "Not all parameters used");
+
+    Ok(ContextItem::Number(value.without_units()))
+}
+
 fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
@@ -103,8 +125,6 @@ fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalR
     debug_assert!(params.is_empty(), "Not all parameters used");
 
     let unit = context.create_unit(unit_name);
-
-    const UNIT_PRECEDENCE: u8 = 9;
 
     context.define_built_in_method(
         unit_name,
@@ -144,12 +164,6 @@ fn convert(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResul
 }
 
 fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
-    try!(expect_params(&params, 1));
-
-    unimplemented!();
-}
-
-fn value_of(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
     unimplemented!();
