@@ -78,7 +78,7 @@ fn operator(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResu
     let name = &params.remove(0).unwrap_constant();
     let function = params.remove(0);
 
-    debug_assert!(params.is_empty(), "Not parameters used");
+    debug_assert!(params.is_empty(), "Not all parameters used");
     
     match function {
         ContextItem::Definition { function, .. } => {
@@ -100,12 +100,16 @@ fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalR
         "Name of the unit must be a string literal"));
 
     let unit_name = &params.remove(0).unwrap_constant();
-    debug_assert!(params.is_empty(), "Not parameters used");
+    debug_assert!(params.is_empty(), "Not all parameters used");
 
     let unit = context.create_unit(unit_name);
 
-    context.define_built_in_method_defaults(
+    const UNIT_PRECEDENCE: u8 = 9;
+
+    context.define_built_in_method(
         unit_name,
+        Fixity::Postfix,
+        UNIT_PRECEDENCE,
         1,
         BuiltInFunction::new(move |context, mut params| {
             try!(expect_params(&params, 1));
@@ -122,10 +126,21 @@ fn define_unit(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalR
     Ok(ContextItem::Nothing)
 }
 
-fn convert(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn convert(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 2));
 
-    unimplemented!();
+    try!(expect_param_is(params[0].is_number(),
+        "Value to convert must be numeric"));
+    try!(expect_param_is(params[1].is_constant(),
+        "Unit to convert to must be a string literal"));
+
+    let value = params.remove(0).unwrap_number();
+    let target_unit_name = params.remove(0).unwrap_constant();
+    debug_assert!(params.is_empty(), "Not all parameters used");
+
+    let unit = context.lookup_unit_name(&target_unit_name).unwrap();
+
+    context.convert(value, Some(unit))
 }
 
 fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {

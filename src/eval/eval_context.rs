@@ -37,7 +37,9 @@ pub struct EvalContext {
     // Symbol name to context item definition
     symbol_table: HashMap<String, ContextItem>,
     // Unit to Symbol name
-    units: HashMap<Unit, String>,
+    unit_names: HashMap<Unit, String>,
+    // Symbol name to Unit
+    units: HashMap<String, Unit>,
     // Used to define new units
     next_unit: Unit,
     conversion_table: ConversionTable,
@@ -47,6 +49,7 @@ impl EvalContext {
     pub fn new() -> EvalContext {
         EvalContext {
             symbol_table: HashMap::new(),
+            unit_names: HashMap::new(),
             units: HashMap::new(),
             next_unit: 1,
             conversion_table: ConversionTable::new(),
@@ -66,6 +69,16 @@ impl EvalContext {
         let mut context = EvalContext::defaults();
         setup_prelude(&mut context);
         context
+    }
+
+    /// Attempts to lookup the name for the given unit value
+    pub fn lookup_unit(&self, unit: Unit) -> Option<String> {
+        self.unit_names.get(&unit).map(|x| x.clone())
+    }
+
+    /// Attempts to lookup the unit for the given unit name
+    pub fn lookup_unit_name(&self, name: &str) -> Option<Unit> {
+        self.units.get(name).map(|x| x.clone())
     }
 
     /// Gets a single value without evaluating it from the current context
@@ -136,7 +149,8 @@ impl EvalContext {
         let unit = self.next_unit;
         self.next_unit += 1;
 
-        self.units.insert(unit, name.to_owned());
+        self.unit_names.insert(unit, name.to_owned());
+        self.units.insert(name.to_owned(), unit);
 
         unit
     }
