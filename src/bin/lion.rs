@@ -8,11 +8,18 @@ use lion::eval::eval_context::EvalContext;
 
 fn main() {
     let mut context = EvalContext::prelude();
+    
+    println!("lion v{}", env!("CARGO_PKG_VERSION"));
 
     loop {
         let line = match readline("\u{03BB} ") {
             Ok(data) => data,
-            Err(ReadlineError::EndOfFile) => break,
+            Err(ReadlineError::EndOfFile) => {
+                // Print an empty line so that the prompt doesn't
+                // throw off the user's next line
+                println!("");
+                break;
+            },
             Err(e) => {
                 println!("{}", e);
                 break;
