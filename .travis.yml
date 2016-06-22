@@ -25,6 +25,7 @@ after_success: |
   make &&
   sudo make install &&
   cd ../.. &&
+  rm -rf kcov-master &&
   kcov --exclude-pattern=/.cargo,/usr/lib --verify target/cov target/debug/lion-* &&
   bash <(curl -s https://codecov.io/bash) &&
   echo "Uploaded code coverage"
