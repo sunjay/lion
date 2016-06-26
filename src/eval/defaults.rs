@@ -163,13 +163,26 @@ fn convert(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResul
     context.convert(value, Some(unit))
 }
 
-fn unit_for(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn unit_for(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 1));
 
-    unimplemented!();
+    try!(expect_param_is(params[0].is_number(),
+        "Value to convert must be numeric"));
+
+    let value = params.remove(0).unwrap_number();
+    debug_assert!(params.is_empty(), "Not all parameters used");
+
+    Ok(ContextItem::Constant(
+        value.unit.map_or_else(
+            || "units".to_owned(),
+            // since all units are defined by the eval context itself,
+            // we can trust unit constants to exist and use unwrap here
+            |v| context.lookup_unit(v).unwrap()
+        )
+    ))
 }
 
-fn conversion(context: &mut EvalContext, params: Vec<ContextItem>) -> EvalResult {
+fn conversion(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 3));
 
     unimplemented!();
@@ -207,8 +220,7 @@ mod tests {
 
     #[test]
     fn fixity_constants() {
-        let mut context = EvalContext::new();
-        setup_defaults(&mut context);
+        let context = context_with_defaults();
 
         let lookup_fixity = |name| Fixity::from_str(&context.get(name).unwrap().unwrap_constant()).unwrap();
 
@@ -219,8 +231,7 @@ mod tests {
 
     #[test]
     fn can_define_operators_with_different_fixities() {
-        let mut context = EvalContext::new();
-        setup_defaults(&mut context);
+        let mut context = context_with_defaults();
 
         let fixity = Fixity::Prefix;
         let precedence: u8 = 0;
@@ -261,6 +272,28 @@ mod tests {
             },
             _ => panic!("operator did not define a function"),
         }
+    }
+
+    #[test]
+    fn can_get_units() {
+        let mut context = context_with_defaults();
+
+        let unit_name = "foo";
+        let unit = context.create_unit(unit_name);
+
+        assert_eq!(context.call("unitFor", vec![
+            ContextItem::Number(RichNumber::from_unit(23f64, unit)),
+        ]).unwrap().unwrap().unwrap_constant(), unit_name);
+
+        assert_eq!(context.call("unitFor", vec![
+            ContextItem::Number(RichNumber::from(23f64)),
+        ]).unwrap().unwrap().unwrap_constant(), "units");
+    }
+
+    fn context_with_defaults() -> EvalContext {
+        let mut context = EvalContext::new();
+        setup_defaults(&mut context);
+        context
     }
 }
 
