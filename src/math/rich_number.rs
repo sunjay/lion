@@ -1,10 +1,11 @@
+use std::cmp::Ordering;
 use std::ops::{Add, Sub, Mul, Div, Rem};
 
 //TODO: Refactor Unit into its own newtype
 //TODO: Define a `.next()` method that returns the next unit from a given unit (use this in EvalContext) instead of manually incrementing the unit in create_unit
 pub type Unit = usize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialOrd)]
 pub struct RichNumber {
     //TODO: These should not be public as modifying them may not always force strict adherence to mathematical laws
     pub value: f64,
@@ -70,6 +71,17 @@ impl PartialEq for RichNumber {
             "Cannot compare values with different units");
 
         (self.value - other.value).abs() < 1e-10
+    }
+}
+
+impl Eq for RichNumber {}
+
+impl Ord for RichNumber {
+    fn cmp(&self, other: &Self) -> Ordering {
+        assert!(self.unit == other.unit,
+            "Cannot compare values with different units");
+
+        self.value.partial_cmp(&other.value).unwrap()
     }
 }
 
@@ -183,6 +195,20 @@ mod tests {
 
         assert_eq!(a % b, RichNumber::from(2f64));
         assert_eq!(b % a, RichNumber::from(1.6f64));
+    }
+
+    #[test]
+    fn ordering() {
+        let a = RichNumber::from(2);
+        let b = RichNumber::from(3.6666666666666);
+        let c = RichNumber::from(3.6666666666667);
+        let d = RichNumber::from(3.6666666666667);
+
+        assert!(a < b);
+        assert!(b < c);
+        assert!(c <= d);
+        assert!(d > b);
+        assert!(b >= a);
     }
 }
 
