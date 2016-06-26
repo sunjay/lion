@@ -38,12 +38,10 @@ pub fn define_math(context: &mut EvalContext) {
     define_unary_operators(context);
 
     apply_program(context, include_str!("math.lion"));
-
-    //TODO: sin, cos, tan, etc.
 }
 
 fn define_unary_operators(context: &mut EvalContext) {
-    define_built_in(context, "not", UNARY_PARAMS_LENGTH, 
+    define_built_in(context, "not", UNARY_PARAMS_LENGTH,
         BuiltInFunction::new(move |_, mut params| {
             if params.len() != UNARY_PARAMS_LENGTH {
                 return Err(EvalError::ExpectedParams(UNARY_PARAMS_LENGTH));
@@ -60,22 +58,8 @@ fn define_unary_operators(context: &mut EvalContext) {
         })
     );
 
-    define_built_in(context, "neg", UNARY_PARAMS_LENGTH, 
-        BuiltInFunction::new(move |_, mut params| {
-            if params.len() != UNARY_PARAMS_LENGTH {
-                return Err(EvalError::ExpectedParams(UNARY_PARAMS_LENGTH));
-            }
-
-            if !params[0].is_number() {
-                return Err(EvalError::InvalidParam("Can only negate a numeric value".to_owned()));
-            }
-
-            let arg = params.pop().unwrap().unwrap_number();
-            debug_assert!(params.is_empty(), "Not all parameters used");
-
-            Ok(ContextItem::Number(-arg))
-        })
-    );
+    define_numeric_unary_op(context, "neg", |a| -a)
+    //TODO: rad (unit), deg (unit), PI (constant), sin, cos, tan, etc.
 }
 
 /// Defines an operator that can take either booleans or numbers
@@ -84,7 +68,7 @@ fn define_unary_operators(context: &mut EvalContext) {
 fn define_boolean_binary_op<F: 'static>(context: &mut EvalContext, name: &str, operator: F, coerce_first: bool)
     where F: Fn(ContextItem, ContextItem) -> bool {
 
-    define_built_in(context, name, BINARY_PARAMS_LENGTH, 
+    define_built_in(context, name, BINARY_PARAMS_LENGTH,
         BuiltInFunction::new(move |context, mut params| {
             if params.len() != BINARY_PARAMS_LENGTH {
                 return Err(EvalError::ExpectedParams(BINARY_PARAMS_LENGTH))
@@ -121,7 +105,7 @@ fn define_numeric_binary_op<F: 'static, G: 'static>(context: &mut EvalContext, n
     where F: Fn(RichNumber, RichNumber) -> RichNumber,
           G: Fn(RichNumber, RichNumber) -> bool {
 
-    define_built_in(context, name, BINARY_PARAMS_LENGTH, 
+    define_built_in(context, name, BINARY_PARAMS_LENGTH,
         BuiltInFunction::new(move |context, mut params| {
             if params.len() != BINARY_PARAMS_LENGTH {
                 return Err(EvalError::ExpectedParams(BINARY_PARAMS_LENGTH))
@@ -142,6 +126,28 @@ fn define_numeric_binary_op<F: 'static, G: 'static>(context: &mut EvalContext, n
             }
 
             Ok(ContextItem::Number(operator(lhs, rhs)))
+        })
+    );
+}
+
+/// Defines an unary operator that can only take a numeric argument
+fn define_numeric_unary_op<F: 'static>(context: &mut EvalContext, name: &'static str, operator: F)
+    where F: Fn(RichNumber) -> RichNumber {
+
+    define_built_in(context, name, UNARY_PARAMS_LENGTH,
+        BuiltInFunction::new(move |_, mut params| {
+            if params.len() != UNARY_PARAMS_LENGTH {
+                return Err(EvalError::ExpectedParams(UNARY_PARAMS_LENGTH));
+            }
+
+            if !params[0].is_number() {
+                return Err(EvalError::InvalidParam(format!("Can only apply {} to a numeric value", name)));
+            }
+
+            let arg = params.pop().unwrap().unwrap_number();
+            debug_assert!(params.is_empty(), "Not all parameters used");
+
+            Ok(ContextItem::Number(operator(arg)))
         })
     );
 }
