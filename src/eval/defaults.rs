@@ -185,7 +185,37 @@ fn unit_for(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResu
 fn conversion(context: &mut EvalContext, mut params: Vec<ContextItem>) -> EvalResult {
     try!(expect_params(&params, 3));
 
-    unimplemented!();
+    try!(expect_param_is(params[0].is_constant(),
+        "Conversion base unit must be a string literal"));
+    try!(expect_param_is(params[1].is_constant(),
+        "Conversion target unit must be a string literal"));
+    try!(expect_param_is(params[2].is_definition(),
+        "Conversion definition must be either an existing function or an anonymous function, built-in functions are not currently supported"));
+    //TODO: Support built-in functions
+
+    let base_unit_name = params.remove(0).unwrap_constant();
+    let target_unit_name = params.remove(0).unwrap_constant();
+    let function = match params.remove(0) {
+        ContextItem::Definition { function, .. } => function,
+        _ => unreachable!(),
+    };
+
+    debug_assert!(params.is_empty(), "Not all parameters used");
+
+    let base_unit = context.lookup_unit_name(&base_unit_name);
+    let target_unit = context.lookup_unit_name(&target_unit_name);
+
+    if base_unit.is_none() {
+        Err(EvalError::UndefinedUnit(base_unit_name))
+    }
+    else if target_unit.is_none() {
+        Err(EvalError::UndefinedUnit(target_unit_name))
+    }
+    else {
+        context.define_conversion(base_unit.unwrap(), target_unit.unwrap(), function);
+
+        Ok(ContextItem::Nothing)
+    }
 }
 
 fn expect_params(params: &Vec<ContextItem>, nparams: usize) -> Result<(), EvalError> {
@@ -288,6 +318,28 @@ mod tests {
         assert_eq!(context.call("unitFor", vec![
             ContextItem::Number(RichNumber::from(23f64)),
         ]).unwrap().unwrap().unwrap_constant(), "units");
+    }
+
+    #[test]
+    fn can_define_conversions() {
+        let mut context = context_with_defaults();
+
+        let foo = context.create_unit("foo");
+        let bar = context.create_unit("bar");
+
+        assert_eq!(context.call("conversion", vec![
+            ContextItem::Constant("foo".to_owned()),
+            ContextItem::Constant("bar".to_owned()),
+            ContextItem::function_defaults(Function {
+                params: vec!["x".to_owned()],
+                body: vec![
+                    ExprItem::SingleTerm(Term::Symbol("x".to_owned())),
+                ],
+            }),
+        ]).unwrap().unwrap(), ContextItem::Nothing);
+
+        assert!(context.convert(RichNumber::from_unit(64f64, foo), Some(bar)).is_ok());
+        assert!(context.convert(RichNumber::from_unit(64f64, bar), Some(foo)).is_err());
     }
 
     fn context_with_defaults() -> EvalContext {

@@ -19,6 +19,7 @@ impl RichNumber {
         }
     }
 
+    //TODO: Rename from_unit to with_unit per Rust styleguide
     pub fn from_unit(value: f64, unit: Unit) -> RichNumber {
         RichNumber::new(value, Some(unit))
     }

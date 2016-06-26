@@ -24,10 +24,13 @@ pub enum EvalError {
         expected_params: usize,
         actual_params: usize,
     },
+    UndefinedUnit(String),
     ConversionUndefined {
         start: Unit,
         target: Unit,
     },
+    //TODO: Change this from a string to an error code and then standardize
+    //TODO: the codes and messages
     InvalidParam(String),
 }
 
@@ -218,31 +221,33 @@ impl EvalContext {
             else {
                 let conversions = conversions.unwrap();
 
-                let mut current = ContextItem::Number(value);
+                let mut current = value;
                 for next_unit in conversions {
-                    //TODO: unwrap_number() here may not be completely safe
-                    //TODO: because it is dependent on the result of applying the converter
-                    let current_number = current.unwrap_number();
-
                     // unwrap() is safe here because we used conversion_steps
                     let converter = self.conversion_table.get_converter(
-                        current_number.unit.unwrap(),
+                        current.unit.unwrap(),
                         next_unit
                     ).unwrap();
 
+                    //TODO: unwrap_number() is not 100% safe here since the converter may not return a number
                     current = try!(self.apply_function(&converter, vec![
-                        ContextItem::Number(current_number.without_units()),
-                    ]));
+                        ContextItem::Number(current.without_units()),
+                    ])).unwrap_number();
+                    current.unit = Some(next_unit);
                 }
 
+                // Ensuring the unit conversion actually worked as expected
                 debug_assert!({
-                    let c = current.clone().unwrap_number().unit;
-                    !c.is_none() && c.unwrap() == unit
+                    !current.unit.is_none() && current.unit.unwrap() == unit
                 });
 
-                Ok(current)
+                Ok(ContextItem::Number(current))
             }
         }
+    }
+
+    pub fn define_conversion(&mut self, from: Unit, to: Unit, converter: Function) {
+        self.conversion_table.define_conversion(from, to, converter);
     }
 
     pub fn apply(&mut self, statement: Statement) -> EvalResult {
@@ -409,6 +414,11 @@ mod tests {
         let result = apply_single(r"(\x y = (\x = x * y) 3) 1 2").unwrap();
         assert_eq!(result.unwrap_number(), RichNumber::from(6f64));
     }
+
+    //TODO: Test wishlist
+    //TODO: * Test convert + other functions in this struct
+    //TODO: * Test that convert removes units before passing into conversion function
+    //TODO: * make sure empty function bodies are impossible
 
     fn apply_single(string: &str) -> EvalResult {
         let mut context = EvalContext::prelude();
