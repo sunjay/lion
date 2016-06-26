@@ -25,9 +25,18 @@ pub fn define_math(context: &mut EvalContext) {
     define_boolean_binary_op(context, "eq", |a, b| a == b, true);
     define_boolean_binary_op(context, "ne", |a, b| a != b, true);
 
+    define_boolean_binary_op(context, "gt",
+        |a, b| a.unwrap_number() > b.unwrap_number(), true);
+    define_boolean_binary_op(context, "ge",
+        |a, b| a.unwrap_number() >= b.unwrap_number(), true);
+    define_boolean_binary_op(context, "lt",
+        |a, b| a.unwrap_number() < b.unwrap_number(), true);
+    define_boolean_binary_op(context, "le",
+        |a, b| a.unwrap_number() <= b.unwrap_number(), true);
+
     apply_program(context, include_str!("math.lion"));
 
-    //TODO: ge, le, gt, lt, neg, not, sin, cos, tan, etc.
+    //TODO: neg, not, sin, cos, tan, etc.
 }
 
 /// Defines an operator that can take either booleans or numbers
