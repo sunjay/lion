@@ -152,7 +152,7 @@ mod tests {
 
     use eval::context_item::ContextItem;
     use eval::eval_context::EvalContext;
-    use math::rich_number::RichNumber;
+    use math::rich_number::{RichNumber, Unit};
 
     #[test]
     fn math_operators() {
@@ -192,9 +192,9 @@ mod tests {
         let mut context = EvalContext::prelude();
 
         let fake_unit = "foounit";
-        context.call("defineUnit", vec![
+        assert_eq!(context.call("defineUnit", vec![
             ContextItem::Constant(fake_unit.to_owned()),
-        ]).unwrap().unwrap();
+        ]).unwrap().unwrap(), ContextItem::Nothing);
 
         let unit = context.lookup_unit_name(fake_unit).unwrap();
 
@@ -238,6 +238,30 @@ mod tests {
             ExprItem::SingleTerm(Term::Symbol("==".to_owned())),
             ExprItem::SingleTerm(Term::Number(2f64)),
         ])).unwrap().unwrap_boolean(), true);
+    }
+
+    #[test]
+    fn can_negate_numbers() {
+        let mut context = EvalContext::prelude();
+
+        let fake_unit: Unit = 2;
+        let number: f64 = 34.314f64;
+
+        assert_eq!(
+            context.call("neg", vec![
+                ContextItem::Number(RichNumber::from_unit(number, fake_unit)),
+            ]).unwrap().unwrap().unwrap_number(),
+            RichNumber::from_unit(-number, fake_unit)
+        );
+    }
+
+    #[test]
+    fn can_negate_booleans() {
+        let mut context = EvalContext::prelude();
+
+        assert_eq!(context.call("not", vec![
+            ContextItem::Boolean(true),
+        ]).unwrap().unwrap().unwrap_boolean(), false);
     }
 }
 
