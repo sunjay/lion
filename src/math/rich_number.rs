@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, Sub, Mul, Div, Rem};
+use std::ops::{Neg, Add, Sub, Mul, Div, Rem};
 
 //TODO: Refactor Unit into its own newtype
 //TODO: Define a `.next()` method that returns the next unit from a given unit (use this in EvalContext) instead of manually incrementing the unit in create_unit
@@ -82,6 +82,14 @@ impl Ord for RichNumber {
             "Cannot compare values with different units");
 
         self.value.partial_cmp(&other.value).unwrap()
+    }
+}
+
+impl Neg for RichNumber {
+    type Output = RichNumber;
+
+    fn neg(self) -> Self::Output {
+        RichNumber::new(-self.value, self.unit)
     }
 }
 

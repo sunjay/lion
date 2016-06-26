@@ -6,6 +6,7 @@ use eval::context_item::ContextItem;
 use eval::eval_context::{EvalContext, EvalError};
 use eval::built_in_function::BuiltInFunction;
 
+const UNARY_PARAMS_LENGTH: usize = 1;
 const BINARY_PARAMS_LENGTH: usize = 2;
 
 pub fn define_math(context: &mut EvalContext) {
@@ -34,9 +35,47 @@ pub fn define_math(context: &mut EvalContext) {
     define_boolean_binary_op(context, "le",
         |a, b| a.unwrap_number() <= b.unwrap_number(), true);
 
+    define_unary_operators(context);
+
     apply_program(context, include_str!("math.lion"));
 
-    //TODO: neg, not, sin, cos, tan, etc.
+    //TODO: sin, cos, tan, etc.
+}
+
+fn define_unary_operators(context: &mut EvalContext) {
+    define_built_in(context, "not", UNARY_PARAMS_LENGTH, 
+        BuiltInFunction::new(move |_, mut params| {
+            if params.len() != UNARY_PARAMS_LENGTH {
+                return Err(EvalError::ExpectedParams(UNARY_PARAMS_LENGTH));
+            }
+
+            if !params[0].is_boolean() {
+                return Err(EvalError::InvalidParam("Can only boolean negate a boolean value".to_owned()));
+            }
+
+            let arg = params.pop().unwrap().unwrap_boolean();
+            debug_assert!(params.is_empty(), "Not all parameters used");
+
+            Ok(ContextItem::Boolean(!arg))
+        })
+    );
+
+    define_built_in(context, "neg", UNARY_PARAMS_LENGTH, 
+        BuiltInFunction::new(move |_, mut params| {
+            if params.len() != UNARY_PARAMS_LENGTH {
+                return Err(EvalError::ExpectedParams(UNARY_PARAMS_LENGTH));
+            }
+
+            if !params[0].is_number() {
+                return Err(EvalError::InvalidParam("Can only negate a numeric value".to_owned()));
+            }
+
+            let arg = params.pop().unwrap().unwrap_number();
+            debug_assert!(params.is_empty(), "Not all parameters used");
+
+            Ok(ContextItem::Number(-arg))
+        })
+    );
 }
 
 /// Defines an operator that can take either booleans or numbers
