@@ -50,6 +50,7 @@ $ add2cm (5 cm)
 * Numbers will be represented by a value as well as a unit
 * Vectors and other fancier types will not be included until future versions
 * Only simple expressions as found in the examples will be included in this initial release
+* Bounded recursion should be supported
 
 ## Possible Future Extensions:
 * Pattern matching on functions
