@@ -37,6 +37,7 @@ fn main() {
         for stmt in program {
             let result = context.apply(stmt);
 
+            //TODO: Better output and error formatting
             if result.is_ok() {
                 println!("{:?}", result.unwrap());
             }
