@@ -1,3 +1,5 @@
+use std::f64::consts::{E, PI};
+
 use prelude::{define_built_in, apply_program};
 
 use math::rich_number::RichNumber;
@@ -13,6 +15,16 @@ pub fn define_math(context: &mut EvalContext) {
     context.set_boolean("true", true);
     context.set_boolean("false", false);
 
+    context.set_number("pi", RichNumber::from(PI));
+    context.set_number("e", RichNumber::from(E));
+
+    define_binary_operators(context);
+    define_unary_operators(context);
+
+    apply_program(context, include_str!("math.lion"));
+}
+
+fn define_binary_operators(context: &mut EvalContext) {
     define_numeric_binary_op(context, "pow", |a, b| a.pow(b), |_, _| false);
     define_numeric_binary_op(context, "mul", |a, b| a * b, |_, _| false);
 
@@ -34,10 +46,6 @@ pub fn define_math(context: &mut EvalContext) {
         |a, b| a.unwrap_number() < b.unwrap_number(), true);
     define_boolean_binary_op(context, "le",
         |a, b| a.unwrap_number() <= b.unwrap_number(), true);
-
-    define_unary_operators(context);
-
-    apply_program(context, include_str!("math.lion"));
 }
 
 fn define_unary_operators(context: &mut EvalContext) {
@@ -58,8 +66,34 @@ fn define_unary_operators(context: &mut EvalContext) {
         })
     );
 
-    define_numeric_unary_op(context, "neg", |a| -a)
-    //TODO: rad (unit), deg (unit), PI (constant), sin, cos, tan, etc.
+    define_numeric_unary_op(context, "neg", |a| -a, |_| true);
+
+    define_numeric_unary_op(context, "abs", |a| a.abs(), |_| true);
+    define_numeric_unary_op(context, "floor", |a| a.floor(), |_| true);
+    define_numeric_unary_op(context, "ceil", |a| a.ceil(), |_| true);
+    define_numeric_unary_op(context, "round", |a| a.round(), |_| true);
+
+    define_numeric_unary_op(context, "sqrt", |a| a.sqrt(), |a| a.is_none());
+    define_numeric_unary_op(context, "ln", |a| a.ln(), |a| a.is_none());
+    define_numeric_unary_op(context, "log10", |a| a.log10(), |a| a.is_none());
+    define_numeric_unary_op(context, "log2", |a| a.log2(), |a| a.is_none());
+
+    define_numeric_unary_op(context, "sin", |a| a.sin(), |a| !a.is_none() && a.unwrap() == "rad");
+    define_numeric_unary_op(context, "cos", |a| a.cos(), |a| !a.is_none() && a.unwrap() == "rad");
+    define_numeric_unary_op(context, "tan", |a| a.tan(), |a| !a.is_none() && a.unwrap() == "rad");
+
+    //TODO: Find a way to set the unit to radians on the output of these methods
+    define_numeric_unary_op(context, "asin", |a| a.asin(), |a| a.is_none());
+    define_numeric_unary_op(context, "acos", |a| a.acos(), |a| a.is_none());
+    define_numeric_unary_op(context, "atan", |a| a.atan(), |a| a.is_none());
+
+    define_numeric_unary_op(context, "sinh", |a| a.sinh(), |a| !a.is_none() && a.unwrap() == "rad");
+    define_numeric_unary_op(context, "cosh", |a| a.cosh(), |a| !a.is_none() && a.unwrap() == "rad");
+    define_numeric_unary_op(context, "tanh", |a| a.tanh(), |a| !a.is_none() && a.unwrap() == "rad");
+
+    define_numeric_unary_op(context, "asinh", |a| a.asinh(), |a| a.is_none());
+    define_numeric_unary_op(context, "acosh", |a| a.acosh(), |a| a.is_none());
+    define_numeric_unary_op(context, "atanh", |a| a.atanh(), |a| a.is_none());
 }
 
 /// Defines an operator that can take either booleans or numbers
@@ -131,11 +165,12 @@ fn define_numeric_binary_op<F: 'static, G: 'static>(context: &mut EvalContext, n
 }
 
 /// Defines an unary operator that can only take a numeric argument
-fn define_numeric_unary_op<F: 'static>(context: &mut EvalContext, name: &'static str, operator: F)
-    where F: Fn(RichNumber) -> RichNumber {
+fn define_numeric_unary_op<F: 'static, G: 'static>(context: &mut EvalContext, name: &'static str, operator: F, accepts_unit: G)
+    where F: Fn(RichNumber) -> RichNumber,
+          G: Fn(Option<String>) -> bool {
 
     define_built_in(context, name, UNARY_PARAMS_LENGTH,
-        BuiltInFunction::new(move |_, mut params| {
+        BuiltInFunction::new(move |context, mut params| {
             if params.len() != UNARY_PARAMS_LENGTH {
                 return Err(EvalError::ExpectedParams(UNARY_PARAMS_LENGTH));
             }
@@ -146,6 +181,11 @@ fn define_numeric_unary_op<F: 'static>(context: &mut EvalContext, name: &'static
 
             let arg = params.pop().unwrap().unwrap_number();
             debug_assert!(params.is_empty(), "Not all parameters used");
+
+            let unit = arg.unit.map(|u| context.lookup_unit(u).unwrap());
+            if !accepts_unit(unit.clone()) {
+                return Err(EvalError::InvalidParam(format!("Function {} does not accept unit {}", name, unit.unwrap_or("(no unit)".to_owned()))));
+            }
 
             Ok(ContextItem::Number(operator(arg)))
         })

@@ -44,6 +44,106 @@ impl RichNumber {
         RichNumber::from(self.value.powf(other.value))
     }
 
+    pub fn abs(&self) -> RichNumber {
+        RichNumber::new(self.value.abs(), self.unit)
+    }
+
+    pub fn floor(&self) -> RichNumber {
+        RichNumber::new(self.value.floor(), self.unit)
+    }
+
+    pub fn ceil(&self) -> RichNumber {
+        RichNumber::new(self.value.ceil(), self.unit)
+    }
+
+    pub fn round(&self) -> RichNumber {
+        RichNumber::new(self.value.round(), self.unit)
+    }
+
+    pub fn sqrt(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::from(self.value.sqrt())
+    }
+
+    pub fn ln(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::from(self.value.ln())
+    }
+
+    pub fn log10(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::from(self.value.log10())
+    }
+
+    pub fn log2(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::from(self.value.log2())
+    }
+
+    pub fn sin(&self) -> RichNumber {
+        RichNumber::from(self.value.sin())
+    }
+
+    pub fn cos(&self) -> RichNumber {
+        RichNumber::from(self.value.cos())
+    }
+
+    pub fn tan(&self) -> RichNumber {
+        RichNumber::from(self.value.tan())
+    }
+
+    pub fn asin(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::new(self.value.asin(), self.unit)
+    }
+
+    pub fn acos(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::new(self.value.acos(), self.unit)
+    }
+
+    pub fn atan(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::new(self.value.atan(), self.unit)
+    }
+
+    pub fn sinh(&self) -> RichNumber {
+        RichNumber::from(self.value.sinh())
+    }
+
+    pub fn cosh(&self) -> RichNumber {
+        RichNumber::from(self.value.cosh())
+    }
+
+    pub fn tanh(&self) -> RichNumber {
+        RichNumber::from(self.value.tanh())
+    }
+
+    pub fn asinh(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::new(self.value.asinh(), self.unit)
+    }
+
+    pub fn acosh(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::new(self.value.acosh(), self.unit)
+    }
+
+    pub fn atanh(&self) -> RichNumber {
+        assert!(self.is_dimensionless(), "Only supports dimensionless/scalar quantities");
+
+        RichNumber::new(self.value.atanh(), self.unit)
+    }
+
     /// Applies an operator to two values given the values and what the resulting unit should be
     fn apply_operator<F>(self, other: RichNumber, operator: F, unit: Option<Unit>) -> RichNumber
         where F: FnOnce(f64, f64) -> f64 {
