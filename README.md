@@ -1,4 +1,4 @@
-# lion [![Build Status](https://travis-ci.org/sunjay/lion.svg?branch=master)](https://travis-ci.org/sunjay/lion)
+# lion [![Build Status](https://travis-ci.org/sunjay/lion.svg?branch=master)](https://travis-ci.org/sunjay/lion) [![codecov](https://codecov.io/gh/sunjay/lion/branch/master/graph/badge.svg)](https://codecov.io/gh/sunjay/lion)
 
 A very tiny, dynamic, loosely-typed language for doing calculations in a more intuitive way.
 
