@@ -5,7 +5,7 @@ use std::ops::{Neg, Add, Sub, Mul, Div, Rem};
 //TODO: Define a `.next()` method that returns the next unit from a given unit (use this in EvalContext) instead of manually incrementing the unit in create_unit
 pub type Unit = usize;
 
-#[derive(Debug, Clone, Copy, PartialOrd)]
+#[derive(Debug, Clone, Copy)]
 pub struct RichNumber {
     //TODO: These should not be public as modifying them may not always force strict adherence to mathematical laws
     pub value: f64,
@@ -176,12 +176,12 @@ impl PartialEq for RichNumber {
 
 impl Eq for RichNumber {}
 
-impl Ord for RichNumber {
-    fn cmp(&self, other: &Self) -> Ordering {
+impl PartialOrd for RichNumber {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         assert!(self.unit == other.unit,
             "Cannot compare values with different units");
 
-        self.value.partial_cmp(&other.value).unwrap()
+        self.value.partial_cmp(&other.value)
     }
 }
 
