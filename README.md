@@ -17,17 +17,17 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
 ## Examples
 
 ```
-$ 2 + 2
+λ 2 + 2
 = 4
-$ 20 cm + 2 m
+λ 20 cm + 2 m
 = 220 cm
-$ (20 cm + 2 m) m
+λ (20 cm + 2 m) m
 = 2.2 m
-$ add2 x = x + 2
-$ add2 5
+λ add2 x = x + 2
+λ add2 5
 = 7
-$ add2cm x = x + 2 cm
-$ add2cm (5 cm)
+λ add2cm x = x + 2 cm
+λ add2cm (5 cm)
 = 7 cm
 ```
 
@@ -123,14 +123,14 @@ TODO: Everything is left-associative right now, this may be changed in later ver
 
 ### Examples
 ```
-$ operator INFIX 6 "$$" (\x y = x * y + x)
-$ 3 $$ 2
+λ operator INFIX 6 "$$" (\x y = x * y + x)
+λ 3 $$ 2
 = 9
-$ f x = 2 * x
-$ operator POSTFIX 6 "timestwo" (f)
-$ 2.5 timestwo
+λ f x = 2 * x
+λ operator POSTFIX 6 "timestwo" (f)
+λ 2.5 timestwo
 = 5
-$ (2.5 cm) timestwo
+λ (2.5 cm) timestwo
 = 5 cm
 ```
 
@@ -142,8 +142,8 @@ Units can have any casing, but to avoid confusion it is recommended to always us
 The `defineUnit` function takes a case-sensitive string (use double-quotes) representing the unit's name. This defines a tightly-bound (high precedence) `POSTFIX` function which when used, attempts to convert its argument to the now defined unit based on any conversions that are currently defined. 
 
 ```
-$ defineUnit "kohm"
-$ 3 kohm
+λ defineUnit "kohm"
+λ 3 kohm
 = 3 kohm
 ```
 
@@ -155,29 +155,29 @@ The now defined unit function can be used as an argument in the `convert` functi
 
 ```
 # By wrapping the `cm` function in parentheses, it is not evaluated
-$ convert (2 units) (cm)
+λ convert (2 units) (cm)
 ```
 
 Conversions are automatically performed during calculations. The units are combined such that the leftmost unit is preserved. Incompatible units (where no conversion can be resolved) are left untouched since they cannot be reduced any further.
 
 ```
-$ 20 cm + 2 m
+λ 20 cm + 2 m
 = 220 cm
-$ 20 cm + 2 m + 2 kohm
+λ 20 cm + 2 m + 2 kohm
 = 220 cm + 2 kohm
 ```
 
 You can explicitly convert to a unit by calling its function:
 
 ```
-$ (20 cm + 2 m) m
+λ (20 cm + 2 m) m
 = 2.2 m
 ```
 
 This is equivalent to:
 
 ```
-$ convert (20 cm + 2 m) "m"
+λ convert (20 cm + 2 m) "m"
 = 2.2 m
 ```
 
@@ -189,7 +189,7 @@ To define a conversion between two units, use the `conversion` function.
 The `conversion` function takes the two units to convert from and to as well as a function to convert from the first argument to the second one. This conversion definition is **one way**. No equivalence is automatically defined.
 
 ```
-$ conversion "cm" "m" (\x = x / 100)
+λ conversion "cm" "m" (\x = x / 100)
 ```
 
 ## Implementation Notes
