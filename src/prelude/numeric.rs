@@ -114,8 +114,8 @@ fn define_boolean_binary_op<F: 'static>(context: &mut EvalContext, name: &str, o
                 return Err(EvalError::InvalidParam("Expecting numeric or boolean argument, cannot compare numeric values to boolean values".to_owned()));
             }
 
-            let mut rhs = params.remove(0);
             let lhs = params.remove(0);
+            let mut rhs = params.remove(0);
             debug_assert!(params.is_empty(), "Not all parameters used");
 
             if coerce_first && lhs.is_number() && rhs.is_number() {
