@@ -69,6 +69,10 @@ $ add2cm (5 cm)
   * Graphing
 * Importing and modules - being able to add defintions defined in a separate module somewhere (split circuits from basic math, etc.)
 * Other numerical bases + numeric literals for those bases (base 16, etc.)
+* More advanced units support:
+    * Composite units - multiplcation + division, i.e. kgm/s
+    * Automatic unit equivalence (i.e. kgms^-1 => N)
+        * Currently supported manuallly through explicit unit conversions
 
 ## Syntax
 
