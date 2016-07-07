@@ -35,22 +35,21 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
 
 * Define most things in the language itself rather than on a compiler level
 * Support prefix, postfix and infix operators -- functions, units and operators
-* Be lazy, not eager -- but still provide a way to force strict evaluation (still under consideration, since lazy probably requires immutable too)
+* &beta; reduce instead of strictly evaluating (planned for the future)
 * **Do not write another programming language.** Keep it simple.
 
 ## Implementation Goals:
-* Be able to generate parse trees and abstract syntax trees given raw text source
+* Be able to generate abstract syntax trees given raw text source
 * Be able to evaluate raw text source from the generated trees
-    * Be able to generate good error messages with line and character numbers
-* Be able to compile programs into bytecode
-* Support basic scope / stack
+    * Be able to generate good error messages with line and character numbers (TODO)
+* Be able to compile programs into bytecode (TODO)
+* Support basic scope / stack (TODO)
 
-## Version 1.0.0 Notes
-* In order to speed up the process of making this, the first version will be very simple and only support numeric types
-* Numbers will be represented by a value as well as a unit
+## Version 1.0.0
+In order to speed up the process of making this, the first version will be very simple and only support numeric types
+* Numbers will be represented by a value as well as a simple unit (single-unit only)
 * Vectors and other fancier types will not be included until future versions
 * Only simple expressions as found in the examples will be included in this initial release
-* Bounded recursion should be supported
 
 ## Possible Future Extensions:
 * Pattern matching on functions
@@ -69,10 +68,12 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
   * Graphing
 * Importing and modules - being able to add defintions defined in a separate module somewhere (split circuits from basic math, etc.)
 * Other numerical bases + numeric literals for those bases (base 16, etc.)
+* Bounded recursion (using `if` function)
 * More advanced units support:
     * Composite units - multiplcation + division, i.e. kgm/s
     * Automatic unit equivalence (i.e. kgms^-1 => N)
         * Currently supported manuallly through explicit unit conversions
+* Support Expressions enclosed in `{` and `}`
 
 ## Syntax
 
@@ -85,7 +86,7 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
 
 * Expressions:
   * Composed of symbols and evaluated at runtime based on the definitions of those symbols (precedence, etc.)
-  * [ADVANCED] Can be enclosed within a block `{ <expressions> }` where the result of the expression is the final line in the block
+  * [ADVANCED+TODO] Can be enclosed within a block `{ <expressions> }` where the result of the expression is the final line in the block
 
 * Strings: (but no string operators...yet)
   * Double-quotes only for strings, backslash escapes for double quotes within strings
@@ -102,7 +103,7 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
     * `>=`
     * `<=`
     * `neg` - for negating numbers (since `-` is infix)
-    * Math functions such as `max`, `min`, `sin`, `cos`, `tan`, etc.
+    * Math functions such as `sin`, `cos`, `tan`, etc.
 
 ## Custom Operators
 All the basic operators will be defined in lion syntax in a special prelude module. 
