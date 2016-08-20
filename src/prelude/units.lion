@@ -1,3 +1,122 @@
 ;- Basic unit definitions and conversions
-;- TODO: Finish defining these
+;- TODO: Conversions between things like length and area (possible?)
+;- See issue #2 - https://github.com/sunjay/lion/issues/2
+
+;- Time - seconds, minutes, hours, days, weeks, years
+
+defineUnit "minutes"
+defineUnit "hours"
+defineUnit "days"
+defineUnit "weeks"
+defineUnit "years"
+defineUnit "s"
+defineUnit "Ys"
+defineUnit "Zs"
+defineUnit "Es"
+defineUnit "Ps"
+defineUnit "Ts"
+defineUnit "Gs"
+defineUnit "Ms"
+defineUnit "ks"
+defineUnit "hs"
+defineUnit "ds"
+defineUnit "cs"
+defineUnit "ms"
+defineUnit "us"
+defineUnit "ns"
+defineUnit "ps"
+defineUnit "fs"
+defineUnit "as"
+defineUnit "zs"
+defineUnit "ys"
+
+conversion "s" "Ys" (\x = x / 10 ** 24)
+conversion "s" "Zs" (\x = x / 10 ** 21)
+conversion "s" "Es" (\x = x / 10 ** 18)
+conversion "s" "Ps" (\x = x / 10 ** 15)
+conversion "s" "Ts" (\x = x / 10 ** 12)
+conversion "s" "Gs" (\x = x / 10 ** 9)
+conversion "s" "Ms" (\x = x / 10 ** 6)
+conversion "s" "ks" (\x = x / 10 ** 3)
+conversion "s" "hs" (\x = x / 10 ** 2)
+conversion "s" "ds" (\x = x / 10 ** -1)
+conversion "s" "cs" (\x = x / 10 ** -2)
+conversion "s" "ms" (\x = x / 10 ** -3)
+conversion "s" "us" (\x = x / 10 ** -6)
+conversion "s" "ns" (\x = x / 10 ** -9)
+conversion "s" "ps" (\x = x / 10 ** -12)
+conversion "s" "fs" (\x = x / 10 ** -15)
+conversion "s" "as" (\x = x / 10 ** -18)
+conversion "s" "zs" (\x = x / 10 ** -21)
+conversion "s" "ys" (\x = x / 10 ** -24)
+conversion "s" "ys" (\x = x / 10 ** -24)
+
+conversion "s" "minutes" (\x = x / 60)
+conversion "minutes" "hours" (\x = x / 60)
+conversion "hours" "days" (\x = x / 24)
+conversion "days" "weeks" (\x = x / 7)
+;- These conversions are in exact...
+conversion "days" "years" (\x = x / 365)
+conversion "weeks" "years" (\x = x / 52)
+
+;- SI length - m, km, etc.
+
+defineUnit "m"
+defineUnit "Ym"
+defineUnit "Zm"
+defineUnit "Em"
+defineUnit "Pm"
+defineUnit "Tm"
+defineUnit "Gm"
+defineUnit "Mm"
+defineUnit "km"
+defineUnit "hm"
+defineUnit "dm"
+defineUnit "cm"
+defineUnit "mm"
+defineUnit "um"
+defineUnit "nm"
+defineUnit "pm"
+defineUnit "fm"
+defineUnit "am"
+defineUnit "zm"
+defineUnit "ym"
+
+conversion "m" "Ym" (\x = x / 10 ** 24)
+conversion "m" "Zm" (\x = x / 10 ** 21)
+conversion "m" "Em" (\x = x / 10 ** 18)
+conversion "m" "Pm" (\x = x / 10 ** 15)
+conversion "m" "Tm" (\x = x / 10 ** 12)
+conversion "m" "Gm" (\x = x / 10 ** 9)
+conversion "m" "Mm" (\x = x / 10 ** 6)
+conversion "m" "km" (\x = x / 10 ** 3)
+conversion "m" "hm" (\x = x / 10 ** 2)
+conversion "m" "dm" (\x = x / 10 ** -1)
+conversion "m" "cm" (\x = x / 10 ** -2)
+conversion "m" "mm" (\x = x / 10 ** -3)
+conversion "m" "um" (\x = x / 10 ** -6)
+conversion "m" "nm" (\x = x / 10 ** -9)
+conversion "m" "pm" (\x = x / 10 ** -12)
+conversion "m" "fm" (\x = x / 10 ** -15)
+conversion "m" "am" (\x = x / 10 ** -18)
+conversion "m" "zm" (\x = x / 10 ** -21)
+conversion "m" "ym" (\x = x / 10 ** -24)
+
+;- SI mass - g, kg, etc.
+
+
+;- SI electrical units - Ohm, Columbs, Amp, Volt, etc.
+
+
+;- SI area
+
+
+;- SI volume
+
+
+;- Imperial length - inch, foot
+
+
+;- Imperial mass - pound, etc.
+
 
