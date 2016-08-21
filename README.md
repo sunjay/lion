@@ -9,7 +9,7 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
 - [x] evaluator (&beta; reducer)
 - [ ] prelude
     - [x] math
-    - [ ] units (see #2)
+    - [x] units (done but not robust, see [#2](https://github.com/sunjay/lion/issues/2))
 - [ ] simple cli (repl)
 - [ ] version 1.0.0
 - [ ] further enhancements
