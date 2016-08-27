@@ -4,7 +4,9 @@ extern crate readline;
 use readline::{readline, add_history, Error as ReadlineError};
 
 use lion::parse;
+use lion::eval::context_item::ContextItem;
 use lion::eval::eval_context::EvalContext;
+use lion::RichNumber;
 
 fn main() {
     let mut context = EvalContext::prelude();
@@ -39,13 +41,38 @@ fn main() {
 
             //TODO: Better output and error formatting
             if result.is_ok() {
-                println!("{:?}", result.unwrap());
+                print_context_item(&context, result.unwrap());
             }
             else {
                 println!("Error: {:?}", result.unwrap_err());
                 break;
             }
         }
+    }
+}
+
+fn print_context_item(context: &EvalContext, item: ContextItem) {
+    match item {
+        ContextItem::Number(RichNumber {value, unit}) => {
+            let unit_name: String;
+            if unit.is_none() {
+                unit_name = "".to_owned();
+            }
+            else {
+                unit_name = format!(" {}", context.lookup_unit(unit.unwrap()).unwrap());
+            }
+            println!("{}{}", value, unit_name);
+        },
+        ContextItem::Definition { .. } | ContextItem::BuiltInMethod { .. } => {
+            println!("<function>");
+        },
+        ContextItem::Constant(value) => {
+            println!("\"{}\"", value);
+        },
+        ContextItem::Boolean(value) => {
+            println!("{}", if value { "true" } else { "false" });
+        },
+        ContextItem::Nothing => {},
     }
 }
 
