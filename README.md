@@ -7,10 +7,10 @@ A very tiny, dynamic, loosely-typed language for doing calculations in a more in
 - [x] parser
 - [x] ast to evaluation tree
 - [x] evaluator (&beta; reducer)
-- [ ] prelude
+- [x] prelude
     - [x] math
     - [x] units (done but not robust, see [#2](https://github.com/sunjay/lion/issues/2))
-- [ ] simple cli (repl)
+- [x] simple cli (repl)
 - [ ] version 1.0.0
 - [ ] further enhancements
 
