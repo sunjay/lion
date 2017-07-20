@@ -60,10 +60,10 @@ fn g(a: i32, b: i32) -> i32 {
     // Lack of semicolon means that this
     // expression returns its type instead of ()
     a * b / k
-};
+}
 
 // Functions can be single expressions too
 fn f(a: i32, b: i32, c: i32) -> i32 {
     a + b + c
-};
+}
 ```
