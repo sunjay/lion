@@ -1,5 +1,7 @@
 # lion
 
+[![Build Status](https://travis-ci.org/sunjay/lion.svg?branch=master)](https://travis-ci.org/sunjay/lion)
+
 ## Syntax
 
 With type inference, must of the explicitly declared type information
