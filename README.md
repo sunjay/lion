@@ -34,6 +34,17 @@ default set of declarations loaded each time you start the interpreter:
 ```rust
 //Filename: units.lion
 
+// Import this file using a use statement:
+//     use units;
+// This will import the file `units.lion` from the current directory
+//
+// Specify the full path using:
+//     use "./units.lion";
+//
+// Specify explicit overloads/overwrites with:
+//     use units overwrite ('mm, 'cm);
+// This would suppress any warnings about overwriting 'mm and 'cm.
+
 // Units must be declared like this before they can be used. This is useful
 // for finding which file actually declared a given unit
 
