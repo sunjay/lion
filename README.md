@@ -26,6 +26,12 @@ involving units.
 9.81 'm*'s^-2
 % 1 'm as 'cm
 100 'cm
+% // Commutative multiplication is recognized and unified in units
+% 10 'm * 's + 20 's * 'm
+30 'm * 's
+% // Division is not commutative, so the following will not do the same thing
+% 10 'm / 's + 20 's / 'm
+10 'm / 's + 20 's / 'm
 ```
 
 We support loading in lion declaration files. For example, here is part of the
