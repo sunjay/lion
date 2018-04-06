@@ -1,0 +1,40 @@
+program := statements
+statements := statement*
+statement := function | expr
+
+function := attribute* "fn" ident? "(" fnargs ")" "{" statements "}"
+fnargs := (fnarg ",")* fnarg?
+fnarg := ident compound_unit?
+// tt = token tree (any tokens)
+attribute := "#" "[" ident tt* "]"
+
+// Precedence: (), compound_unit, ^, *, /, %, +, -
+expr := term | expr ("+" | "-") term
+term := pow | term ("*" | "/" | '%') pow
+pow := factor | pow "^" integer_literal
+factor := factor compound_unit | numeric_literal | fncall | ident | "(" expr ")"
+fncall := ident "(" (expr ",")* expr? ")"
+
+// A compound_unit is an expr with ONLY units, constant operators,
+// and a limited set of operators: multiplication, division, and exponentiation
+// i.e. `'cm ^ -3 / 'L` but not `2 'cm`
+compound_unit := unitpow | compound_unit ("*" | "/") unitpow
+               // Add this if we want to support `'m 's^-2` as an alias
+               // for `'m * 's^-2`
+               // We would only support this sort of multiplication for units,
+               // not for general expressions.
+               | compound_unit compound_unit
+unitpow := unitfactor | unitpow "^" integer_literal
+unitfactor := unit | "(" compound_unit ")"
+
+unit := "'" ident
+ident := (:alpha: | "_") (:alpha: | :digit: | "_")*
+
+// We have different literals, but all numbers are expressed exactly using a
+// decimal/rational number data type
+numeric_literal := integer_literal | float_literal
+float_literal := sign? float_body float_exp?
+float_body := (:digit:+ "." :digit:*) | (:digit:* "." :digit:+)
+float_exp := ("e" | "E") :digit:+
+integer_literal := sign? :digit:+
+sign := "+" | "-"
