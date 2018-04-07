@@ -1,19 +1,27 @@
-program := statements
-statements := statement*
-statement := function | expr
+program := decl*
+decl := macro_invoke | function
 
-function := attribute* "fn" ident? "(" fnargs ")" "{" statements "}"
+macro_invoke := ident "!" macro_args
+// tt = token tree (any tokens)
+macro_args := "(" tt* ")" | "{" tt* "}" | "[" tt* "]"
+
+function := attribute* "fn" ident? "(" fnargs ")" block
 fnargs := (fnarg ",")* fnarg?
 fnarg := ident compound_unit?
+// attributes consume all text/tokens until a *matching* `]` is found.
+// "matching" means that `[stuff=[]]` should parse in its entirety
 // tt = token tree (any tokens)
 attribute := "#" "[" ident tt* "]"
+block := "{" statements expr? "}"
+statements := statement*
+statement := (function | expr | "return" expr) ";"
 
 // Precedence: (), compound_unit, ^, *, /, %, +, -
 expr := term | expr ("+" | "-") term
 term := pow | term ("*" | "/" | '%') pow
 pow := factor | pow "^" integer_literal
 factor := factor compound_unit | factor "as" compound_unit | numeric_literal
-        | fncall | ident | "(" expr ")"
+        | fncall | ident | "(" expr ")" | block
 fncall := ident "(" (expr ",")* expr? ")"
 
 // A compound_unit is an expr with ONLY units, constant operators,
