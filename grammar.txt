@@ -1,7 +1,7 @@
 program := decl*
 decl := macro_invoke | function
 
-macro_invoke := ident "!" macro_args
+macro_invoke := ident_path "!" macro_args
 // tt = token tree (any tokens)
 macro_args := "(" tt* ")" | "{" tt* "}" | "[" tt* "]"
 
@@ -14,15 +14,15 @@ fnarg := ident compound_unit?
 attribute := "#" "[" ident tt* "]"
 block := "{" statements expr? "}"
 statements := statement*
-statement := (function | expr | "return" expr) ";"
+statement := (function | expr) ";"
 
 // Precedence: (), compound_unit, ^, *, /, %, +, -
 expr := term | expr ("+" | "-") term
 term := pow | term ("*" | "/" | '%') pow
 pow := factor | pow "^" integer_literal
 factor := factor compound_unit | factor "as" compound_unit | numeric_literal
-        | fncall | ident | "(" expr ")" | block
-fncall := ident "(" (expr ",")* expr? ")"
+        | fncall | ident_path | "(" expr ")" | block | "return" expr | "()"
+fncall := ident_path "(" (expr ",")* expr? ")"
 
 // A compound_unit is an expr with ONLY units, constant operators,
 // and a limited set of operators: multiplication, division, and exponentiation
@@ -37,6 +37,7 @@ unitpow := unitfactor | unitpow "^" integer_literal
 unitfactor := unit | "(" compound_unit ")"
 
 unit := "'" ident
+ident_path := ident ("::" ident)*
 ident := (:alpha: | "_") (:alpha: | :digit: | "_")*
 
 // We have different literals, but all numbers are expressed exactly using a
