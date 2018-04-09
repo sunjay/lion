@@ -13,7 +13,7 @@ pub enum Decl<'i> {
 }
 
 pub struct MacroInvoke<'i> {
-    pub name: IdentPath,
+    pub name: IdentPath<'i>,
     pub tokens: Vec<Token>,
     pub span: Span<'i>,
 }
@@ -28,12 +28,12 @@ pub struct Function<'i> {
 }
 
 pub struct Attribute<'i> {
-    pub name: String,
+    pub name: Ident<'i>,
     pub tokens: Vec<Token>,
     pub span: Span<'i>,
 }
 
-pub type FnArgs<'i> = Vec<(String, UnitExpr<'i>)>;
+pub type FnArgs<'i> = Vec<(Ident<'i>, UnitExpr<'i>)>;
 
 pub struct Block<'i> {
     pub body: Vec<Statement<'i>>,
@@ -53,13 +53,14 @@ pub enum Expr<'i> {
     Div(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Rem(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Pow(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
-    Call(IdentPath, Vec<Expr<'i>>, Span<'i>),
+    Call(IdentPath<'i>, Vec<Expr<'i>>, Span<'i>),
     Number(NumericLiteral<'i>, UnitExpr<'i>, Span<'i>),
     ConvertTo(Box<Expr<'i>>, UnitExpr<'i>, Span<'i>),
-    Ident(IdentPath, Span<'i>),
+    Ident(IdentPath<'i>, Span<'i>),
     Return(Box<Expr<'i>>, Span<'i>),
 }
-pub type IdentPath = Vec<String>;
+pub type IdentPath<'i> = Vec<&'i str>;
+pub type Ident<'i> = &'i str;
 
 pub enum NumericLiteral<'i> {
     Float(f64, Span<'i>),
