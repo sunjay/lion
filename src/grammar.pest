@@ -1,0 +1,112 @@
+program = _{ soi ~ decl* ~ eoi }
+decl = _{ macro_invoke | function }
+
+macro_invoke = { macro_name ~ macro_args }
+macro_name = @{ ident_path ~ "!" }
+macro_args = { t_left_paren ~ tt* ~ t_right_paren | t_left_brace ~ tt* ~ t_right_brace | t_left_bracket ~ tt* ~ t_right_bracket }
+
+function = { attribute* ~ "fn" ~ ident? ~ fnargs ~ return_unit? ~ block }
+fnargs = { t_left_paren ~ (fnarg ~ t_comma)* ~ fnarg? ~ t_right_paren }
+fnarg = { ident ~ compound_unit? }
+return_unit = _{ t_arrow ~ compound_unit }
+// attributes consume all text/tokens until a *matching* `]` is found.
+// "matching" means that `[stuff=[]]` should parse in its entirety
+attribute = { t_hash ~ t_left_bracket ~ ident ~ tt* ~ t_right_bracket }
+block = { t_left_brace ~ statements ~ expr? ~ t_right_brace }
+statements = { statement* }
+statement = { (function | var_decl | expr) ~ t_semi }
+var_decl = { t_let ~ ident ~ compound_unit? ~ t_becomes ~ expr }
+
+// Precedence: (), compound_unit, ^, *, /, %, +, -
+expr = { term ~ (bin_op ~ term)* }
+bin_op = _{ t_plus | t_minus | t_star | t_slash | t_percent | t_caret | t_as }
+term = _{ numeric_literal ~ compound_unit? | fncall ~ compound_unit? | ident_path ~ compound_unit? | t_left_paren ~ expr ~ t_right_paren ~ compound_unit? | block ~ compound_unit? | t_return ~ expr | t_unit }
+fncall = { ident_path ~ t_left_paren ~ (expr ~ t_comma)* ~ expr? ~ t_right_paren }
+
+// A compound_unit is an expr with ONLY units, constant operators,
+// and a limited set of operators: multiplication, division, and exponentiation
+// i.e. `'cm ^ -3 / 'L` but not `2 'cm`
+// We support `'m 's^-2` as an alias for `'m * 's^-2` (see first rule below)
+// This sort of multiplication is only for units, not for general expressions
+// Precedence: (), ^, *, /
+compound_unit = _{ unitterm+ }
+unitterm = _{ unitpow ~ ((t_star | t_slash) ~ unitpow)* }
+// The ^ operator is special in units. It only supports integers on the right
+unitpow = _{ unitfactor ~ (t_caret ~ integer_literal)* }
+unitfactor = _{ unit | t_left_paren ~ compound_unit ~ t_right_paren }
+unit = @{ "'" ~ ident }
+ident_path = @{ ident ~ ("::" ~ ident)* }
+//TODO: Disable keywords
+ident = @{ (alpha | "_") ~ (alpha | digit | "_")* }
+
+// We have different literals, but all numbers are expressed exactly using a
+// decimal/rational number data type
+numeric_literal = @{ float_literal | integer_literal }
+float_literal = { sign? ~ float_body ~ float_exp? }
+float_body = { (digit+ ~ "." ~ digit*) | (digit* ~ "." ~ digit+) }
+float_exp = { ("e" | "E") ~ digit+ }
+integer_literal = { sign? ~ digit+ }
+sign = { t_plus | t_minus }
+
+alpha = { 'a'..'z' | 'A'..'Z' }
+digit = { '0'..'9' }
+
+// Tokens
+t_left_brace = @{ "{" }
+t_right_brace = @{ "}" }
+t_left_paren = @{ "(" }
+t_right_paren = @{ ")" }
+t_left_bracket = @{ "[" }
+t_right_bracket = @{ "]" }
+t_plus = @{ "+" }
+t_minus = @{ "-" }
+t_star = @{ "*" }
+t_slash = @{ "/" }
+t_percent = @{ "%" }
+t_caret = @{ "^" }
+t_comma = @{ "," }
+t_hash = @{ "#" }
+t_semi = @{ ";" }
+t_return = @{ "return" }
+t_unit = @{ "()" }
+t_as = @{ "as" }
+t_arrow = @{ "->" }
+t_let = @{ "let" }
+t_becomes = @{ "=" }
+
+// tt = token tree (any tokens)
+tt = @{
+    t_left_brace |
+    t_right_brace |
+    t_left_paren |
+    t_right_paren |
+    t_left_bracket |
+    t_right_bracket |
+    t_plus |
+    t_minus |
+    t_star |
+    t_slash |
+    t_percent |
+    t_caret |
+    t_comma |
+    t_hash |
+    t_semi |
+    t_return |
+    t_unit |
+    t_as |
+    t_arrow |
+    t_let |
+    t_becomes |
+    macro_invoke |
+    function |
+    attribute |
+    block |
+    expr |
+    compound_unit |
+    ident_path |
+    numeric_literal
+}
+
+newline    = _{ "\n" | "\r\n" }
+whitespace = _{ " " | "\t" | newline }
+comment    = _{ "//" ~ (!newline ~ any)* }

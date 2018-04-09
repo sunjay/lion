@@ -5,16 +5,18 @@ macro_invoke := ident_path "!" macro_args
 // tt = token tree (any tokens)
 macro_args := "(" tt* ")" | "{" tt* "}" | "[" tt* "]"
 
-function := attribute* "fn" ident? "(" fnargs ")" block
+function := attribute* "fn" ident? "(" fnargs ")" return_unit? block
 fnargs := (fnarg ",")* fnarg?
 fnarg := ident compound_unit?
+return_unit := "->" compound_unit
 // attributes consume all text/tokens until a *matching* `]` is found.
 // "matching" means that `[stuff=[]]` should parse in its entirety
 // tt = token tree (any tokens)
 attribute := "#" "[" ident tt* "]"
 block := "{" statements expr? "}"
 statements := statement*
-statement := (function | expr) ";"
+statement := (function | var_decl | expr) ";"
+var_decl := "let" ident compound_unit? "=" expr
 
 // Precedence: (), compound_unit, ^, *, /, %, +, -
 expr := term | expr ("+" | "-") term
@@ -42,7 +44,7 @@ ident := (:alpha: | "_") (:alpha: | :digit: | "_")*
 
 // We have different literals, but all numbers are expressed exactly using a
 // decimal/rational number data type
-numeric_literal := integer_literal | float_literal
+numeric_literal := float_literal | integer_literal
 float_literal := sign? float_body float_exp?
 float_body := (:digit:+ "." :digit:*) | (:digit:* "." :digit:+)
 float_exp := ("e" | "E") :digit:+
