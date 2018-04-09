@@ -34,6 +34,7 @@ unitterm = _{ unitpow ~ ((t_star | t_slash) ~ unitpow)* }
 // The ^ operator is special in units. It only supports integers on the right
 unitpow = _{ unitfactor ~ (t_caret ~ integer_literal)* }
 unitfactor = _{ unit | t_left_paren ~ compound_unit ~ t_right_paren }
+
 unit = @{ "'" ~ ident }
 ident_path = @{ ident ~ ("::" ~ ident)* }
 //TODO: Disable keywords
