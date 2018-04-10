@@ -82,6 +82,9 @@ t_becomes := "="
 
 // tt = token tree (any tokens)
 tt :=
+    t_left_paren tt* t_right_paren |
+    t_left_bracket tt* t_right_bracket |
+    t_left_brace tt* t_right_brace |
     macro_invoke |
     function |
     attribute |
@@ -90,12 +93,6 @@ tt :=
     compound_unit |
     ident_path |
     numeric_literal |
-    t_left_brace |
-    t_right_brace |
-    t_left_paren |
-    t_right_paren |
-    t_left_bracket |
-    t_right_bracket |
     t_plus |
     t_minus |
     t_star |
