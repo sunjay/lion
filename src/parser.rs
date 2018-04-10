@@ -1,4 +1,5 @@
 pub use nom::Err as Error;
+use nom::{alpha, digit, recognize_float};
 use nom_locate::LocatedSpan;
 
 use ast::*;
@@ -97,7 +98,11 @@ named_args!(return_unit<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, do_p
 ));
 
 named!(attribute(Span) -> Attribute, do_parse!(
-    (unimplemented!()) //TODO
+    t_hash >>
+    span: position!() >>
+    //TODO: tt*
+    name: delimited!(t_left_bracket, ident, t_right_bracket) >>
+    (Attribute {name, tokens: Vec::new(), span})
 ));
 
 named_args!(block<'a>(units: &mut UnitGraph)<Span<'a>, Block<'a>>, do_parse!(
@@ -279,24 +284,40 @@ named_args!(unitfactor<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, alt_c
 ));
 
 named_args!(unit<'a>(units: &mut UnitGraph)<Span<'a>, (Unit, Span<'a>)>, do_parse!(
-    (unimplemented!())
+    span: position!() >>
+    char!('\'') >>
+    name: recognize!(tuple!(alpha, alt!(alpha | digit | tag!("_")))) >>
+    (units.lookup(name.fragment), span)
 ));
 
-named!(ident_path(Span) -> IdentPath, do_parse!(
-    (unimplemented!())
+named!(ident_path(Span) -> IdentPath,
+    separated_nonempty_list_complete!(tag!("::"), ident)
+);
+
+named!(ident(Span) -> Ident,
+    map!(
+        recognize!(tuple!(alt!(alpha | tag!("_")), alt!(alpha | digit | tag!("_")))),
+        |id| id.fragment
+    )
+);
+
+named!(numeric_literal(Span) -> NumericLiteral, alt_complete!(
+    tuple!(position!(), float_literal) => { |(span, fl)| NumericLiteral::Float(fl, span) } |
+    tuple!(position!(), integer_literal) => { |(span, i)| NumericLiteral::Int(i, span) }
 ));
 
-named!(ident(Span) -> Ident, do_parse!(
-    (unimplemented!())
-));
+named!(integer_literal(Span) -> i64,
+    flat_map!(recognize!(
+        tuple!(
+            opt!(alt!(t_plus | t_minus)),
+            many1!(digit)
+        )
+    ), parse_to!(i64))
+);
 
-named!(numeric_literal(Span) -> NumericLiteral, do_parse!(
-    (unimplemented!())
-));
-
-named!(integer_literal(Span) -> i64, do_parse!(
-    (unimplemented!())
-));
+named!(float_literal(Span) -> f64,
+    flat_map!(call!(recognize_float), parse_to!(f64))
+);
 
 named!(t_left_brace(Span) -> Span, tag!("{"));
 named!(t_right_brace(Span) -> Span, tag!("}"));

@@ -53,7 +53,7 @@ ident := (alpha | "_") (alpha | digit | "_")*
 numeric_literal := float_literal | integer_literal
 float_literal := sign? float_body float_exp?
 float_body := (digit+ "." digit*) | (digit* "." digit+)
-float_exp := ("e" | "E") digit+
+float_exp := ("e" | "E") sign? digit+
 integer_literal := sign? digit+
 sign := "+" | "-"
 
@@ -82,6 +82,14 @@ t_becomes := "="
 
 // tt = token tree (any tokens)
 tt :=
+    macro_invoke |
+    function |
+    attribute |
+    block |
+    expr |
+    compound_unit |
+    ident_path |
+    numeric_literal |
     t_left_brace |
     t_right_brace |
     t_left_paren |
@@ -102,15 +110,7 @@ tt :=
     t_as |
     t_arrow |
     t_let |
-    t_becomes |
-    macro_invoke |
-    function |
-    attribute |
-    block |
-    expr |
-    compound_unit |
-    ident_path |
-    numeric_literal
+    t_becomes
 
 newline := "\n" | "\r\n"
 whitespace := " " | "\t" | newline
