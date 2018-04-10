@@ -22,7 +22,11 @@ pub struct Function<'i> {
     pub attrs: Vec<Attribute<'i>>,
     pub name: &'i str,
     pub args: FnArgs<'i>,
-    pub ret: UnitExpr<'i>,
+    // None means that the function returns ()
+    // To return unitless, use `-> '_` since '_ represents unitless
+    //FIXME: In the future this will be replaced with a real way to represent
+    // types in the AST
+    pub ret: Option<UnitExpr<'i>>,
     pub body: Block<'i>,
     pub span: Span<'i>,
 }
@@ -33,7 +37,7 @@ pub struct Attribute<'i> {
     pub span: Span<'i>,
 }
 
-pub type FnArgs<'i> = Vec<(Ident<'i>, UnitExpr<'i>)>;
+pub type FnArgs<'i> = Vec<IdentUnit<'i>>;
 
 pub struct Block<'i> {
     pub body: Vec<Statement<'i>>,
@@ -42,8 +46,9 @@ pub struct Block<'i> {
 }
 
 pub enum Statement<'i> {
-    Function(Function<'i>, Span<'i>),
-    Expr(Expr<'i>, Span<'i>),
+    Function(Function<'i>),
+    Let(IdentUnit<'i>, Expr<'i>),
+    Expr(Expr<'i>),
 }
 
 pub enum Expr<'i> {
@@ -51,15 +56,24 @@ pub enum Expr<'i> {
     Sub(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Mul(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Div(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
-    Rem(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
+    Mod(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Pow(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Call(IdentPath<'i>, Vec<Expr<'i>>, Span<'i>),
-    Number(NumericLiteral<'i>, UnitExpr<'i>, Span<'i>),
+    Number(NumericLiteral<'i>, UnitExpr<'i>),
+    // Used for both "as" and for "() 'newunit" syntax
     ConvertTo(Box<Expr<'i>>, UnitExpr<'i>, Span<'i>),
     Ident(IdentPath<'i>, Span<'i>),
     Return(Box<Expr<'i>>, Span<'i>),
+    Block(Box<Block<'i>>),
+    UnitValue, // ()
 }
-pub type IdentPath<'i> = Vec<&'i str>;
+
+pub struct IdentUnit<'i> {
+    pub name: Ident<'i>,
+    pub unit: UnitExpr<'i>,
+}
+
+pub type IdentPath<'i> = Vec<Ident<'i>>;
 pub type Ident<'i> = &'i str;
 
 pub enum NumericLiteral<'i> {
