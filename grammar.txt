@@ -1,7 +1,7 @@
 program := BOF decl* EOF
 decl := macro_invoke | function
 
-macro_invoke := macro_name macro_args
+macro_invoke := macro_name macro_args t_semi
 macro_name := ident_path "!"
 macro_args := t_left_paren tt* t_right_paren | t_left_brace tt* t_right_brace | t_left_bracket tt* t_right_bracket
 
@@ -37,7 +37,8 @@ fncall := ident_path t_left_paren (expr t_comma)* expr? t_right_paren
 // This sort of multiplication is only for units, not for general expressions
 // i.e. `'cm ^ -3 / 'L` but not `2 'cm`
 // Precedence: (), ^, *, /
-compound_unit := unitpow | compound_unit (t_star | t_slash) unitpow | compound_unit compound_unit
+compound_unit := unitterm+
+unitterm := unitpow | unitterm (t_star | t_slash) unitpow
 unitpow := unitfactor | unitpow t_caret integer_literal
 unitfactor := unit | t_left_paren compound_unit t_right_paren
 

@@ -1,4 +1,4 @@
-pub type Unit = u64;
+pub type Unit = usize;
 
 pub struct UnitGraph {
 }

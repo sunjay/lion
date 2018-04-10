@@ -83,6 +83,7 @@ pub enum NumericLiteral<'i> {
 
 pub enum UnitExpr<'i> {
     Unit(Unit, Span<'i>),
+    // For both 'a * 'b and 'a 'b
     Mul(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
     Div(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
     Pow(Box<UnitExpr<'i>>, i64, Span<'i>),

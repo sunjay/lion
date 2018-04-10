@@ -2,7 +2,7 @@ pub use nom::Err as Error;
 use nom_locate::LocatedSpan;
 
 use ast::*;
-use unit_graph::UnitGraph;
+use unit_graph::{UnitGraph, Unit};
 
 pub type Span<'a> = LocatedSpan<&'a str>;
 
@@ -49,6 +49,7 @@ named_args!(decl<'a>(units: &mut UnitGraph)<Span<'a>, Decl<'a>>, alt_complete!(
 named!(macro_invoke(Span) -> MacroInvoke, do_parse!(
     span: position!() >>
     name: ident_path >>
+    t_semi >>
     (MacroInvoke {
         name,
         tokens: Vec::new(), //TODO
@@ -236,6 +237,48 @@ named_args!(fncall<'a>(units: &mut UnitGraph)<Span<'a>, (IdentPath<'a>, Vec<Expr
 ));
 
 named_args!(compound_unit<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, do_parse!(
+    first: apply!(unitterm, units) >>
+    result: fold_many0!(
+        tuple!(position!(), apply!(unitterm, units)),
+        first,
+        |acc, (span, rhs)| UnitExpr::Mul(Box::new(acc), Box::new(rhs), span)
+    ) >>
+    (result)
+));
+
+named_args!(unitterm<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, do_parse!(
+    first: apply!(unitpow, units) >>
+    result: fold_many0!(
+        tuple!(position!(), alt!(t_star | t_slash), apply!(unitpow, units)),
+        first,
+        |acc, (span, op, rhs): (_, Span, _)| match op.fragment {
+            "*" => UnitExpr::Mul(Box::new(acc), Box::new(rhs), span),
+            "/" => UnitExpr::Div(Box::new(acc), Box::new(rhs), span),
+            _ => unreachable!(),
+        }
+    ) >>
+    (result)
+));
+
+named_args!(unitpow<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, do_parse!(
+    first: apply!(unitfactor, units) >>
+    result: fold_many0!(
+        tuple!(position!(), t_caret, integer_literal),
+        first,
+        |acc, (span, op, rhs): (_, Span, _)| match op.fragment {
+            "^" => UnitExpr::Pow(Box::new(acc), rhs, span),
+            _ => unreachable!(),
+        }
+    ) >>
+    (result)
+));
+
+named_args!(unitfactor<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, alt_complete!(
+    apply!(unit, units) => { |(u, span)| UnitExpr::Unit(u, span) } |
+    delimited!(t_left_paren, apply!(compound_unit, units), t_right_paren)
+));
+
+named_args!(unit<'a>(units: &mut UnitGraph)<Span<'a>, (Unit, Span<'a>)>, do_parse!(
     (unimplemented!())
 ));
 
@@ -248,6 +291,10 @@ named!(ident(Span) -> Ident, do_parse!(
 ));
 
 named!(numeric_literal(Span) -> NumericLiteral, do_parse!(
+    (unimplemented!())
+));
+
+named!(integer_literal(Span) -> i64, do_parse!(
     (unimplemented!())
 ));
 
