@@ -1,20 +1,20 @@
 pub use nom::Err as Error;
-use nom::{alpha, digit, recognize_float, sp};
+use nom::{alpha, digit, recognize_float, sp, types::CompleteStr};
 use nom_locate::LocatedSpan;
 
 use ast::*;
 use unit_graph::{UnitGraph, Unit};
 
-pub type Span<'a> = LocatedSpan<&'a str>;
+pub type Span<'a> = LocatedSpan<CompleteStr<'a>>;
 
 pub type ParseResult<'a, T> = Result<T, Error<Span<'a>>>;
 
 pub fn parse_program(input: &str) -> ParseResult<Program> {
-    let input = Span::new(input);
+    let input = Span::new(CompleteStr(input));
     let mut units = UnitGraph::new();
     match program(input, &mut units) {
         Ok((remaining, decls)) => {
-            assert!(remaining.fragment.is_empty(), "bug: parser did not completely read input");
+            assert!(remaining.fragment.0.is_empty(), "bug: parser did not completely read input");
             Ok(Program {decls, units})
         },
         Err(err) => Err(err),
@@ -22,10 +22,10 @@ pub fn parse_program(input: &str) -> ParseResult<Program> {
 }
 
 pub fn parse_expr<'a>(input: &'a str, units: &'a mut UnitGraph) -> ParseResult<'a, Expr<'a>> {
-    let input = Span::new(input);
+    let input = Span::new(CompleteStr(input));
     match expr(input, units) {
         Ok((remaining, expr)) => {
-            assert!(remaining.fragment.is_empty(), "bug: parser did not completely read input");
+            assert!(remaining.fragment.0.is_empty(), "bug: parser did not completely read input");
             Ok(expr)
         },
         Err(err) => Err(err),
@@ -144,7 +144,7 @@ named_args!(expr<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, complete!(ws_co
     result: fold_many0!(
         tuple!(position!(), alt!(t_plus | t_minus), apply!(term, units)),
         first,
-        |acc, (span, op, rhs): (_, Span, _)| match op.fragment {
+        |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "+" => Expr::Add(Box::new(acc), Box::new(rhs), span),
             "-" => Expr::Sub(Box::new(acc), Box::new(rhs), span),
             _ => unreachable!(),
@@ -158,7 +158,7 @@ named_args!(term<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(do
     result: fold_many0!(
         tuple!(position!(), alt!(t_star | t_slash | t_percent), apply!(pow, units)),
         first,
-        |acc, (span, op, rhs): (_, Span, _)| match op.fragment {
+        |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "*" => Expr::Mul(Box::new(acc), Box::new(rhs), span),
             "/" => Expr::Div(Box::new(acc), Box::new(rhs), span),
             "%" => Expr::Mod(Box::new(acc), Box::new(rhs), span),
@@ -173,7 +173,7 @@ named_args!(pow<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(do_
     result: fold_many0!(
         tuple!(position!(), t_caret, apply!(factor_as, units)),
         first,
-        |acc, (span, op, rhs): (_, Span, _)| match op.fragment {
+        |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "^" => Expr::Pow(Box::new(acc), Box::new(rhs), span),
             _ => unreachable!(),
         }
@@ -188,7 +188,7 @@ named_args!(factor_as<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comment
     result: fold_many0!(
         tuple!(position!(), t_as, apply!(compound_unit, units)),
         first,
-        |acc, (span, op, unit): (_, Span, _)| match op.fragment {
+        |acc, (span, op, unit): (_, Span, _)| match op.fragment.0 {
             "as" => Expr::ConvertTo(Box::new(acc), unit, span),
             _ => unreachable!(),
         }
@@ -264,7 +264,7 @@ named_args!(unitterm<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comm
     result: fold_many0!(
         tuple!(position!(), alt!(t_star | t_slash), apply!(unitpow, units)),
         first,
-        |acc, (span, op, rhs): (_, Span, _)| match op.fragment {
+        |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "*" => UnitExpr::Mul(Box::new(acc), Box::new(rhs), span),
             "/" => UnitExpr::Div(Box::new(acc), Box::new(rhs), span),
             _ => unreachable!(),
@@ -278,7 +278,7 @@ named_args!(unitpow<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comme
     result: fold_many0!(
         tuple!(position!(), t_caret, integer_literal),
         first,
-        |acc, (span, op, rhs): (_, Span, _)| match op.fragment {
+        |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "^" => UnitExpr::Pow(Box::new(acc), rhs, span),
             _ => unreachable!(),
         }
@@ -294,8 +294,18 @@ named_args!(unitfactor<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_co
 named_args!(unit<'a>(units: &mut UnitGraph)<Span<'a>, (Unit, Span<'a>)>, do_parse!(
     span: position!() >>
     char!('\'') >>
-    name: recognize!(tuple!(alpha, many0!(alt!(alpha | digit | tag!("_"))))) >>
-    (units.lookup(name.fragment), span)
+    name: alt_complete!(
+        recognize!(tuple!(alpha, many0!(alt!(alpha | digit | tag!("_"))))) |
+        // '_ on its own without anything following it
+        do_parse!(
+            result: tag!("_") >>
+            // This crazy not(not(eof)) is brought to you by the not!() function returning ()
+            // That means that alt would return incompatible types...
+            alt!(not!(not!(eof!())) | not!(alt!(alpha | digit | tag!("_")))) >>
+            (result)
+        )
+    ) >>
+    (units.lookup(name.fragment.0), span)
 ));
 
 named!(ident_path(Span) -> IdentPath,
@@ -305,7 +315,7 @@ named!(ident_path(Span) -> IdentPath,
 named!(ident(Span) -> Ident,
     map!(
         recognize!(tuple!(alt!(alpha | tag!("_")), alt!(alpha | digit | tag!("_")))),
-        |id| id.fragment
+        |id| id.fragment.0
     )
 );
 
@@ -361,35 +371,35 @@ mod tests {
 
     macro_rules! test_parser {
         ($parser:ident ( $input:expr ) -> ok) => {
-            let input = Span::new($input);
+            let input = Span::new(CompleteStr($input));
             let mut units = UnitGraph::new();
             match $parser(input, &mut units) {
-                Ok((remaining, _)) => {
-                    assert!(remaining.fragment.is_empty(),
-                        "fail: parser did not completely read input");
+                Ok((remaining, output)) => {
+                    assert!(remaining.fragment.0.is_empty(),
+                        "fail: parser did not completely read input for: `{}`", $input);
                 },
                 Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
             }
         };
         ($parser:ident ( $input:expr ) -> err) => {
-            let input = Span::new($input);
+            let input = Span::new(CompleteStr($input));
             let mut units = UnitGraph::new();
             match $parser(input, &mut units) {
                 Ok((remaining, output)) => {
-                    assert!(remaining.fragment.is_empty(),
-                        "fail: parser did not completely read input");
+                    assert!(remaining.fragment.0.is_empty(),
+                        "fail: parser did not completely read input for: `{}`", $input);
                     panic!("parse of `{}` succeeded (when it should have failed). Result: {:?}", $input, output);
                 },
                 Err(_) => {}, // Expected
             }
         };
         ($parser:ident ( $input:expr ) -> ok, $expected:expr) => {
-            let input = Span::new($input);
+            let input = Span::new(CompleteStr($input));
             let mut units = UnitGraph::new();
             match $parser(input, &mut units) {
                 Ok((remaining, output)) => {
-                    assert!(remaining.fragment.is_empty(),
-                        "fail: parser did not completely read input");
+                    assert!(remaining.fragment.0.is_empty(),
+                        "fail: parser did not completely read input for: `{}`", $input);
                     assert_eq!(output, $expected);
                 },
                 Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
@@ -399,10 +409,9 @@ mod tests {
 
     #[test]
     fn unit_parser() {
-        test_parser!(program("") -> err);
+        test_parser!(unit("") -> err);
         test_parser!(unit("'a") -> ok);
         test_parser!(unit("'km") -> ok);
-        test_parser!(unit("'km / 'h") -> err);
         test_parser!(unit("'_") -> ok);
         test_parser!(unit("'_a") -> err);
         test_parser!(unit("'a_b") -> ok);
