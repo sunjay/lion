@@ -324,14 +324,17 @@ named!(numeric_literal(Span) -> NumericLiteral, alt!(
     tuple!(position!(), integer_literal) => { |(span, i)| NumericLiteral::Int(i, span) }
 ));
 
-named!(integer_literal(Span) -> i64,
-    flat_map!(recognize!(
+named!(integer_literal(Span) -> i64, do_parse!(
+    literal: flat_map!(recognize!(
         tuple!(
             opt!(alt!(t_plus | t_minus)),
             many1!(digit)
         )
-    ), parse_to!(i64))
-);
+    ), parse_to!(i64)) >>
+    // Cannot be followed by any part of a float
+    alt!(not!(not!(eof!())) | not!(alt!(char!('.') | char!('e') | char!('E')))) >>
+    (literal)
+));
 
 named!(float_literal(Span) -> f64,
     flat_map!(call!(recognize_float), parse_to!(f64))
@@ -451,6 +454,39 @@ mod tests {
         test_parser2!(unit("'_a") -> err);
         test_parser2!(unit("'a_b") -> ok);
         test_parser2!(unit("'kph") -> ok);
+    }
+
+    #[test]
+    fn integer_literal_parser() {
+        test_parser!(integer_literal("") -> err);
+        test_parser!(integer_literal("a") -> err);
+        test_parser!(integer_literal("'km") -> err);
+        test_parser!(integer_literal("0") -> ok, 0);
+        test_parser!(integer_literal("1") -> ok, 1);
+        test_parser!(integer_literal("123") -> ok, 123);
+        test_parser!(integer_literal("-123") -> ok, -123);
+        test_parser!(integer_literal(".123") -> err);
+        test_parser!(integer_literal("-.123") -> err);
+        test_parser!(integer_literal("123.") -> err);
+        test_parser!(integer_literal("-123.") -> err);
+        test_parser!(integer_literal("123.e1") -> err);
+        test_parser!(integer_literal("123.e-1") -> err);
+        test_parser!(integer_literal("123.456e10") -> err);
+        test_parser!(integer_literal("123.456e-10") -> err);
+        test_parser!(integer_literal("123.456E10") -> err);
+        test_parser!(integer_literal("123.456E-10") -> err);
+        test_parser!(integer_literal("0.456E-10") -> err);
+        test_parser!(integer_literal("123.0E-10") -> err);
+        test_parser!(integer_literal("0.456E10") -> err);
+        test_parser!(integer_literal("123.0E10") -> err);
+        test_parser!(integer_literal("+123.456e10") -> err);
+        test_parser!(integer_literal("+123.456e-10") -> err);
+        test_parser!(integer_literal("+123.456E10") -> err);
+        test_parser!(integer_literal("+123.456E-10") -> err);
+        test_parser!(integer_literal("-123.456e10") -> err);
+        test_parser!(integer_literal("-123.456e-10") -> err);
+        test_parser!(integer_literal("-123.456E10") -> err);
+        test_parser!(integer_literal("-123.456E-10") -> err);
     }
 
     #[test]
