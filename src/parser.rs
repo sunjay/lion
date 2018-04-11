@@ -50,7 +50,7 @@ named_args!(program<'a>(units: &mut UnitGraph)<Span<'a>, Vec<Decl<'a>>>,
     exact!(complete!(ws_comments!(many0!(apply!(decl, units)))))
 );
 
-named_args!(decl<'a>(units: &mut UnitGraph)<Span<'a>, Decl<'a>>, alt_complete!(
+named_args!(decl<'a>(units: &mut UnitGraph)<Span<'a>, Decl<'a>>, alt!(
     apply!(function, units) => { |func| Decl::Function(func) } |
     macro_invoke => { |mi| Decl::MacroInvoke(mi) }
 ));
@@ -122,7 +122,7 @@ named_args!(block<'a>(units: &mut UnitGraph)<Span<'a>, Block<'a>>, ws_comments!(
     (Block {body, ret: ret.unwrap_or(Expr::UnitValue), span})
 )));
 
-named_args!(statement<'a>(units: &mut UnitGraph)<Span<'a>, Statement<'a>>, ws_comments!(alt_complete!(
+named_args!(statement<'a>(units: &mut UnitGraph)<Span<'a>, Statement<'a>>, ws_comments!(alt!(
     apply!(function, units) => { |func| Statement::Function(func) } |
     apply!(var_decl, units) => { |(name, expr)| Statement::Let(name, expr) } |
     do_parse!(e: apply!(expr, units) >> t_semi >> (e)) => { |expr| Statement::Expr(expr) }
@@ -209,7 +209,7 @@ macro_rules! maybe_convert_unit {
     };
 }
 
-named_args!(factor<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(alt_complete!(
+named_args!(factor<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(alt!(
     tuple!(numeric_literal, position!(), opt!(apply!(compound_unit, units))) => {
         |(num, unit_span, unit): (_, _, Option<_>)| Expr::Number(num, default_unitless!(unit, units, unit_span))
     } |
@@ -286,7 +286,7 @@ named_args!(unitpow<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comme
     (result)
 )));
 
-named_args!(unitfactor<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(alt_complete!(
+named_args!(unitfactor<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(alt!(
     apply!(unit, units) => { |(u, span)| UnitExpr::Unit(u, span) } |
     delimited!(t_left_paren, apply!(compound_unit, units), t_right_paren)
 )));
@@ -294,7 +294,7 @@ named_args!(unitfactor<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_co
 named_args!(unit<'a>(units: &mut UnitGraph)<Span<'a>, (Unit, Span<'a>)>, do_parse!(
     span: position!() >>
     char!('\'') >>
-    name: alt_complete!(
+    name: alt!(
         recognize!(tuple!(alpha, many0!(alt!(alpha | digit | tag!("_"))))) |
         // '_ on its own without anything following it
         do_parse!(
@@ -319,7 +319,7 @@ named!(ident(Span) -> Ident,
     )
 );
 
-named!(numeric_literal(Span) -> NumericLiteral, alt_complete!(
+named!(numeric_literal(Span) -> NumericLiteral, alt!(
     tuple!(position!(), float_literal) => { |(span, fl)| NumericLiteral::Float(fl, span) } |
     tuple!(position!(), integer_literal) => { |(span, i)| NumericLiteral::Int(i, span) }
 ));
@@ -374,7 +374,7 @@ mod tests {
             let input = Span::new(CompleteStr($input));
             let mut units = UnitGraph::new();
             match $parser(input, &mut units) {
-                Ok((remaining, output)) => {
+                Ok((remaining, _)) => {
                     assert!(remaining.fragment.0.is_empty(),
                         "fail: parser did not completely read input for: `{}`", $input);
                 },
