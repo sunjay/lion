@@ -372,6 +372,41 @@ mod tests {
     macro_rules! test_parser {
         ($parser:ident ( $input:expr ) -> ok) => {
             let input = Span::new(CompleteStr($input));
+            match $parser(input) {
+                Ok((remaining, _)) => {
+                    assert!(remaining.fragment.0.is_empty(),
+                        "fail: parser did not completely read input for: `{}`", $input);
+                },
+                Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
+            }
+        };
+        ($parser:ident ( $input:expr ) -> err) => {
+            let input = Span::new(CompleteStr($input));
+            match $parser(input) {
+                Ok((remaining, output)) => {
+                    assert!(remaining.fragment.0.is_empty(),
+                        "fail: parser did not completely read input for: `{}`", $input);
+                    panic!("parse of `{}` succeeded (when it should have failed). Result: {:?}", $input, output);
+                },
+                Err(_) => {}, // Expected
+            }
+        };
+        ($parser:ident ( $input:expr ) -> ok, $expected:expr) => {
+            let input = Span::new(CompleteStr($input));
+            match $parser(input) {
+                Ok((remaining, output)) => {
+                    assert!(remaining.fragment.0.is_empty(),
+                        "fail: parser did not completely read input for: `{}`", $input);
+                    assert_eq!(output, $expected);
+                },
+                Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
+            }
+        };
+    }
+
+    macro_rules! test_parser2 {
+        ($parser:ident ( $input:expr ) -> ok) => {
+            let input = Span::new(CompleteStr($input));
             let mut units = UnitGraph::new();
             match $parser(input, &mut units) {
                 Ok((remaining, _)) => {
@@ -409,12 +444,45 @@ mod tests {
 
     #[test]
     fn unit_parser() {
-        test_parser!(unit("") -> err);
-        test_parser!(unit("'a") -> ok);
-        test_parser!(unit("'km") -> ok);
-        test_parser!(unit("'_") -> ok);
-        test_parser!(unit("'_a") -> err);
-        test_parser!(unit("'a_b") -> ok);
-        test_parser!(unit("'kph") -> ok);
+        test_parser2!(unit("") -> err);
+        test_parser2!(unit("'a") -> ok);
+        test_parser2!(unit("'km") -> ok);
+        test_parser2!(unit("'_") -> ok);
+        test_parser2!(unit("'_a") -> err);
+        test_parser2!(unit("'a_b") -> ok);
+        test_parser2!(unit("'kph") -> ok);
+    }
+
+    #[test]
+    fn float_literal_parser() {
+        test_parser!(float_literal("") -> err);
+        test_parser!(float_literal("a") -> err);
+        test_parser!(float_literal("'km") -> err);
+        test_parser!(float_literal("0") -> ok, 0.0);
+        test_parser!(float_literal("1") -> ok, 1.0);
+        test_parser!(float_literal("123") -> ok, 123.0);
+        test_parser!(float_literal("-123") -> ok, -123.0);
+        test_parser!(float_literal(".123") -> ok, 0.123);
+        test_parser!(float_literal("-.123") -> ok, -0.123);
+        test_parser!(float_literal("123.") -> ok, 123.);
+        test_parser!(float_literal("-123.") -> ok, -123.);
+        test_parser!(float_literal("123.e1") -> ok, 123.0e1);
+        test_parser!(float_literal("123.e-1") -> ok, 123.0e-1);
+        test_parser!(float_literal("123.456e10") -> ok, 123.456e10);
+        test_parser!(float_literal("123.456e-10") -> ok, 123.456e-10);
+        test_parser!(float_literal("123.456E10") -> ok, 123.456E10);
+        test_parser!(float_literal("123.456E-10") -> ok, 123.456E-10);
+        test_parser!(float_literal("0.456E-10") -> ok, 0.456E-10);
+        test_parser!(float_literal("123.0E-10") -> ok, 123.0E-10);
+        test_parser!(float_literal("0.456E10") -> ok, 0.456E10);
+        test_parser!(float_literal("123.0E10") -> ok, 123.0E10);
+        test_parser!(float_literal("+123.456e10") -> ok, 123.456e10);
+        test_parser!(float_literal("+123.456e-10") -> ok, 123.456e-10);
+        test_parser!(float_literal("+123.456E10") -> ok, 123.456E10);
+        test_parser!(float_literal("+123.456E-10") -> ok, 123.456E-10);
+        test_parser!(float_literal("-123.456e10") -> ok, -123.456e10);
+        test_parser!(float_literal("-123.456e-10") -> ok, -123.456e-10);
+        test_parser!(float_literal("-123.456E10") -> ok, -123.456E10);
+        test_parser!(float_literal("-123.456E-10") -> ok, -123.456E-10);
     }
 }
