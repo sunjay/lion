@@ -1,5 +1,6 @@
 pub type Unit = usize;
 
+#[derive(Debug, Clone)]
 pub struct UnitGraph {
 }
 

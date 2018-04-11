@@ -1,23 +1,27 @@
 use parser::Span;
 use unit_graph::{UnitGraph, Unit};
 
+#[derive(Debug, Clone)]
 pub struct Program<'i> {
     pub decls: Vec<Decl<'i>>,
     //TODO: Replace with a real symbol table (e.g. symbol-map crate)
     pub units: UnitGraph,
 }
 
+#[derive(Debug, Clone)]
 pub enum Decl<'i> {
     MacroInvoke(MacroInvoke<'i>),
     Function(Function<'i>),
 }
 
+#[derive(Debug, Clone)]
 pub struct MacroInvoke<'i> {
     pub name: IdentPath<'i>,
     pub tokens: Vec<Token>,
     pub span: Span<'i>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Function<'i> {
     pub attrs: Vec<Attribute<'i>>,
     pub name: &'i str,
@@ -31,6 +35,7 @@ pub struct Function<'i> {
     pub span: Span<'i>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Attribute<'i> {
     pub name: Ident<'i>,
     pub tokens: Vec<Token>,
@@ -39,18 +44,21 @@ pub struct Attribute<'i> {
 
 pub type FnArgs<'i> = Vec<IdentUnit<'i>>;
 
+#[derive(Debug, Clone)]
 pub struct Block<'i> {
     pub body: Vec<Statement<'i>>,
     pub ret: Expr<'i>,
     pub span: Span<'i>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Statement<'i> {
     Function(Function<'i>),
     Let(IdentUnit<'i>, Expr<'i>),
     Expr(Expr<'i>),
 }
 
+#[derive(Debug, Clone)]
 pub enum Expr<'i> {
     Add(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Sub(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
@@ -68,6 +76,7 @@ pub enum Expr<'i> {
     UnitValue, // ()
 }
 
+#[derive(Debug, Clone)]
 pub struct IdentUnit<'i> {
     pub name: Ident<'i>,
     pub unit: UnitExpr<'i>,
@@ -76,11 +85,13 @@ pub struct IdentUnit<'i> {
 pub type IdentPath<'i> = Vec<Ident<'i>>;
 pub type Ident<'i> = &'i str;
 
+#[derive(Debug, Clone)]
 pub enum NumericLiteral<'i> {
     Float(f64, Span<'i>),
     Int(i64, Span<'i>),
 }
 
+#[derive(Debug, Clone)]
 pub enum UnitExpr<'i> {
     Unit(Unit, Span<'i>),
     // For both 'a * 'b and 'a 'b
