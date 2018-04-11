@@ -262,7 +262,7 @@ named_args!(compound_unit<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws
 named_args!(unitterm<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(do_parse!(
     first: apply!(unitpow, units) >>
     result: fold_many0!(
-        tuple!(position!(), alt!(t_star | t_slash), apply!(unitpow, units)),
+        ws_comments!(tuple!(position!(), alt!(t_star | t_slash), apply!(unitpow, units))),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "*" => UnitExpr::Mul(Box::new(acc), Box::new(rhs), span),
@@ -276,7 +276,7 @@ named_args!(unitterm<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comm
 named_args!(unitpow<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(do_parse!(
     first: apply!(unitfactor, units) >>
     result: fold_many0!(
-        tuple!(position!(), t_caret, integer_literal),
+        ws_comments!(tuple!(position!(), t_caret, integer_literal)),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "^" => UnitExpr::Pow(Box::new(acc), rhs, span),
@@ -389,12 +389,10 @@ mod tests {
         ($parser:ident ( $input:expr ) -> err) => {
             let input = Span::new(CompleteStr($input));
             match $parser(input) {
-                Ok((remaining, output)) => {
-                    assert!(remaining.fragment.0.is_empty(),
-                        "fail: parser did not completely read input for: `{}`", $input);
+                Ok((ref remaining, ref output)) if remaining.fragment.0.is_empty() => {
                     panic!("parse of `{}` succeeded (when it should have failed). Result: {:?}", $input, output);
                 },
-                Err(_) => {}, // Expected
+                _ => {}, // Expected
             }
         };
         ($parser:ident ( $input:expr ) -> ok, $expected:expr) => {
@@ -426,12 +424,10 @@ mod tests {
             let input = Span::new(CompleteStr($input));
             let mut units = UnitGraph::new();
             match $parser(input, &mut units) {
-                Ok((remaining, output)) => {
-                    assert!(remaining.fragment.0.is_empty(),
-                        "fail: parser did not completely read input for: `{}`", $input);
+                Ok((ref remaining, ref output)) if remaining.fragment.0.is_empty() => {
                     panic!("parse of `{}` succeeded (when it should have failed). Result: {:?}", $input, output);
                 },
-                Err(_) => {}, // Expected
+                _ => {}, // Expected
             }
         };
         ($parser:ident ( $input:expr ) -> ok, $expected:expr) => {
@@ -446,6 +442,73 @@ mod tests {
                 Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
             }
         };
+    }
+
+    #[test]
+    fn unitpow_parser() {
+        test_parser2!(unitpow("") -> err);
+        test_parser2!(unitpow("'a") -> ok);
+        test_parser2!(unitpow("'km") -> ok);
+        test_parser2!(unitpow("'_") -> ok);
+        test_parser2!(unitpow("'_a") -> err);
+        test_parser2!(unitpow("'a_b") -> ok);
+        test_parser2!(unitpow("'kph") -> ok);
+
+        // Disallow non-integer exponents
+        test_parser2!(unitpow("'a^i") -> err);
+        test_parser2!(unitpow("'km^i") -> err);
+        test_parser2!(unitpow("'_^i") -> err);
+        test_parser2!(unitpow("'a_b^i") -> err);
+        test_parser2!(unitpow("'kph^i") -> err);
+
+        test_parser2!(unitpow("'a^^2") -> err);
+        test_parser2!(unitpow("'km^^2") -> err);
+        test_parser2!(unitpow("'_^^2") -> err);
+        test_parser2!(unitpow("'a_b^^2") -> err);
+        test_parser2!(unitpow("'kph^^2") -> err);
+
+        test_parser2!(unitpow("'a^2") -> ok);
+        test_parser2!(unitpow("'km^2") -> ok);
+        test_parser2!(unitpow("'_^2") -> ok);
+        test_parser2!(unitpow("'a_b^2") -> ok);
+        test_parser2!(unitpow("'kph^2") -> ok);
+
+        test_parser2!(unitpow("'a ^ 2") -> ok);
+        test_parser2!(unitpow("'km ^ 2") -> ok);
+        test_parser2!(unitpow("'_ ^ 2") -> ok);
+        test_parser2!(unitpow("'a_b ^ 2") -> ok);
+        test_parser2!(unitpow("'kph ^ 2") -> ok);
+
+        test_parser2!(unitpow("'a ^ 2   ^   3") -> ok);
+        test_parser2!(unitpow("'km ^ 2  ^   3") -> ok);
+        test_parser2!(unitpow("'_ ^ 2   ^   3") -> ok);
+        test_parser2!(unitpow("'a_b ^ 2     ^   3") -> ok);
+        test_parser2!(unitpow("'kph ^ 2     ^   3") -> ok);
+
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
+        let span3 = Span { offset: 7, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 11, line: 1, fragment: CompleteStr("") };
+        let span5 = Span { offset: 15, line: 1, fragment: CompleteStr("") };
+        test_parser2!(unitpow("'a ^ 2 ^ 3 ^ 4 ^ 5") -> ok,
+            UnitExpr::Pow(
+                Box::new(UnitExpr::Pow(
+                    Box::new(UnitExpr::Pow(
+                        Box::new(UnitExpr::Pow(
+                            Box::new(UnitExpr::Unit(0, span1)),
+                            2,
+                            span2
+                        )),
+                        3,
+                        span3,
+                    )),
+                    4,
+                    span4,
+                )),
+                5,
+                span5,
+            )
+        );
     }
 
     #[test]
@@ -481,6 +544,16 @@ mod tests {
         test_parser2!(unitfactor("(      '_    )") -> ok);
         test_parser2!(unitfactor("(      'a_b )") -> ok);
         test_parser2!(unitfactor("(      'kph )") -> ok);
+
+        test_parser2!(unitfactor("(( (  ( ('a))   )  )  )") -> ok);
+        test_parser2!(unitfactor("(( (  ( ('km))   )  )  )") -> ok);
+        test_parser2!(unitfactor("(( (  ( ('_))   )  )  )") -> ok);
+        test_parser2!(unitfactor("(( (  ( ('a_b))   )  )  )") -> ok);
+        test_parser2!(unitfactor("(( (  ( ('kph))   )  )  )") -> ok);
+
+        // unbalanced
+        test_parser2!(unitfactor("(( (  ( ('a)   )  )  )") -> err);
+        test_parser2!(unitfactor("((   ( ('kph))   )  )  )") -> err);
     }
 
     #[test]
