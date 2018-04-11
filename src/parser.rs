@@ -449,6 +449,41 @@ mod tests {
     }
 
     #[test]
+    fn unitfactor_parser() {
+        test_parser2!(unitfactor("") -> err);
+        test_parser2!(unitfactor("'a") -> ok);
+        test_parser2!(unitfactor("'km") -> ok);
+        test_parser2!(unitfactor("'_") -> ok);
+        test_parser2!(unitfactor("'_a") -> err);
+        test_parser2!(unitfactor("'a_b") -> ok);
+        test_parser2!(unitfactor("'kph") -> ok);
+
+        test_parser2!(unitfactor("('a)") -> ok);
+        test_parser2!(unitfactor("('km)") -> ok);
+        test_parser2!(unitfactor("('_)") -> ok);
+        test_parser2!(unitfactor("('a_b)") -> ok);
+        test_parser2!(unitfactor("('kph)") -> ok);
+
+        test_parser2!(unitfactor("( 'a)") -> ok);
+        test_parser2!(unitfactor("( 'km)") -> ok);
+        test_parser2!(unitfactor("( '_)") -> ok);
+        test_parser2!(unitfactor("( 'a_b)") -> ok);
+        test_parser2!(unitfactor("( 'kph)") -> ok);
+
+        test_parser2!(unitfactor("('a )") -> ok);
+        test_parser2!(unitfactor("('km )") -> ok);
+        test_parser2!(unitfactor("('_ )") -> ok);
+        test_parser2!(unitfactor("('a_b )") -> ok);
+        test_parser2!(unitfactor("('kph )") -> ok);
+
+        test_parser2!(unitfactor("(      'a )") -> ok);
+        test_parser2!(unitfactor("(      'km )") -> ok);
+        test_parser2!(unitfactor("(      '_    )") -> ok);
+        test_parser2!(unitfactor("(      'a_b )") -> ok);
+        test_parser2!(unitfactor("(      'kph )") -> ok);
+    }
+
+    #[test]
     fn unit_parser() {
         test_parser2!(unit("") -> err);
         test_parser2!(unit("'a") -> ok);
