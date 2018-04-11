@@ -409,86 +409,53 @@ mod tests {
         };
     }
 
-    macro_rules! test_parser2 {
-        ($parser:ident ( $input:expr ) -> ok) => {
-            let input = Span::new(CompleteStr($input));
-            match $parser(input) {
-                Ok((remaining, _)) => {
-                    assert!(remaining.fragment.0.is_empty(),
-                        "fail: parser did not completely read input for: `{}`", $input);
-                },
-                Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
-            }
-        };
-        ($parser:ident ( $input:expr ) -> err) => {
-            let input = Span::new(CompleteStr($input));
-            match $parser(input) {
-                Ok((ref remaining, ref output)) if remaining.fragment.0.is_empty() => {
-                    panic!("parse of `{}` succeeded (when it should have failed). Result: {:?}", $input, output);
-                },
-                _ => {}, // Expected
-            }
-        };
-        ($parser:ident ( $input:expr ) -> ok, $expected:expr) => {
-            let input = Span::new(CompleteStr($input));
-            match $parser(input) {
-                Ok((remaining, output)) => {
-                    assert!(remaining.fragment.0.is_empty(),
-                        "fail: parser did not completely read input for: `{}`", $input);
-                    assert_eq!(output, $expected);
-                },
-                Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
-            }
-        };
-    }
-
     #[test]
     fn unitpow_parser() {
-        test_parser2!(unitpow("") -> err);
-        test_parser2!(unitpow("'a") -> ok);
-        test_parser2!(unitpow("'km") -> ok);
-        test_parser2!(unitpow("'_") -> ok);
-        test_parser2!(unitpow("'_a") -> err);
-        test_parser2!(unitpow("'a_b") -> ok);
-        test_parser2!(unitpow("'kph") -> ok);
+        test_parser!(unitpow("") -> err);
+        test_parser!(unitpow("'a") -> ok);
+        test_parser!(unitpow("'km") -> ok);
+        test_parser!(unitpow("'_") -> ok);
+        test_parser!(unitpow("'_a") -> err);
+        test_parser!(unitpow("'a_b") -> ok);
+        test_parser!(unitpow("'kph") -> ok);
 
         // Disallow non-integer exponents
-        test_parser2!(unitpow("'a^i") -> err);
-        test_parser2!(unitpow("'km^i") -> err);
-        test_parser2!(unitpow("'_^i") -> err);
-        test_parser2!(unitpow("'a_b^i") -> err);
-        test_parser2!(unitpow("'kph^i") -> err);
+        test_parser!(unitpow("'a^i") -> err);
+        test_parser!(unitpow("'km^i") -> err);
+        test_parser!(unitpow("'_^i") -> err);
+        test_parser!(unitpow("'a_b^i") -> err);
+        test_parser!(unitpow("'kph^i") -> err);
 
-        test_parser2!(unitpow("'a^^2") -> err);
-        test_parser2!(unitpow("'km^^2") -> err);
-        test_parser2!(unitpow("'_^^2") -> err);
-        test_parser2!(unitpow("'a_b^^2") -> err);
-        test_parser2!(unitpow("'kph^^2") -> err);
+        test_parser!(unitpow("'a^^2") -> err);
+        test_parser!(unitpow("'km^^2") -> err);
+        test_parser!(unitpow("'_^^2") -> err);
+        test_parser!(unitpow("'a_b^^2") -> err);
+        test_parser!(unitpow("'kph^^2") -> err);
 
-        test_parser2!(unitpow("'a^2") -> ok);
-        test_parser2!(unitpow("'km^2") -> ok);
-        test_parser2!(unitpow("'_^2") -> ok);
-        test_parser2!(unitpow("'a_b^2") -> ok);
-        test_parser2!(unitpow("'kph^2") -> ok);
+        test_parser!(unitpow("'a^2") -> ok);
+        test_parser!(unitpow("'km^2") -> ok);
+        test_parser!(unitpow("'_^2") -> ok);
+        test_parser!(unitpow("'a_b^2") -> ok);
+        test_parser!(unitpow("'kph^2") -> ok);
 
-        test_parser2!(unitpow("'a ^ 2") -> ok);
-        test_parser2!(unitpow("'km ^ 2") -> ok);
-        test_parser2!(unitpow("'_ ^ 2") -> ok);
-        test_parser2!(unitpow("'a_b ^ 2") -> ok);
-        test_parser2!(unitpow("'kph ^ 2") -> ok);
+        test_parser!(unitpow("'a ^ 2") -> ok);
+        test_parser!(unitpow("'km ^ 2") -> ok);
+        test_parser!(unitpow("'_ ^ 2") -> ok);
+        test_parser!(unitpow("'a_b ^ 2") -> ok);
+        test_parser!(unitpow("'kph ^ 2") -> ok);
 
-        test_parser2!(unitpow("'a ^ 2   ^   3") -> ok);
-        test_parser2!(unitpow("'km ^ 2  ^   3") -> ok);
-        test_parser2!(unitpow("'_ ^ 2   ^   3") -> ok);
-        test_parser2!(unitpow("'a_b ^ 2     ^   3") -> ok);
-        test_parser2!(unitpow("'kph ^ 2     ^   3") -> ok);
+        test_parser!(unitpow("'a ^ 2   ^   3") -> ok);
+        test_parser!(unitpow("'km ^ 2  ^   3") -> ok);
+        test_parser!(unitpow("'_ ^ 2   ^   3") -> ok);
+        test_parser!(unitpow("'a_b ^ 2     ^   3") -> ok);
+        test_parser!(unitpow("'kph ^ 2     ^   3") -> ok);
 
         let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
         let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
         let span3 = Span { offset: 7, line: 1, fragment: CompleteStr("") };
         let span4 = Span { offset: 11, line: 1, fragment: CompleteStr("") };
         let span5 = Span { offset: 15, line: 1, fragment: CompleteStr("") };
-        test_parser2!(unitpow("'a ^ 2 ^ 3 ^ 4 ^ 5") -> ok,
+        test_parser!(unitpow("'a ^ 2 ^ 3 ^ 4 ^ 5") -> ok,
             UnitExpr::Pow(
                 Box::new(UnitExpr::Pow(
                     Box::new(UnitExpr::Pow(
@@ -511,59 +478,59 @@ mod tests {
 
     #[test]
     fn unitfactor_parser() {
-        test_parser2!(unitfactor("") -> err);
-        test_parser2!(unitfactor("'a") -> ok);
-        test_parser2!(unitfactor("'km") -> ok);
-        test_parser2!(unitfactor("'_") -> ok);
-        test_parser2!(unitfactor("'_a") -> err);
-        test_parser2!(unitfactor("'a_b") -> ok);
-        test_parser2!(unitfactor("'kph") -> ok);
+        test_parser!(unitfactor("") -> err);
+        test_parser!(unitfactor("'a") -> ok);
+        test_parser!(unitfactor("'km") -> ok);
+        test_parser!(unitfactor("'_") -> ok);
+        test_parser!(unitfactor("'_a") -> err);
+        test_parser!(unitfactor("'a_b") -> ok);
+        test_parser!(unitfactor("'kph") -> ok);
 
-        test_parser2!(unitfactor("('a)") -> ok);
-        test_parser2!(unitfactor("('km)") -> ok);
-        test_parser2!(unitfactor("('_)") -> ok);
-        test_parser2!(unitfactor("('a_b)") -> ok);
-        test_parser2!(unitfactor("('kph)") -> ok);
+        test_parser!(unitfactor("('a)") -> ok);
+        test_parser!(unitfactor("('km)") -> ok);
+        test_parser!(unitfactor("('_)") -> ok);
+        test_parser!(unitfactor("('a_b)") -> ok);
+        test_parser!(unitfactor("('kph)") -> ok);
 
-        test_parser2!(unitfactor("( 'a)") -> ok);
-        test_parser2!(unitfactor("( 'km)") -> ok);
-        test_parser2!(unitfactor("( '_)") -> ok);
-        test_parser2!(unitfactor("( 'a_b)") -> ok);
-        test_parser2!(unitfactor("( 'kph)") -> ok);
+        test_parser!(unitfactor("( 'a)") -> ok);
+        test_parser!(unitfactor("( 'km)") -> ok);
+        test_parser!(unitfactor("( '_)") -> ok);
+        test_parser!(unitfactor("( 'a_b)") -> ok);
+        test_parser!(unitfactor("( 'kph)") -> ok);
 
-        test_parser2!(unitfactor("('a )") -> ok);
-        test_parser2!(unitfactor("('km )") -> ok);
-        test_parser2!(unitfactor("('_ )") -> ok);
-        test_parser2!(unitfactor("('a_b )") -> ok);
-        test_parser2!(unitfactor("('kph )") -> ok);
+        test_parser!(unitfactor("('a )") -> ok);
+        test_parser!(unitfactor("('km )") -> ok);
+        test_parser!(unitfactor("('_ )") -> ok);
+        test_parser!(unitfactor("('a_b )") -> ok);
+        test_parser!(unitfactor("('kph )") -> ok);
 
-        test_parser2!(unitfactor("(      'a )") -> ok);
-        test_parser2!(unitfactor("(      'km )") -> ok);
-        test_parser2!(unitfactor("(      '_    )") -> ok);
-        test_parser2!(unitfactor("(      'a_b )") -> ok);
-        test_parser2!(unitfactor("(      'kph )") -> ok);
+        test_parser!(unitfactor("(      'a )") -> ok);
+        test_parser!(unitfactor("(      'km )") -> ok);
+        test_parser!(unitfactor("(      '_    )") -> ok);
+        test_parser!(unitfactor("(      'a_b )") -> ok);
+        test_parser!(unitfactor("(      'kph )") -> ok);
 
-        test_parser2!(unitfactor("(( (  ( ('a))   )  )  )") -> ok);
-        test_parser2!(unitfactor("(( (  ( ('km))   )  )  )") -> ok);
-        test_parser2!(unitfactor("(( (  ( ('_))   )  )  )") -> ok);
-        test_parser2!(unitfactor("(( (  ( ('a_b))   )  )  )") -> ok);
-        test_parser2!(unitfactor("(( (  ( ('kph))   )  )  )") -> ok);
+        test_parser!(unitfactor("(( (  ( ('a))   )  )  )") -> ok);
+        test_parser!(unitfactor("(( (  ( ('km))   )  )  )") -> ok);
+        test_parser!(unitfactor("(( (  ( ('_))   )  )  )") -> ok);
+        test_parser!(unitfactor("(( (  ( ('a_b))   )  )  )") -> ok);
+        test_parser!(unitfactor("(( (  ( ('kph))   )  )  )") -> ok);
 
         // unbalanced
-        test_parser2!(unitfactor("(( (  ( ('a)   )  )  )") -> err);
-        test_parser2!(unitfactor("((   ( ('kph))   )  )  )") -> err);
+        test_parser!(unitfactor("(( (  ( ('a)   )  )  )") -> err);
+        test_parser!(unitfactor("((   ( ('kph))   )  )  )") -> err);
     }
 
     #[test]
     fn unit_parser() {
         let span = Span { offset: 0, line: 1, fragment: CompleteStr("") };
-        test_parser2!(unit("") -> err);
-        test_parser2!(unit("'a") -> ok, (Some("a"), span));
-        test_parser2!(unit("'km") -> ok, (Some("km"), span));
-        test_parser2!(unit("'_") -> ok, (None, span));
-        test_parser2!(unit("'a_b") -> ok, (Some("a_b"), span));
-        test_parser2!(unit("'kph") -> ok, (Some("kph"), span));
-        test_parser2!(unit("'_a") -> err);
+        test_parser!(unit("") -> err);
+        test_parser!(unit("'a") -> ok, (Some("a"), span));
+        test_parser!(unit("'km") -> ok, (Some("km"), span));
+        test_parser!(unit("'_") -> ok, (None, span));
+        test_parser!(unit("'a_b") -> ok, (Some("a_b"), span));
+        test_parser!(unit("'kph") -> ok, (Some("kph"), span));
+        test_parser!(unit("'_a") -> err);
     }
 
     #[test]
