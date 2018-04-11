@@ -24,7 +24,7 @@ pub struct MacroInvoke<'i> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function<'i> {
     pub attrs: Vec<Attribute<'i>>,
-    pub name: &'i str,
+    pub name: Ident<'i>,
     pub args: FnArgs<'i>,
     // None means that the function returns ()
     // To return unitless, use `-> '_` since '_ represents unitless

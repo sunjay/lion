@@ -314,7 +314,7 @@ named!(ident_path(Span) -> IdentPath,
 
 named!(ident(Span) -> Ident,
     map!(
-        recognize!(tuple!(alt!(alpha | tag!("_")), alt!(alpha | digit | tag!("_")))),
+        recognize!(tuple!(not!(eof!()), alt!(alpha | tag!("_")), many0!(alt!(alpha | digit | tag!("_"))))),
         |id| id.fragment.0
     )
 );
@@ -454,6 +454,47 @@ mod tests {
         test_parser2!(unit("'_a") -> err);
         test_parser2!(unit("'a_b") -> ok);
         test_parser2!(unit("'kph") -> ok);
+    }
+
+    #[test]
+    fn ident_parser() {
+        test_parser!(ident("") -> err);
+        test_parser!(ident("a") -> ok, "a");
+        test_parser!(ident("km") -> ok, "km");
+        test_parser!(ident("foooo") -> ok, "foooo");
+        test_parser!(ident("_") -> ok, "_");
+        test_parser!(ident("_a") -> ok, "_a");
+        test_parser!(ident("_ab") -> ok, "_ab");
+        test_parser!(ident("a_b") -> ok, "a_b");
+        test_parser!(ident("tree_height") -> ok, "tree_height");
+        test_parser!(ident("kph") -> ok, "kph");
+        test_parser!(ident("0") -> err);
+        test_parser!(ident("0") -> err);
+        test_parser!(ident("1") -> err);
+        test_parser!(ident("123") -> err);
+        test_parser!(ident("-123") -> err);
+        test_parser!(ident(".123") -> err);
+        test_parser!(ident("-.123") -> err);
+        test_parser!(ident("123.") -> err);
+        test_parser!(ident("-123.") -> err);
+        test_parser!(ident("123.e1") -> err);
+        test_parser!(ident("123.e-1") -> err);
+        test_parser!(ident("123.456e10") -> err);
+        test_parser!(ident("123.456e-10") -> err);
+        test_parser!(ident("123.456E10") -> err);
+        test_parser!(ident("123.456E-10") -> err);
+        test_parser!(ident("0.456E-10") -> err);
+        test_parser!(ident("123.0E-10") -> err);
+        test_parser!(ident("0.456E10") -> err);
+        test_parser!(ident("123.0E10") -> err);
+        test_parser!(ident("+123.456e10") -> err);
+        test_parser!(ident("+123.456e-10") -> err);
+        test_parser!(ident("+123.456E10") -> err);
+        test_parser!(ident("+123.456E-10") -> err);
+        test_parser!(ident("-123.456e10") -> err);
+        test_parser!(ident("-123.456e-10") -> err);
+        test_parser!(ident("-123.456E10") -> err);
+        test_parser!(ident("-123.456E-10") -> err);
     }
 
     #[test]
