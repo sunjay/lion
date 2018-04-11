@@ -308,9 +308,12 @@ named_args!(unit<'a>(units: &mut UnitGraph)<Span<'a>, (Unit, Span<'a>)>, do_pars
     (units.lookup(name.fragment.0), span)
 ));
 
-named!(ident_path(Span) -> IdentPath,
-    separated_nonempty_list_complete!(tag!("::"), ident)
-);
+named!(ident_path(Span) -> IdentPath, do_parse!(
+    path: separated_nonempty_list_complete!(tag!("::"), ident) >>
+    // Cannot be followed by another path separator
+    not!(tag!("::")) >>
+    (path)
+));
 
 named!(ident(Span) -> Ident,
     map!(
@@ -454,6 +457,15 @@ mod tests {
         test_parser2!(unit("'_a") -> err);
         test_parser2!(unit("'a_b") -> ok);
         test_parser2!(unit("'kph") -> ok);
+    }
+
+    #[test]
+    fn ident_path_parser() {
+        test_parser!(ident_path("") -> err);
+        test_parser!(ident_path("abc") -> ok, vec!["abc"]);
+        test_parser!(ident_path("abc::bcd") -> ok, vec!["abc", "bcd"]);
+        test_parser!(ident_path("abc:: bcd") -> err);
+        test_parser!(ident_path("abc::") -> err);
     }
 
     #[test]
