@@ -22,6 +22,19 @@ impl UnitGraph {
     ///
     /// Note: name must be given without "'", i.e. to lookup 'foo, use lookup("foo")
     pub fn lookup(&mut self, name: &str) -> Unit {
+        assert!(!name.is_empty(), "unit name cannot be empty");
         0 //TODO
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "unit name cannot be empty")]
+    fn lookup_empty() {
+        let mut units = UnitGraph::new();
+        units.lookup("");
     }
 }
