@@ -320,8 +320,8 @@ named!(ident(Span) -> Ident,
 );
 
 named!(numeric_literal(Span) -> NumericLiteral, alt!(
-    tuple!(position!(), float_literal) => { |(span, fl)| NumericLiteral::Float(fl, span) } |
-    tuple!(position!(), integer_literal) => { |(span, i)| NumericLiteral::Int(i, span) }
+    tuple!(position!(), integer_literal) => { |(span, i)| NumericLiteral::Int(i, span) } |
+    tuple!(position!(), float_literal) => { |(span, fl)| NumericLiteral::Float(fl, span) }
 ));
 
 named!(integer_literal(Span) -> i64, do_parse!(
@@ -454,6 +454,41 @@ mod tests {
         test_parser2!(unit("'_a") -> err);
         test_parser2!(unit("'a_b") -> ok);
         test_parser2!(unit("'kph") -> ok);
+    }
+
+    #[test]
+    fn numeric_literal_parser() {
+        let span = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        test_parser!(numeric_literal("") -> err);
+        test_parser!(numeric_literal("a") -> err);
+        test_parser!(numeric_literal("'km") -> err);
+        test_parser!(numeric_literal("0") -> ok, NumericLiteral::Int(0, span));
+        test_parser!(numeric_literal("0") -> ok, NumericLiteral::Int(0, span));
+        test_parser!(numeric_literal("1") -> ok, NumericLiteral::Int(1, span));
+        test_parser!(numeric_literal("123") -> ok, NumericLiteral::Int(123, span));
+        test_parser!(numeric_literal("-123") -> ok, NumericLiteral::Int(-123, span));
+        test_parser!(numeric_literal(".123") -> ok, NumericLiteral::Float(0.123, span));
+        test_parser!(numeric_literal("-.123") -> ok, NumericLiteral::Float(-0.123, span));
+        test_parser!(numeric_literal("123.") -> ok, NumericLiteral::Float(123., span));
+        test_parser!(numeric_literal("-123.") -> ok, NumericLiteral::Float(-123., span));
+        test_parser!(numeric_literal("123.e1") -> ok, NumericLiteral::Float(123.0e1, span));
+        test_parser!(numeric_literal("123.e-1") -> ok, NumericLiteral::Float(123.0e-1, span));
+        test_parser!(numeric_literal("123.456e10") -> ok, NumericLiteral::Float(123.456e10, span));
+        test_parser!(numeric_literal("123.456e-10") -> ok, NumericLiteral::Float(123.456e-10, span));
+        test_parser!(numeric_literal("123.456E10") -> ok, NumericLiteral::Float(123.456E10, span));
+        test_parser!(numeric_literal("123.456E-10") -> ok, NumericLiteral::Float(123.456E-10, span));
+        test_parser!(numeric_literal("0.456E-10") -> ok, NumericLiteral::Float(0.456E-10, span));
+        test_parser!(numeric_literal("123.0E-10") -> ok, NumericLiteral::Float(123.0E-10, span));
+        test_parser!(numeric_literal("0.456E10") -> ok, NumericLiteral::Float(0.456E10, span));
+        test_parser!(numeric_literal("123.0E10") -> ok, NumericLiteral::Float(123.0E10, span));
+        test_parser!(numeric_literal("+123.456e10") -> ok, NumericLiteral::Float(123.456e10, span));
+        test_parser!(numeric_literal("+123.456e-10") -> ok, NumericLiteral::Float(123.456e-10, span));
+        test_parser!(numeric_literal("+123.456E10") -> ok, NumericLiteral::Float(123.456E10, span));
+        test_parser!(numeric_literal("+123.456E-10") -> ok, NumericLiteral::Float(123.456E-10, span));
+        test_parser!(numeric_literal("-123.456e10") -> ok, NumericLiteral::Float(-123.456e10, span));
+        test_parser!(numeric_literal("-123.456e-10") -> ok, NumericLiteral::Float(-123.456e-10, span));
+        test_parser!(numeric_literal("-123.456E10") -> ok, NumericLiteral::Float(-123.456E10, span));
+        test_parser!(numeric_literal("-123.456E-10") -> ok, NumericLiteral::Float(-123.456E-10, span));
     }
 
     #[test]
