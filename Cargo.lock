@@ -35,7 +35,7 @@ dependencies = [
 [[package]]
 name = "nom_locate"
 version = "0.3.0-beta.2"
-source = "git+https://github.com/CAD97/nom_locate?branch=patch-1#ce692bfd5a48afa73097f3fd5287f5ce195a958f"
+source = "git+https://github.com/CAD97/nom_locate?branch=patch-1#6710706c89a8b73c420e42dc77f773f686f1686d"
 dependencies = [
  "bytecount 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
