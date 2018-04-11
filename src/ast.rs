@@ -1,11 +1,8 @@
 use parser::Span;
-use unit_graph::{UnitGraph, Unit};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program<'i> {
     pub decls: Vec<Decl<'i>>,
-    //TODO: Replace with a real symbol table (e.g. symbol-map crate)
-    pub units: UnitGraph,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -93,11 +90,15 @@ pub enum NumericLiteral<'i> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnitExpr<'i> {
-    Unit(Unit, Span<'i>),
+    Unit(UnitName<'i>, Span<'i>),
     // For both 'a * 'b and 'a 'b
     Mul(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
     Div(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
     Pow(Box<UnitExpr<'i>>, i64, Span<'i>),
 }
+
+// If the quantity is unitless, then we return None
+// Unitless is represented in the syntax as '_
+pub type UnitName<'i> = Option<&'i str>;
 
 pub type Token = (); //TODO: tt

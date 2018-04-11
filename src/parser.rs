@@ -3,7 +3,6 @@ use nom::{alpha, digit, recognize_float, sp, types::CompleteStr};
 use nom_locate::LocatedSpan;
 
 use ast::*;
-use unit_graph::{UnitGraph, Unit};
 
 pub type Span<'a> = LocatedSpan<CompleteStr<'a>>;
 
@@ -11,19 +10,18 @@ pub type ParseResult<'a, T> = Result<T, Error<Span<'a>>>;
 
 pub fn parse_program(input: &str) -> ParseResult<Program> {
     let input = Span::new(CompleteStr(input));
-    let mut units = UnitGraph::new();
-    match program(input, &mut units) {
+    match program(input) {
         Ok((remaining, decls)) => {
             assert!(remaining.fragment.0.is_empty(), "bug: parser did not completely read input");
-            Ok(Program {decls, units})
+            Ok(Program {decls})
         },
         Err(err) => Err(err),
     }
 }
 
-pub fn parse_expr<'a>(input: &'a str, units: &'a mut UnitGraph) -> ParseResult<'a, Expr<'a>> {
+pub fn parse_expr<'a>(input: &'a str) -> ParseResult<'a, Expr<'a>> {
     let input = Span::new(CompleteStr(input));
-    match expr(input, units) {
+    match expr(input) {
         Ok((remaining, expr)) => {
             assert!(remaining.fragment.0.is_empty(), "bug: parser did not completely read input");
             Ok(expr)
@@ -33,8 +31,8 @@ pub fn parse_expr<'a>(input: &'a str, units: &'a mut UnitGraph) -> ParseResult<'
 }
 
 macro_rules! default_unitless {
-    ($id:ident, $units:ident, $span:ident) => {
-        $id.unwrap_or_else(|| UnitExpr::Unit($units.unitless(), $span))
+    ($id:ident, $span:ident) => {
+        $id.unwrap_or_else(|| UnitExpr::Unit(None, $span))
     };
 }
 
@@ -46,12 +44,12 @@ macro_rules! ws_comments {
   )
 }
 
-named_args!(program<'a>(units: &mut UnitGraph)<Span<'a>, Vec<Decl<'a>>>,
-    exact!(complete!(ws_comments!(many0!(apply!(decl, units)))))
+named!(program(Span) -> Vec<Decl>,
+    exact!(complete!(ws_comments!(many0!(decl))))
 );
 
-named_args!(decl<'a>(units: &mut UnitGraph)<Span<'a>, Decl<'a>>, alt!(
-    apply!(function, units) => { |func| Decl::Function(func) } |
+named!(decl(Span) -> Decl, alt!(
+    function => { |func| Decl::Function(func) } |
     macro_invoke => { |mi| Decl::MacroInvoke(mi) }
 ));
 
@@ -66,14 +64,14 @@ named!(macro_invoke(Span) -> MacroInvoke, ws_comments!(do_parse!(
     })
 )));
 
-named_args!(function<'a>(units: &mut UnitGraph)<Span<'a>, Function<'a>>, ws_comments!(do_parse!(
+named!(function(Span) -> Function, ws_comments!(do_parse!(
     attrs: many0!(attribute) >>
     span: position!() >>
     t_fn >>
     name: opt!(ident) >>
-    args: apply!(fnargs, units) >>
-    ret: opt!(apply!(return_unit, units)) >>
-    body: apply!(block, units) >>
+    args: fnargs >>
+    ret: opt!(return_unit) >>
+    body: block >>
     (Function {
         attrs,
         name: name.unwrap_or_default(),
@@ -84,24 +82,24 @@ named_args!(function<'a>(units: &mut UnitGraph)<Span<'a>, Function<'a>>, ws_comm
     })
 )));
 
-named_args!(fnargs<'a>(units: &mut UnitGraph)<Span<'a>, FnArgs<'a>>,
+named!(fnargs(Span) -> FnArgs,
     ws_comments!(delimited!(
         t_left_paren,
-        separated_list_complete!(t_comma, apply!(fnarg, units)),
+        separated_list_complete!(t_comma, fnarg),
         t_right_paren
     ))
 );
 
-named_args!(fnarg<'a>(units: &mut UnitGraph)<Span<'a>, IdentUnit<'a>>, ws_comments!(do_parse!(
+named!(fnarg(Span) -> IdentUnit, ws_comments!(do_parse!(
     name: ident >>
     span: position!() >>
-    unit: opt!(apply!(compound_unit, units)) >>
-    (IdentUnit {name, unit: default_unitless!(unit, units, span)})
+    unit: opt!(compound_unit) >>
+    (IdentUnit {name, unit: default_unitless!(unit, span)})
 )));
 
-named_args!(return_unit<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(do_parse!(
+named!(return_unit(Span) -> UnitExpr, ws_comments!(do_parse!(
     t_arrow >>
-    unit: apply!(compound_unit, units) >>
+    unit: compound_unit >>
     (unit)
 )));
 
@@ -113,36 +111,36 @@ named!(attribute(Span) -> Attribute, ws_comments!(do_parse!(
     (Attribute {name, tokens: Vec::new(), span})
 )));
 
-named_args!(block<'a>(units: &mut UnitGraph)<Span<'a>, Block<'a>>, ws_comments!(do_parse!(
+named!(block(Span) -> Block, ws_comments!(do_parse!(
     t_left_brace >>
     span: position!() >>
-    body: many0!(apply!(statement, units)) >>
-    ret: opt!(apply!(expr, units)) >>
+    body: many0!(statement) >>
+    ret: opt!(expr) >>
     t_right_brace >>
     (Block {body, ret: ret.unwrap_or(Expr::UnitValue), span})
 )));
 
-named_args!(statement<'a>(units: &mut UnitGraph)<Span<'a>, Statement<'a>>, ws_comments!(alt!(
-    apply!(function, units) => { |func| Statement::Function(func) } |
-    apply!(var_decl, units) => { |(name, expr)| Statement::Let(name, expr) } |
-    do_parse!(e: apply!(expr, units) >> t_semi >> (e)) => { |expr| Statement::Expr(expr) }
+named!(statement(Span) -> Statement, ws_comments!(alt!(
+    function => { |func| Statement::Function(func) } |
+    var_decl => { |(name, expr)| Statement::Let(name, expr) } |
+    do_parse!(e: expr >> t_semi >> (e)) => { |expr| Statement::Expr(expr) }
 )));
 
-named_args!(var_decl<'a>(units: &mut UnitGraph)<Span<'a>, (IdentUnit<'a>, Expr<'a>)>, ws_comments!(do_parse!(
+named!(var_decl(Span) -> (IdentUnit, Expr), ws_comments!(do_parse!(
     t_let >>
     name: ident >>
     unit_span: position!() >>
-    unit: opt!(apply!(compound_unit, units)) >>
+    unit: opt!(compound_unit) >>
     t_becomes >>
-    rhs: apply!(expr, units) >>
+    rhs: expr >>
     t_semi >>
-    ((IdentUnit {name, unit: default_unitless!(unit, units, unit_span)}, rhs))
+    ((IdentUnit {name, unit: default_unitless!(unit, unit_span)}, rhs))
 )));
 
-named_args!(expr<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, complete!(ws_comments!(do_parse!(
-    first: apply!(term, units) >>
+named!(expr(Span) -> Expr, complete!(ws_comments!(do_parse!(
+    first: term >>
     result: fold_many0!(
-        tuple!(position!(), alt!(t_plus | t_minus), apply!(term, units)),
+        tuple!(position!(), alt!(t_plus | t_minus), term),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "+" => Expr::Add(Box::new(acc), Box::new(rhs), span),
@@ -153,10 +151,10 @@ named_args!(expr<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, complete!(ws_co
     (result)
 ))));
 
-named_args!(term<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(do_parse!(
-    first: apply!(pow, units) >>
+named!(term(Span) -> Expr, ws_comments!(do_parse!(
+    first: pow >>
     result: fold_many0!(
-        tuple!(position!(), alt!(t_star | t_slash | t_percent), apply!(pow, units)),
+        tuple!(position!(), alt!(t_star | t_slash | t_percent), pow),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "*" => Expr::Mul(Box::new(acc), Box::new(rhs), span),
@@ -168,10 +166,10 @@ named_args!(term<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(do
     (result)
 )));
 
-named_args!(pow<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(do_parse!(
-    first: apply!(factor_as, units) >>
+named!(pow(Span) -> Expr, ws_comments!(do_parse!(
+    first: factor_as >>
     result: fold_many0!(
-        tuple!(position!(), t_caret, apply!(factor_as, units)),
+        tuple!(position!(), t_caret, factor_as),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "^" => Expr::Pow(Box::new(acc), Box::new(rhs), span),
@@ -183,10 +181,10 @@ named_args!(pow<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(do_
 
 // Not technically in the grammar, but needs to be done separately from factor in order to
 // avoid left recursion problems
-named_args!(factor_as<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(do_parse!(
-    first: apply!(factor, units) >>
+named!(factor_as(Span) -> Expr, ws_comments!(do_parse!(
+    first: factor >>
     result: fold_many0!(
-        tuple!(position!(), t_as, apply!(compound_unit, units)),
+        tuple!(position!(), t_as, compound_unit),
         first,
         |acc, (span, op, unit): (_, Span, _)| match op.fragment.0 {
             "as" => Expr::ConvertTo(Box::new(acc), unit, span),
@@ -209,60 +207,60 @@ macro_rules! maybe_convert_unit {
     };
 }
 
-named_args!(factor<'a>(units: &mut UnitGraph)<Span<'a>, Expr<'a>>, ws_comments!(alt!(
-    tuple!(numeric_literal, position!(), opt!(apply!(compound_unit, units))) => {
-        |(num, unit_span, unit): (_, _, Option<_>)| Expr::Number(num, default_unitless!(unit, units, unit_span))
+named!(factor(Span) -> Expr, ws_comments!(alt!(
+    tuple!(numeric_literal, position!(), opt!(compound_unit)) => {
+        |(num, unit_span, unit): (_, _, Option<_>)| Expr::Number(num, default_unitless!(unit, unit_span))
     } |
-    tuple!(position!(), apply!(fncall, units), position!(), opt!(apply!(compound_unit, units))) => {
+    tuple!(position!(), fncall, position!(), opt!(compound_unit)) => {
         |(span, (path, args), unit_span, unit)| {
             maybe_convert_unit!(Expr::Call(path, args, span), unit, unit_span)
         }
     } |
-    tuple!(position!(), ident_path, position!(), opt!(apply!(compound_unit, units))) => {
+    tuple!(position!(), ident_path, position!(), opt!(compound_unit)) => {
         |(span, path, unit_span, unit)| {
             maybe_convert_unit!(Expr::Ident(path, span), unit, unit_span)
         }
     } |
-    tuple!(delimited!(t_left_paren, apply!(expr, units), t_right_paren), position!(), opt!(apply!(compound_unit, units))) => {
+    tuple!(delimited!(t_left_paren, expr, t_right_paren), position!(), opt!(compound_unit)) => {
         |(expr, unit_span, unit)| {
             maybe_convert_unit!(expr, unit, unit_span)
         }
     } |
-    tuple!(apply!(block, units), position!(), opt!(apply!(compound_unit, units))) => {
+    tuple!(block, position!(), opt!(compound_unit)) => {
         |(block, unit_span, unit)| {
             maybe_convert_unit!(Expr::Block(Box::new(block)), unit, unit_span)
         }
     } |
-    tuple!(position!(), t_return, apply!(expr, units)) => {
+    tuple!(position!(), t_return, expr) => {
         |(span, _, return_expr)| Expr::Return(Box::new(return_expr), span)
     } |
     t_unit => { |_| Expr::UnitValue }
 )));
 
-named_args!(fncall<'a>(units: &mut UnitGraph)<Span<'a>, (IdentPath<'a>, Vec<Expr<'a>>)>, ws_comments!(do_parse!(
+named!(fncall(Span) -> (IdentPath, Vec<Expr>), ws_comments!(do_parse!(
     name: ident_path >>
     args: delimited!(
         t_left_paren,
-        separated_list_complete!(t_comma, apply!(expr, units)),
+        separated_list_complete!(t_comma, expr),
         t_right_paren
     ) >>
     (name, args)
 )));
 
-named_args!(compound_unit<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(do_parse!(
-    first: apply!(unitterm, units) >>
+named!(compound_unit(Span) -> UnitExpr, ws_comments!(do_parse!(
+    first: unitterm >>
     result: fold_many0!(
-        tuple!(position!(), apply!(unitterm, units)),
+        tuple!(position!(), unitterm),
         first,
         |acc, (span, rhs)| UnitExpr::Mul(Box::new(acc), Box::new(rhs), span)
     ) >>
     (result)
 )));
 
-named_args!(unitterm<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(do_parse!(
-    first: apply!(unitpow, units) >>
+named!(unitterm(Span) -> UnitExpr, ws_comments!(do_parse!(
+    first: unitpow >>
     result: fold_many0!(
-        ws_comments!(tuple!(position!(), alt!(t_star | t_slash), apply!(unitpow, units))),
+        ws_comments!(tuple!(position!(), alt!(t_star | t_slash), unitpow)),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "*" => UnitExpr::Mul(Box::new(acc), Box::new(rhs), span),
@@ -273,8 +271,8 @@ named_args!(unitterm<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comm
     (result)
 )));
 
-named_args!(unitpow<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(do_parse!(
-    first: apply!(unitfactor, units) >>
+named!(unitpow(Span) -> UnitExpr, ws_comments!(do_parse!(
+    first: unitfactor >>
     result: fold_many0!(
         ws_comments!(tuple!(position!(), t_caret, integer_literal)),
         first,
@@ -286,12 +284,12 @@ named_args!(unitpow<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comme
     (result)
 )));
 
-named_args!(unitfactor<'a>(units: &mut UnitGraph)<Span<'a>, UnitExpr<'a>>, ws_comments!(alt!(
-    apply!(unit, units) => { |(u, span)| UnitExpr::Unit(u, span) } |
-    delimited!(t_left_paren, apply!(compound_unit, units), t_right_paren)
+named!(unitfactor(Span) -> UnitExpr, ws_comments!(alt!(
+    unit => { |(u, span)| UnitExpr::Unit(u, span) } |
+    delimited!(t_left_paren, compound_unit, t_right_paren)
 )));
 
-named_args!(unit<'a>(units: &mut UnitGraph)<Span<'a>, (Unit, Span<'a>)>, do_parse!(
+named!(unit(Span) -> (UnitName, Span), do_parse!(
     span: position!() >>
     char!('\'') >>
     name: alt!(
@@ -305,7 +303,10 @@ named_args!(unit<'a>(units: &mut UnitGraph)<Span<'a>, (Unit, Span<'a>)>, do_pars
             (result)
         )
     ) >>
-    (units.lookup(name.fragment.0), span)
+    (match name.fragment.0 {
+        "_" => None,
+        name => Some(name),
+    }, span)
 ));
 
 named!(ident_path(Span) -> IdentPath, do_parse!(
@@ -411,8 +412,7 @@ mod tests {
     macro_rules! test_parser2 {
         ($parser:ident ( $input:expr ) -> ok) => {
             let input = Span::new(CompleteStr($input));
-            let mut units = UnitGraph::new();
-            match $parser(input, &mut units) {
+            match $parser(input) {
                 Ok((remaining, _)) => {
                     assert!(remaining.fragment.0.is_empty(),
                         "fail: parser did not completely read input for: `{}`", $input);
@@ -422,8 +422,7 @@ mod tests {
         };
         ($parser:ident ( $input:expr ) -> err) => {
             let input = Span::new(CompleteStr($input));
-            let mut units = UnitGraph::new();
-            match $parser(input, &mut units) {
+            match $parser(input) {
                 Ok((ref remaining, ref output)) if remaining.fragment.0.is_empty() => {
                     panic!("parse of `{}` succeeded (when it should have failed). Result: {:?}", $input, output);
                 },
@@ -432,8 +431,7 @@ mod tests {
         };
         ($parser:ident ( $input:expr ) -> ok, $expected:expr) => {
             let input = Span::new(CompleteStr($input));
-            let mut units = UnitGraph::new();
-            match $parser(input, &mut units) {
+            match $parser(input) {
                 Ok((remaining, output)) => {
                     assert!(remaining.fragment.0.is_empty(),
                         "fail: parser did not completely read input for: `{}`", $input);
@@ -495,7 +493,7 @@ mod tests {
                 Box::new(UnitExpr::Pow(
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Pow(
-                            Box::new(UnitExpr::Unit(0, span1)),
+                            Box::new(UnitExpr::Unit(Some("a"), span1)),
                             2,
                             span2
                         )),
@@ -558,13 +556,14 @@ mod tests {
 
     #[test]
     fn unit_parser() {
+        let span = Span { offset: 0, line: 1, fragment: CompleteStr("") };
         test_parser2!(unit("") -> err);
-        test_parser2!(unit("'a") -> ok);
-        test_parser2!(unit("'km") -> ok);
-        test_parser2!(unit("'_") -> ok);
+        test_parser2!(unit("'a") -> ok, (Some("a"), span));
+        test_parser2!(unit("'km") -> ok, (Some("km"), span));
+        test_parser2!(unit("'_") -> ok, (None, span));
+        test_parser2!(unit("'a_b") -> ok, (Some("a_b"), span));
+        test_parser2!(unit("'kph") -> ok, (Some("kph"), span));
         test_parser2!(unit("'_a") -> err);
-        test_parser2!(unit("'a_b") -> ok);
-        test_parser2!(unit("'kph") -> ok);
     }
 
     #[test]
