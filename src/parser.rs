@@ -391,7 +391,7 @@ mod tests {
             match $parser(input) {
                 Ok((remaining, _)) => {
                     assert!(remaining.fragment.0.is_empty(),
-                        "fail: parser did not completely read input for: `{}`", $input);
+                        "fail: parser did not completely read input for: `{}`\nRemaining: `{}`", $input, remaining.fragment.0);
                 },
                 Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
             }
@@ -410,7 +410,7 @@ mod tests {
             match $parser(input) {
                 Ok((remaining, output)) => {
                     assert!(remaining.fragment.0.is_empty(),
-                        "fail: parser did not completely read input for: `{}`", $input);
+                        "fail: parser did not completely read input for: `{}`\nRemaining: `{}`", $input, remaining.fragment.0);
                     assert_eq!(output, $expected, "Incorrect result for parse of input: `{}`", $input);
                 },
                 Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
@@ -454,6 +454,15 @@ mod tests {
     }
 
     #[test]
+    fn expr_parser() {
+        test_parser!(expr("") -> err);
+        test_parser!(expr("1 + 3 'a") -> ok);
+        test_parser!(expr("1 + 3 'a * (4 / 6 'a)") -> ok);
+        test_parser!(expr("1 + 3 'a * ((4 / 6 'a) / 22 'b ^ 2)") -> ok);
+        test_parser!(expr("1 + 3 'a * ((4 / 6 'a) + (331.2 'a + 4.2) / 1 'b ^ 2)") -> ok);
+    }
+
+    #[test]
     fn compound_unit_parser() {
         test_parser!(compound_unit("") -> err);
         test_parser!(compound_unit("'a") -> ok);
@@ -492,6 +501,29 @@ mod tests {
                     span4,
                 )),
                 span2,
+            )
+        );
+
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
+        let span3 = Span { offset: 6, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 11, line: 1, fragment: CompleteStr("") };
+        let span5 = Span { offset: 13, line: 1, fragment: CompleteStr("") };
+        let span6 = Span { offset: 17, line: 1, fragment: CompleteStr("") };
+        let span7 = Span { offset: 19, line: 1, fragment: CompleteStr("") };
+        test_parser!(compound_unit("'a * ('kph / 'b) * 'b") -> ok,
+            UnitExpr::Mul(
+                Box::new(UnitExpr::Mul(
+                    Box::new(UnitExpr::Unit(Some("a"), span1)),
+                    Box::new(UnitExpr::Div(
+                        Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                        Box::new(UnitExpr::Unit(Some("b"), span5)),
+                        span4,
+                    )),
+                    span2,
+                )),
+                Box::new(UnitExpr::Unit(Some("b"), span7)),
+                span6,
             )
         );
 
