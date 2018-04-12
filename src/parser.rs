@@ -11,9 +11,9 @@ pub type ParseResult<'a, T> = Result<T, Error<Span<'a>>>;
 pub fn parse_program(input: &str) -> ParseResult<Program> {
     let input = Span::new(CompleteStr(input));
     match program(input) {
-        Ok((remaining, decls)) => {
+        Ok((remaining, program)) => {
             assert!(remaining.fragment.0.is_empty(), "bug: parser did not completely read input");
-            Ok(Program {decls})
+            Ok(program)
         },
         Err(err) => Err(err),
     }
@@ -44,10 +44,10 @@ macro_rules! ws_comments {
   )
 }
 
-named!(program(Span) -> Vec<Decl>,
-    exact!(complete!(
+named!(program(Span) -> Program,
+    map!(exact!(complete!(
         delimited!(many0!(whitespace_comment), many0!(decl), many0!(whitespace_comment))
-    ))
+    )), |decls| Program {decls})
 );
 
 named!(decl(Span) -> Decl, alt!(
@@ -438,6 +438,17 @@ mod tests {
 
         // foo is a foo
         fn foo() {}
+        ") -> ok);
+        test_parser!(program("
+        fn velocity() -> 'm / 's {
+            let F = 5.2 'N;
+            let m = 150 'lbs;
+            let t = 30 'min;
+            // Answer is automatically converted to the unit of the variable.
+            // It is an error if the conversion is impossible.
+            let v 'km / 'hour = F / m * t;
+            v
+        }
         ") -> ok);
     }
 
