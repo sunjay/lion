@@ -45,7 +45,9 @@ macro_rules! ws_comments {
 }
 
 named!(program(Span) -> Vec<Decl>,
-    exact!(complete!(ws_comments!(many0!(decl))))
+    exact!(complete!(
+        delimited!(many0!(whitespace_comment), many0!(decl), many0!(whitespace_comment))
+    ))
 );
 
 named!(decl(Span) -> Decl, alt!(
@@ -140,7 +142,7 @@ named!(var_decl(Span) -> (IdentUnit, Expr), ws_comments!(do_parse!(
 named!(expr(Span) -> Expr, complete!(ws_comments!(do_parse!(
     first: term >>
     result: fold_many0!(
-        tuple!(position!(), alt!(t_plus | t_minus), term),
+        ws_comments!(tuple!(position!(), alt!(t_plus | t_minus), term)),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "+" => Expr::Add(Box::new(acc), Box::new(rhs), span),
@@ -154,7 +156,7 @@ named!(expr(Span) -> Expr, complete!(ws_comments!(do_parse!(
 named!(term(Span) -> Expr, ws_comments!(do_parse!(
     first: pow >>
     result: fold_many0!(
-        tuple!(position!(), alt!(t_star | t_slash | t_percent), pow),
+        ws_comments!(tuple!(position!(), alt!(t_star | t_slash | t_percent), pow)),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "*" => Expr::Mul(Box::new(acc), Box::new(rhs), span),
@@ -169,7 +171,7 @@ named!(term(Span) -> Expr, ws_comments!(do_parse!(
 named!(pow(Span) -> Expr, ws_comments!(do_parse!(
     first: factor_as >>
     result: fold_many0!(
-        tuple!(position!(), t_caret, factor_as),
+        ws_comments!(tuple!(position!(), t_caret, factor_as)),
         first,
         |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
             "^" => Expr::Pow(Box::new(acc), Box::new(rhs), span),
@@ -184,7 +186,7 @@ named!(pow(Span) -> Expr, ws_comments!(do_parse!(
 named!(factor_as(Span) -> Expr, ws_comments!(do_parse!(
     first: factor >>
     result: fold_many0!(
-        tuple!(position!(), t_as, compound_unit),
+        ws_comments!(tuple!(position!(), t_as, compound_unit)),
         first,
         |acc, (span, op, unit): (_, Span, _)| match op.fragment.0 {
             "as" => Expr::ConvertTo(Box::new(acc), unit, span),
@@ -344,6 +346,12 @@ named!(float_literal(Span) -> f64,
     flat_map!(call!(recognize_float), parse_to!(f64))
 );
 
+macro_rules! keyword {
+    ($parser:ident, $tag:expr) => {
+        named!($parser(Span) -> Span, terminated!(tag!($tag), not!(alpha)));
+    };
+}
+
 named!(t_left_brace(Span) -> Span, tag!("{"));
 named!(t_right_brace(Span) -> Span, tag!("}"));
 named!(t_left_paren(Span) -> Span, tag!("("));
@@ -359,15 +367,16 @@ named!(t_caret(Span) -> Span, tag!("^"));
 named!(t_comma(Span) -> Span, tag!(","));
 named!(t_hash(Span) -> Span, tag!("#"));
 named!(t_semi(Span) -> Span, tag!(";"));
-named!(t_fn(Span) -> Span, tag!("fn"));
-named!(t_return(Span) -> Span, tag!("return"));
 named!(t_unit(Span) -> Span, tag!("()"));
-named!(t_as(Span) -> Span, tag!("as"));
 named!(t_arrow(Span) -> Span, tag!("->"));
-named!(t_let(Span) -> Span, tag!("let"));
 named!(t_becomes(Span) -> Span, tag!("="));
 
-named!(whitespace_comment(Span) -> Span, alt!(whitespace | comment));
+keyword!(t_fn, "fn");
+keyword!(t_return, "return");
+keyword!(t_as, "as");
+keyword!(t_let, "let");
+
+named!(whitespace_comment(Span) -> Span, alt!(comment | whitespace));
 
 named!(whitespace(Span) -> Span, call!(sp));
 named!(comment(Span) -> Span, recognize!(tuple!(tag!("//"), take_until_and_consume!("\n"))));
@@ -407,6 +416,41 @@ mod tests {
                 Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
             }
         };
+    }
+
+    #[test]
+    fn program_parser() {
+        test_parser!(program("") -> ok);
+        test_parser!(program(" ") -> ok);
+        test_parser!(program("// heelloooooo!\n") -> ok);
+        test_parser!(program("
+        // heelloooooo!
+        // what's up
+
+         // hello
+         // foo // foo
+
+         // hiiii
+        ") -> ok);
+        test_parser!(program("
+        fn foo() {}
+        fn foo() {}
+
+        // foo is a foo
+        fn foo() {}
+        ") -> ok);
+    }
+
+    #[test]
+    fn function_parser() {
+        test_parser!(function("") -> err);
+        test_parser!(function("fn main() {}") -> ok);
+        test_parser!(function("fn main() -> 'a {}") -> ok);
+        test_parser!(function("fn() -> 'a {}") -> ok);
+        test_parser!(function("fn main() -> 'km / 'h {
+
+        }") -> ok);
+        test_parser!(function("fnmain() -> 'a {}") -> err);
     }
 
     #[test]
@@ -982,5 +1026,30 @@ mod tests {
         test_parser!(float_literal("-123.456e-10") -> ok, -123.456e-10);
         test_parser!(float_literal("-123.456E10") -> ok, -123.456E10);
         test_parser!(float_literal("-123.456E-10") -> ok, -123.456E-10);
+    }
+
+    #[test]
+    fn whitespace_comment_parser() {
+        test_parser!(whitespace_comment("") -> ok);
+        test_parser!(whitespace_comment("// helloooo!\n") -> ok, Span::new(CompleteStr("// helloooo!\n")));
+        test_parser!(whitespace_comment("// helloooo! // nested\n") -> ok, Span::new(CompleteStr("// helloooo! // nested\n")));
+        // comments must have a newline at the end (at least for the timebeing)
+        test_parser!(whitespace_comment("// helloooo!") -> err);
+        test_parser!(whitespace_comment("  \n\t \r \n\n\n       ") -> ok, Span::new(CompleteStr("  \n\t \r \n\n\n       ")));
+    }
+
+    #[test]
+    fn comment_parser() {
+        test_parser!(comment("") -> err);
+        test_parser!(comment("// helloooo!\n") -> ok, Span::new(CompleteStr("// helloooo!\n")));
+        test_parser!(comment("// helloooo! // nested\n") -> ok, Span::new(CompleteStr("// helloooo! // nested\n")));
+        // comments must have a newline at the end (at least for the timebeing)
+        test_parser!(comment("// helloooo!") -> err);
+    }
+
+    #[test]
+    fn whitespace_parser() {
+        test_parser!(whitespace("") -> ok);
+        test_parser!(whitespace("  \n\t \r \n\n\n       ") -> ok, Span::new(CompleteStr("  \n\t \r \n\n\n       ")));
     }
 }
