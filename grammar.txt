@@ -39,6 +39,7 @@ fncall := ident_path t_left_paren (expr t_comma)* expr? t_right_paren
 // Precedence: (), ^, *, /
 compound_unit := unitterm+
 unitterm := unitpow | unitterm (t_star | t_slash) unitpow
+//TODO: integer_literal could potentially be any constexpr
 unitpow := unitfactor | unitpow t_caret integer_literal
 unitfactor := unit | t_left_paren compound_unit t_right_paren
 

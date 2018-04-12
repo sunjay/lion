@@ -250,7 +250,7 @@ named!(fncall(Span) -> (IdentPath, Vec<Expr>), ws_comments!(do_parse!(
 named!(compound_unit(Span) -> UnitExpr, ws_comments!(do_parse!(
     first: unitterm >>
     result: fold_many0!(
-        tuple!(position!(), unitterm),
+        ws_comments!(tuple!(position!(), unitterm)),
         first,
         |acc, (span, rhs)| UnitExpr::Mul(Box::new(acc), Box::new(rhs), span)
     ) >>
@@ -402,11 +402,151 @@ mod tests {
                 Ok((remaining, output)) => {
                     assert!(remaining.fragment.0.is_empty(),
                         "fail: parser did not completely read input for: `{}`", $input);
-                    assert_eq!(output, $expected);
+                    assert_eq!(output, $expected, "Incorrect result for parse of input: `{}`", $input);
                 },
                 Err(err) => panic!("parse of `{}` failed. Error: {:?}", $input, err),
             }
         };
+    }
+
+    #[test]
+    fn unitterm_parser() {
+        test_parser!(unitterm("") -> err);
+        test_parser!(unitterm("'a") -> ok);
+        test_parser!(unitterm("'km") -> ok);
+        test_parser!(unitterm("'_") -> ok);
+        test_parser!(unitterm("'a_b") -> ok);
+        test_parser!(unitterm("'kph") -> ok);
+
+        test_parser!(unitterm("'a*'b") -> ok);
+        test_parser!(unitterm("'km*'b") -> ok);
+        test_parser!(unitterm("'_*'b") -> ok);
+        test_parser!(unitterm("'a_b*'b") -> ok);
+        test_parser!(unitterm("'kph*'b") -> ok);
+
+        test_parser!(unitterm("'a * 'b") -> ok);
+        test_parser!(unitterm("'km * 'b") -> ok);
+        test_parser!(unitterm("'_ * 'b") -> ok);
+        test_parser!(unitterm("'a_b * 'b") -> ok);
+        test_parser!(unitterm("'kph * 'b") -> ok);
+
+        test_parser!(unitterm("'a/'b") -> ok);
+        test_parser!(unitterm("'km/'b") -> ok);
+        test_parser!(unitterm("'_/'b") -> ok);
+        test_parser!(unitterm("'a_b/'b") -> ok);
+        test_parser!(unitterm("'kph/'b") -> ok);
+
+        test_parser!(unitterm("'a / 'b") -> ok);
+        test_parser!(unitterm("'km / 'b") -> ok);
+        test_parser!(unitterm("'_ / 'b") -> ok);
+        test_parser!(unitterm("'a_b / 'b") -> ok);
+        test_parser!(unitterm("'kph / 'b") -> ok);
+
+        test_parser!(unitterm("'a * 'a / 'b") -> ok);
+        test_parser!(unitterm("'a * 'km / 'b") -> ok);
+        test_parser!(unitterm("'a * '_ / 'b") -> ok);
+        test_parser!(unitterm("'a * 'a_b / 'b") -> ok);
+
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
+        let span3 = Span { offset: 5, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 10, line: 1, fragment: CompleteStr("") };
+        let span5 = Span { offset: 12, line: 1, fragment: CompleteStr("") };
+        test_parser!(unitterm("'a * 'kph / 'b") -> ok,
+            UnitExpr::Div(
+                Box::new(UnitExpr::Mul(
+                    Box::new(UnitExpr::Unit(Some("a"), span1)),
+                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    span2,
+                )),
+                Box::new(UnitExpr::Unit(Some("b"), span5)),
+                span4,
+            )
+        );
+
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
+        let span3 = Span { offset: 6, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 11, line: 1, fragment: CompleteStr("") };
+        let span5 = Span { offset: 13, line: 1, fragment: CompleteStr("") };
+        test_parser!(unitterm("'a * ('kph / 'b)") -> ok,
+            UnitExpr::Mul(
+                Box::new(UnitExpr::Unit(Some("a"), span1)),
+                Box::new(UnitExpr::Div(
+                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    Box::new(UnitExpr::Unit(Some("b"), span5)),
+                    span4,
+                )),
+                span2,
+            )
+        );
+
+        test_parser!(unitterm("'a / 'a * 'b") -> ok);
+        test_parser!(unitterm("'a / 'km * 'b") -> ok);
+        test_parser!(unitterm("'a / '_ * 'b") -> ok);
+        test_parser!(unitterm("'a / 'a_b * 'b") -> ok);
+
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
+        let span3 = Span { offset: 5, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 10, line: 1, fragment: CompleteStr("") };
+        let span5 = Span { offset: 12, line: 1, fragment: CompleteStr("") };
+        test_parser!(unitterm("'a / 'kph * 'b") -> ok,
+            UnitExpr::Mul(
+                Box::new(UnitExpr::Div(
+                    Box::new(UnitExpr::Unit(Some("a"), span1)),
+                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    span2,
+                )),
+                Box::new(UnitExpr::Unit(Some("b"), span5)),
+                span4,
+            )
+        );
+
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
+        let span3 = Span { offset: 6, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 11, line: 1, fragment: CompleteStr("") };
+        let span5 = Span { offset: 13, line: 1, fragment: CompleteStr("") };
+        test_parser!(unitterm("'a / ('kph * 'b)") -> ok,
+            UnitExpr::Div(
+                Box::new(UnitExpr::Unit(Some("a"), span1)),
+                Box::new(UnitExpr::Mul(
+                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    Box::new(UnitExpr::Unit(Some("b"), span5)),
+                    span4,
+                )),
+                span2,
+            )
+        );
+
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span2 = Span { offset: 3, line: 1, fragment: CompleteStr("") };
+        let span3 = Span { offset: 5, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 8, line: 1, fragment: CompleteStr("") };
+        let span6 = Span { offset: 12, line: 1, fragment: CompleteStr("") };
+        let span7 = Span { offset: 15, line: 1, fragment: CompleteStr("") };
+        let span8 = Span { offset: 18, line: 1, fragment: CompleteStr("") };
+        let span9 = Span { offset: 20, line: 1, fragment: CompleteStr("") };
+        test_parser!(unitterm("'b * 'a ^ 2 * ('e / 'f)") -> ok,
+            UnitExpr::Mul(
+                Box::new(UnitExpr::Mul(
+                    Box::new(UnitExpr::Unit(Some("b"), span1)),
+                    Box::new(UnitExpr::Pow(
+                        Box::new(UnitExpr::Unit(Some("a"), span3)),
+                        2,
+                        span4,
+                    )),
+                    span2,
+                )),
+                Box::new(UnitExpr::Div(
+                    Box::new(UnitExpr::Unit(Some("e"), span7)),
+                    Box::new(UnitExpr::Unit(Some("f"), span9)),
+                    span8,
+                )),
+                span6,
+            )
+        );
     }
 
     #[test]
