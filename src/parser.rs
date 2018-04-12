@@ -124,19 +124,19 @@ named!(block(Span) -> Block, ws_comments!(do_parse!(
 
 named!(statement(Span) -> Statement, ws_comments!(alt!(
     function => { |func| Statement::Function(func) } |
-    var_decl => { |(name, expr)| Statement::Let(name, expr) } |
+    var_decl => { |(name, unit, expr, span)| Statement::Let(name, unit, expr, span) } |
     do_parse!(e: expr >> t_semi >> (e)) => { |expr| Statement::Expr(expr) }
 )));
 
-named!(var_decl(Span) -> (IdentUnit, Expr), ws_comments!(do_parse!(
+named!(var_decl(Span) -> (Ident, Option<UnitExpr>, Expr, Span), ws_comments!(do_parse!(
+    span: position!() >>
     t_let >>
     name: ident >>
-    unit_span: position!() >>
     unit: opt!(compound_unit) >>
     t_becomes >>
     rhs: expr >>
     t_semi >>
-    ((IdentUnit {name, unit: default_unitless!(unit, unit_span)}, rhs))
+    ((name, unit, rhs, span))
 )));
 
 named!(expr(Span) -> Expr, complete!(ws_comments!(do_parse!(
@@ -451,6 +451,24 @@ mod tests {
 
         }") -> ok);
         test_parser!(function("fnmain() -> 'a {}") -> err);
+    }
+
+    #[test]
+    fn var_decl_parser() {
+        let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
+        let span4 = Span { offset: 8, line: 1, fragment: CompleteStr("") };
+        let span5 = Span { offset: 12, line: 1, fragment: CompleteStr("") };
+        test_parser!(var_decl("let F = 5.2 'N;") -> ok,
+            (
+                "F",
+                None,
+                Expr::Number(
+                    NumericLiteral::Float(5.2, span4),
+                    UnitExpr::Unit(Some("N"), span5),
+                ),
+                span1,
+            )
+        );
     }
 
     #[test]

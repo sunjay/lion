@@ -51,7 +51,7 @@ pub struct Block<'i> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<'i> {
     Function(Function<'i>),
-    Let(IdentUnit<'i>, Expr<'i>),
+    Let(Ident<'i>, Option<UnitExpr<'i>>, Expr<'i>, Span<'i>),
     Expr(Expr<'i>),
 }
 
