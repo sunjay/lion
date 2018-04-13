@@ -1,6 +1,7 @@
 pub use nom::Err as Error;
 use nom::{alpha, digit, recognize_float, sp, types::CompleteStr};
 use nom_locate::LocatedSpan;
+use rust_decimal::Decimal;
 
 use ast::*;
 
@@ -326,11 +327,11 @@ named!(ident(Span) -> Ident,
 );
 
 named!(numeric_literal(Span) -> NumericLiteral, alt!(
-    tuple!(position!(), integer_literal) => { |(span, i)| NumericLiteral::Int(i, span) } |
-    tuple!(position!(), float_literal) => { |(span, fl)| NumericLiteral::Float(fl, span) }
+    tuple!(position!(), integer_literal) => { |(span, value)| NumericLiteral {value, span} } |
+    tuple!(position!(), float_literal) => { |(span, value)| NumericLiteral {value, span} }
 ));
 
-named!(integer_literal(Span) -> i64, do_parse!(
+named!(integer_literal(Span) -> Decimal, do_parse!(
     literal: flat_map!(recognize!(
         tuple!(
             opt!(alt!(t_plus | t_minus)),
@@ -339,11 +340,17 @@ named!(integer_literal(Span) -> i64, do_parse!(
     ), parse_to!(i64)) >>
     // Cannot be followed by any part of a float
     alt!(not!(not!(eof!())) | not!(alt!(char!('.') | char!('e') | char!('E')))) >>
-    (literal)
+    (Decimal::new(literal, 0))
 ));
 
-named!(float_literal(Span) -> f64,
-    flat_map!(call!(recognize_float), parse_to!(f64))
+named!(float_literal(Span) -> Decimal,
+    map!(recognize!(tuple!(not!(eof!()), call!(recognize_float))), |lit| {
+        let mut lit = lit.fragment.0.to_lowercase();
+        if !lit.contains("e") {
+            lit.extend("e0".chars());
+        }
+        Decimal::from_scientific(&lit).unwrap()
+    })
 );
 
 macro_rules! keyword {
@@ -474,7 +481,7 @@ mod tests {
                 "F",
                 None,
                 Expr::Number(
-                    NumericLiteral::Float(5.2, span4),
+                    NumericLiteral {value: Decimal::from_scientific("5.2e0").unwrap(), span: span4},
                     UnitExpr::Unit(Some("N"), span5),
                 ),
                 span1,
@@ -604,7 +611,7 @@ mod tests {
                     Box::new(UnitExpr::Unit(Some("b"), span1)),
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Unit(Some("a"), span3)),
-                        2,
+                        Decimal::new(2, 0),
                         span4,
                     )),
                     span2,
@@ -799,7 +806,7 @@ mod tests {
                     Box::new(UnitExpr::Unit(Some("b"), span1)),
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Unit(Some("a"), span3)),
-                        2,
+                        Decimal::new(2, 0),
                         span4,
                     )),
                     span2,
@@ -866,16 +873,16 @@ mod tests {
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Pow(
                             Box::new(UnitExpr::Unit(Some("a"), span1)),
-                            2,
+                            Decimal::new(2, 0),
                             span2
                         )),
-                        3,
+                        Decimal::new(3, 0),
                         span3,
                     )),
-                    4,
+                    Decimal::new(4, 0),
                     span4,
                 )),
-                5,
+                Decimal::new(5, 0),
                 span5,
             )
         );
@@ -994,33 +1001,33 @@ mod tests {
         test_parser!(numeric_literal("") -> err);
         test_parser!(numeric_literal("a") -> err);
         test_parser!(numeric_literal("'km") -> err);
-        test_parser!(numeric_literal("0") -> ok, NumericLiteral::Int(0, span));
-        test_parser!(numeric_literal("0") -> ok, NumericLiteral::Int(0, span));
-        test_parser!(numeric_literal("1") -> ok, NumericLiteral::Int(1, span));
-        test_parser!(numeric_literal("123") -> ok, NumericLiteral::Int(123, span));
-        test_parser!(numeric_literal("-123") -> ok, NumericLiteral::Int(-123, span));
-        test_parser!(numeric_literal(".123") -> ok, NumericLiteral::Float(0.123, span));
-        test_parser!(numeric_literal("-.123") -> ok, NumericLiteral::Float(-0.123, span));
-        test_parser!(numeric_literal("123.") -> ok, NumericLiteral::Float(123., span));
-        test_parser!(numeric_literal("-123.") -> ok, NumericLiteral::Float(-123., span));
-        test_parser!(numeric_literal("123.e1") -> ok, NumericLiteral::Float(123.0e1, span));
-        test_parser!(numeric_literal("123.e-1") -> ok, NumericLiteral::Float(123.0e-1, span));
-        test_parser!(numeric_literal("123.456e10") -> ok, NumericLiteral::Float(123.456e10, span));
-        test_parser!(numeric_literal("123.456e-10") -> ok, NumericLiteral::Float(123.456e-10, span));
-        test_parser!(numeric_literal("123.456E10") -> ok, NumericLiteral::Float(123.456E10, span));
-        test_parser!(numeric_literal("123.456E-10") -> ok, NumericLiteral::Float(123.456E-10, span));
-        test_parser!(numeric_literal("0.456E-10") -> ok, NumericLiteral::Float(0.456E-10, span));
-        test_parser!(numeric_literal("123.0E-10") -> ok, NumericLiteral::Float(123.0E-10, span));
-        test_parser!(numeric_literal("0.456E10") -> ok, NumericLiteral::Float(0.456E10, span));
-        test_parser!(numeric_literal("123.0E10") -> ok, NumericLiteral::Float(123.0E10, span));
-        test_parser!(numeric_literal("+123.456e10") -> ok, NumericLiteral::Float(123.456e10, span));
-        test_parser!(numeric_literal("+123.456e-10") -> ok, NumericLiteral::Float(123.456e-10, span));
-        test_parser!(numeric_literal("+123.456E10") -> ok, NumericLiteral::Float(123.456E10, span));
-        test_parser!(numeric_literal("+123.456E-10") -> ok, NumericLiteral::Float(123.456E-10, span));
-        test_parser!(numeric_literal("-123.456e10") -> ok, NumericLiteral::Float(-123.456e10, span));
-        test_parser!(numeric_literal("-123.456e-10") -> ok, NumericLiteral::Float(-123.456e-10, span));
-        test_parser!(numeric_literal("-123.456E10") -> ok, NumericLiteral::Float(-123.456E10, span));
-        test_parser!(numeric_literal("-123.456E-10") -> ok, NumericLiteral::Float(-123.456E-10, span));
+        test_parser!(numeric_literal("0") -> ok, NumericLiteral {value: Decimal::from_scientific("0.0e0").unwrap(), span});
+        test_parser!(numeric_literal("0") -> ok, NumericLiteral {value: Decimal::from_scientific("0.0e0").unwrap(), span});
+        test_parser!(numeric_literal("1") -> ok, NumericLiteral {value: Decimal::from_scientific("1.0e0").unwrap(), span});
+        test_parser!(numeric_literal("123") -> ok, NumericLiteral {value: Decimal::from_scientific("123.0e0").unwrap(), span});
+        test_parser!(numeric_literal("-123") -> ok, NumericLiteral {value: Decimal::from_scientific("-123.0e0").unwrap(), span});
+        test_parser!(numeric_literal(".123") -> ok, NumericLiteral {value: Decimal::from_scientific("0.123e0").unwrap(), span});
+        test_parser!(numeric_literal("-.123") -> ok, NumericLiteral {value: Decimal::from_scientific("-0.123e0").unwrap(), span});
+        test_parser!(numeric_literal("123.") -> ok, NumericLiteral {value: Decimal::from_scientific("123.0e0").unwrap(), span});
+        test_parser!(numeric_literal("-123.") -> ok, NumericLiteral {value: Decimal::from_scientific("-123.0e0").unwrap(), span});
+        test_parser!(numeric_literal("123.e1") -> ok, NumericLiteral {value: Decimal::from_scientific("123.0e1").unwrap(), span});
+        test_parser!(numeric_literal("123.e-1") -> ok, NumericLiteral {value: Decimal::from_scientific("123.0e-1").unwrap(), span});
+        test_parser!(numeric_literal("123.456e10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e10").unwrap(), span});
+        test_parser!(numeric_literal("123.456e-10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e-10").unwrap(), span});
+        test_parser!(numeric_literal("123.456E10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e10").unwrap(), span});
+        test_parser!(numeric_literal("123.456E-10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e-10").unwrap(), span});
+        test_parser!(numeric_literal("0.456E-10") -> ok, NumericLiteral {value: Decimal::from_scientific("0.456e-10").unwrap(), span});
+        test_parser!(numeric_literal("123.0E-10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.0e-10").unwrap(), span});
+        test_parser!(numeric_literal("0.456E10") -> ok, NumericLiteral {value: Decimal::from_scientific("0.456e10").unwrap(), span});
+        test_parser!(numeric_literal("123.0E10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.0e10").unwrap(), span});
+        test_parser!(numeric_literal("+123.456e10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e10").unwrap(), span});
+        test_parser!(numeric_literal("+123.456e-10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e-10").unwrap(), span});
+        test_parser!(numeric_literal("+123.456E10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e10").unwrap(), span});
+        test_parser!(numeric_literal("+123.456E-10") -> ok, NumericLiteral {value: Decimal::from_scientific("123.456e-10").unwrap(), span});
+        test_parser!(numeric_literal("-123.456e10") -> ok, NumericLiteral {value: Decimal::from_scientific("-123.456e10").unwrap(), span});
+        test_parser!(numeric_literal("-123.456e-10") -> ok, NumericLiteral {value: Decimal::from_scientific("-123.456e-10").unwrap(), span});
+        test_parser!(numeric_literal("-123.456E10") -> ok, NumericLiteral {value: Decimal::from_scientific("-123.456e10").unwrap(), span});
+        test_parser!(numeric_literal("-123.456E-10") -> ok, NumericLiteral {value: Decimal::from_scientific("-123.456e-10").unwrap(), span});
     }
 
     #[test]
@@ -1028,10 +1035,10 @@ mod tests {
         test_parser!(integer_literal("") -> err);
         test_parser!(integer_literal("a") -> err);
         test_parser!(integer_literal("'km") -> err);
-        test_parser!(integer_literal("0") -> ok, 0);
-        test_parser!(integer_literal("1") -> ok, 1);
-        test_parser!(integer_literal("123") -> ok, 123);
-        test_parser!(integer_literal("-123") -> ok, -123);
+        test_parser!(integer_literal("0") -> ok, Decimal::new(0, 0));
+        test_parser!(integer_literal("1") -> ok, Decimal::new(1, 0));
+        test_parser!(integer_literal("123") -> ok, Decimal::new(123, 0));
+        test_parser!(integer_literal("-123") -> ok, Decimal::new(-123, 0));
         test_parser!(integer_literal(".123") -> err);
         test_parser!(integer_literal("-.123") -> err);
         test_parser!(integer_literal("123.") -> err);
@@ -1061,32 +1068,32 @@ mod tests {
         test_parser!(float_literal("") -> err);
         test_parser!(float_literal("a") -> err);
         test_parser!(float_literal("'km") -> err);
-        test_parser!(float_literal("0") -> ok, 0.0);
-        test_parser!(float_literal("1") -> ok, 1.0);
-        test_parser!(float_literal("123") -> ok, 123.0);
-        test_parser!(float_literal("-123") -> ok, -123.0);
-        test_parser!(float_literal(".123") -> ok, 0.123);
-        test_parser!(float_literal("-.123") -> ok, -0.123);
-        test_parser!(float_literal("123.") -> ok, 123.);
-        test_parser!(float_literal("-123.") -> ok, -123.);
-        test_parser!(float_literal("123.e1") -> ok, 123.0e1);
-        test_parser!(float_literal("123.e-1") -> ok, 123.0e-1);
-        test_parser!(float_literal("123.456e10") -> ok, 123.456e10);
-        test_parser!(float_literal("123.456e-10") -> ok, 123.456e-10);
-        test_parser!(float_literal("123.456E10") -> ok, 123.456E10);
-        test_parser!(float_literal("123.456E-10") -> ok, 123.456E-10);
-        test_parser!(float_literal("0.456E-10") -> ok, 0.456E-10);
-        test_parser!(float_literal("123.0E-10") -> ok, 123.0E-10);
-        test_parser!(float_literal("0.456E10") -> ok, 0.456E10);
-        test_parser!(float_literal("123.0E10") -> ok, 123.0E10);
-        test_parser!(float_literal("+123.456e10") -> ok, 123.456e10);
-        test_parser!(float_literal("+123.456e-10") -> ok, 123.456e-10);
-        test_parser!(float_literal("+123.456E10") -> ok, 123.456E10);
-        test_parser!(float_literal("+123.456E-10") -> ok, 123.456E-10);
-        test_parser!(float_literal("-123.456e10") -> ok, -123.456e10);
-        test_parser!(float_literal("-123.456e-10") -> ok, -123.456e-10);
-        test_parser!(float_literal("-123.456E10") -> ok, -123.456E10);
-        test_parser!(float_literal("-123.456E-10") -> ok, -123.456E-10);
+        test_parser!(float_literal("0") -> ok, Decimal::from_scientific("0.0e0").unwrap());
+        test_parser!(float_literal("1") -> ok, Decimal::from_scientific("1.0e0").unwrap());
+        test_parser!(float_literal("123") -> ok, Decimal::from_scientific("123.0e0").unwrap());
+        test_parser!(float_literal("-123") -> ok, Decimal::from_scientific("-123.0e0").unwrap());
+        test_parser!(float_literal(".123") -> ok, Decimal::from_scientific("0.123e0").unwrap());
+        test_parser!(float_literal("-.123") -> ok, Decimal::from_scientific("-0.123e0").unwrap());
+        test_parser!(float_literal("123.") -> ok, Decimal::from_scientific("123.0e0").unwrap());
+        test_parser!(float_literal("-123.") -> ok, Decimal::from_scientific("-123.0e0").unwrap());
+        test_parser!(float_literal("123.e1") -> ok, Decimal::from_scientific("123.0e1").unwrap());
+        test_parser!(float_literal("123.e-1") -> ok, Decimal::from_scientific("123.0e-1").unwrap());
+        test_parser!(float_literal("123.456e10") -> ok, Decimal::from_scientific("123.456e10").unwrap());
+        test_parser!(float_literal("123.456e-10") -> ok, Decimal::from_scientific("123.456e-10").unwrap());
+        test_parser!(float_literal("123.456E10") -> ok, Decimal::from_scientific("123.456e10").unwrap());
+        test_parser!(float_literal("123.456E-10") -> ok, Decimal::from_scientific("123.456e-10").unwrap());
+        test_parser!(float_literal("0.456E-10") -> ok, Decimal::from_scientific("0.456e-10").unwrap());
+        test_parser!(float_literal("123.0E-10") -> ok, Decimal::from_scientific("123.0e-10").unwrap());
+        test_parser!(float_literal("0.456E10") -> ok, Decimal::from_scientific("0.456e10").unwrap());
+        test_parser!(float_literal("123.0E10") -> ok, Decimal::from_scientific("123.0e10").unwrap());
+        test_parser!(float_literal("+123.456e10") -> ok, Decimal::from_scientific("123.456e10").unwrap());
+        test_parser!(float_literal("+123.456e-10") -> ok, Decimal::from_scientific("123.456e-10").unwrap());
+        test_parser!(float_literal("+123.456E10") -> ok, Decimal::from_scientific("123.456e10").unwrap());
+        test_parser!(float_literal("+123.456E-10") -> ok, Decimal::from_scientific("123.456e-10").unwrap());
+        test_parser!(float_literal("-123.456e10") -> ok, Decimal::from_scientific("-123.456e10").unwrap());
+        test_parser!(float_literal("-123.456e-10") -> ok, Decimal::from_scientific("-123.456e-10").unwrap());
+        test_parser!(float_literal("-123.456E10") -> ok, Decimal::from_scientific("-123.456e10").unwrap());
+        test_parser!(float_literal("-123.456E-10") -> ok, Decimal::from_scientific("-123.456e-10").unwrap());
     }
 
     #[test]

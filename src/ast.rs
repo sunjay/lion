@@ -1,3 +1,5 @@
+use rust_decimal::Decimal;
+
 use parser::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -83,9 +85,9 @@ pub type IdentPath<'i> = Vec<Ident<'i>>;
 pub type Ident<'i> = &'i str;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum NumericLiteral<'i> {
-    Float(f64, Span<'i>),
-    Int(i64, Span<'i>),
+pub struct NumericLiteral<'i> {
+    pub value: Decimal,
+    pub span: Span<'i>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -94,7 +96,7 @@ pub enum UnitExpr<'i> {
     // For both 'a * 'b and 'a 'b
     Mul(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
     Div(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
-    Pow(Box<UnitExpr<'i>>, i64, Span<'i>),
+    Pow(Box<UnitExpr<'i>>, Decimal, Span<'i>),
 }
 
 // If the quantity is unitless, then we return None

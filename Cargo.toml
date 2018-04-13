@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Sunjay Varma <varma.sunjay@gmail.com>"]
 
 [dependencies]
+rust_decimal = "^0.8"
 # Temporarily relying on someone's fork until nom 4.0 is published and this
 # gets merged into nom_locate
 nom_locate = { git = "https://github.com/CAD97/nom_locate", branch = "patch-1" }
