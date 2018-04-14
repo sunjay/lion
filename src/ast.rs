@@ -16,7 +16,7 @@ pub enum Decl<'i> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MacroInvoke<'i> {
     pub name: IdentPath<'i>,
-    pub tokens: Vec<Token>,
+    pub tokens: Vec<Token<'i>>,
     pub span: Span<'i>,
 }
 
@@ -37,7 +37,7 @@ pub struct Function<'i> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Attribute<'i> {
     pub name: Ident<'i>,
-    pub tokens: Vec<Token>,
+    pub tokens: Vec<Token<'i>>,
     pub span: Span<'i>,
 }
 
@@ -103,4 +103,32 @@ pub enum UnitExpr<'i> {
 // Unitless is represented in the syntax as '_
 pub type UnitName<'i> = Option<&'i str>;
 
-pub type Token = (); //TODO: tt
+#[derive(Debug, Clone, PartialEq)]
+pub enum Token<'i> {
+    Parens(Vec<Token<'i>>),
+    Brackets(Vec<Token<'i>>),
+    Braces(Vec<Token<'i>>),
+    MacroInvoke(MacroInvoke<'i>),
+    Function(Function<'i>),
+    Attribute(Attribute<'i>),
+    Block(Block<'i>),
+    Expr(Expr<'i>),
+    UnitExpr(UnitExpr<'i>),
+    IdentPath(IdentPath<'i>),
+    NumericLiteral(NumericLiteral<'i>),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Caret,
+    Comma,
+    Hash,
+    Semi,
+    Return,
+    Unit,
+    As,
+    Arrow,
+    Let,
+    Becomes,
+}

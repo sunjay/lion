@@ -58,14 +58,22 @@ named!(decl(Span) -> Decl, alt!(
 
 named!(macro_invoke(Span) -> MacroInvoke, ws_comments!(do_parse!(
     span: position!() >>
-    name: ident_path >>
+    name: macro_name >>
+    tokens: macro_args >>
     t_semi >>
     (MacroInvoke {
         name,
-        tokens: Vec::new(), //TODO
+        tokens,
         span,
     })
 )));
+
+named!(macro_name(Span) -> IdentPath, terminated!(ident_path, char!('!')));
+named!(macro_args(Span) -> Vec<Token>, alt!(
+    delimited!(t_left_paren, many0!(tt), t_right_paren) |
+    delimited!(t_left_bracket, many0!(tt), t_right_bracket) |
+    delimited!(t_left_brace, many0!(tt), t_right_brace)
+));
 
 named!(function(Span) -> Function, ws_comments!(do_parse!(
     attrs: many0!(attribute) >>
@@ -109,9 +117,9 @@ named!(return_unit(Span) -> UnitExpr, ws_comments!(do_parse!(
 named!(attribute(Span) -> Attribute, ws_comments!(do_parse!(
     t_hash >>
     span: position!() >>
-    //TODO: tt*
+    tokens: many0!(tt) >>
     name: delimited!(t_left_bracket, ident, t_right_bracket) >>
-    (Attribute {name, tokens: Vec::new(), span})
+    (Attribute {name, tokens, span})
 )));
 
 named!(block(Span) -> Block, ws_comments!(do_parse!(
@@ -387,6 +395,36 @@ named!(whitespace_comment(Span) -> Span, alt!(comment | whitespace));
 
 named!(whitespace(Span) -> Span, call!(sp));
 named!(comment(Span) -> Span, recognize!(tuple!(tag!("//"), take_until_and_consume!("\n"))));
+
+// tt = token tree (any tokens)
+named!(tt(Span) -> Token, ws_comments!(alt!(
+    delimited!(t_left_paren, many0!(tt), t_right_paren) => { Token::Parens } |
+    delimited!(t_left_bracket, many0!(tt), t_right_bracket) => { Token::Brackets } |
+    delimited!(t_left_brace, many0!(tt), t_right_brace) => { Token::Braces } |
+    macro_invoke => { Token::MacroInvoke } |
+    function => { Token::Function } |
+    attribute => { Token::Attribute } |
+    block => { Token::Block } |
+    expr => { Token::Expr } |
+    compound_unit => { Token::UnitExpr } |
+    ident_path => { Token::IdentPath } |
+    numeric_literal => { Token::NumericLiteral } |
+    t_plus => { |_| Token::Plus } |
+    t_minus => { |_| Token::Minus } |
+    t_star => { |_| Token::Star } |
+    t_slash => { |_| Token::Slash } |
+    t_percent => { |_| Token::Percent } |
+    t_caret => { |_| Token::Caret } |
+    t_comma => { |_| Token::Comma } |
+    t_hash => { |_| Token::Hash } |
+    t_semi => { |_| Token::Semi } |
+    t_return => { |_| Token::Return } |
+    t_unit => { |_| Token::Unit } |
+    t_as => { |_| Token::As } |
+    t_arrow => { |_| Token::Arrow } |
+    t_let => { |_| Token::Let } |
+    t_becomes => { |_| Token::Becomes }
+)));
 
 #[cfg(test)]
 mod tests {
