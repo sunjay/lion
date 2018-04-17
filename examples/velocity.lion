@@ -1,0 +1,9 @@
+fn velocity() -> 'm / 's {
+    let F = 5.2 'N;
+    let m = 150 'lbs;
+    let t = 30 'min;
+    // Answer is automatically converted to the unit of the variable.
+    // It is an error if the conversion is impossible.
+    let v 'km / 'hour = F / m * t;
+    v
+}

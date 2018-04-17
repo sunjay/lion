@@ -115,11 +115,10 @@ named!(return_unit(Span) -> UnitExpr, ws_comments!(do_parse!(
 )));
 
 named!(attribute(Span) -> Attribute, ws_comments!(do_parse!(
-    t_hash >>
     span: position!() >>
-    tokens: many0!(tt) >>
-    name: delimited!(t_left_bracket, ident, t_right_bracket) >>
-    (Attribute {name, tokens, span})
+    t_hash >>
+    name_body: delimited!(t_left_bracket, tuple!(ident, many0!(tt)), t_right_bracket) >>
+    (Attribute {name: name_body.0, tokens: name_body.1, span})
 )));
 
 named!(block(Span) -> Block, ws_comments!(do_parse!(

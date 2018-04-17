@@ -1,9 +1,22 @@
-fn velocity() -> 'm / 's {
-    let F = 5.2 'N;
-    let m = 150 'lbs;
-    let t = 30 'min;
-    // Answer is automatically converted to the unit of the variable.
-    // It is an error if the conversion is impossible.
-    let v 'km / 'hour = F / m * t;
-    v
-}
+#[unit]
+fn(x '_) -> 'deg { x }
+#[unit]
+fn(x '_) -> 'rad { x }
+
+#[converter]
+fn(x 'deg) -> 'rad { x * (pi 'rad) / (180 'deg) }
+#[converter]
+fn(x 'rad) -> 'deg { x * (180 'deg) / (pi 'rad) }
+
+#[unit]
+#[prefix(SI)]
+fn(x '_) -> 'm { x }
+
+#[unit]
+#[prefix(SI, transform=[lowercase])]
+fn(x '_) -> 'L { x }
+
+#[converter]
+fn(x 'm^3) -> 'L { x * 1000 }
+#[converter]
+fn(x 'L) -> 'm^3 { x / 1000 }
