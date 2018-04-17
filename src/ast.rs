@@ -1,3 +1,5 @@
+use std::fmt;
+
 use rust_decimal::Decimal;
 
 use parser::Span;
@@ -101,7 +103,31 @@ pub enum UnitExpr<'i> {
 
 // If the quantity is unitless, then we return None
 // Unitless is represented in the syntax as '_
-pub type UnitName<'i> = Option<&'i str>;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnitName<'i>(Option<&'i str>);
+
+impl<'i> From<&'i str> for UnitName<'i> {
+    fn from(name: &'i str) -> Self {
+        assert!(!name.is_empty(), "unit name cannot be empty");
+        assert_ne!(name, "_", "bug: to get '_, use UnitName::unitless()");
+        UnitName(Some(name))
+    }
+}
+
+impl<'a> fmt::Display for UnitName<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "'{}", match self.0 {
+            None => "_",
+            Some(name) => name,
+        })
+    }
+}
+
+impl<'i> UnitName<'i> {
+    pub fn unitless() -> Self {
+        UnitName(None)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token<'i> {
@@ -131,4 +157,27 @@ pub enum Token<'i> {
     Arrow,
     Let,
     Becomes,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "unit name cannot be empty")]
+    fn unit_name_empty() {
+        UnitName::from("");
+    }
+
+    #[test]
+    #[should_panic]
+    fn unit_name_unitless() {
+        UnitName::from("_");
+    }
+
+    #[test]
+    fn format_unit_name() {
+        assert_eq!(UnitName::unitless().to_string(), "'_");
+        assert_eq!(UnitName::from("km").to_string(), "'km");
+    }
 }

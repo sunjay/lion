@@ -33,7 +33,7 @@ pub fn parse_expr<'a>(input: &'a str) -> ParseResult<'a, Expr<'a>> {
 
 macro_rules! default_unitless {
     ($id:ident, $span:ident) => {
-        $id.unwrap_or_else(|| UnitExpr::Unit(None, $span))
+        $id.unwrap_or_else(|| UnitExpr::Unit(UnitName::unitless(), $span))
     };
 }
 
@@ -314,8 +314,8 @@ named!(unit(Span) -> (UnitName, Span), do_parse!(
         )
     ) >>
     (match name.fragment.0 {
-        "_" => None,
-        name => Some(name),
+        "_" => UnitName::unitless(),
+        name => UnitName::from(name),
     }, span)
 ));
 
@@ -519,7 +519,7 @@ mod tests {
                 None,
                 Expr::Number(
                     NumericLiteral {value: Decimal::from_scientific("5.2e0").unwrap(), span: span4},
-                    UnitExpr::Unit(Some("N"), span5),
+                    UnitExpr::Unit(UnitName::from("N"), span5),
                 ),
                 span1,
             )
@@ -551,11 +551,11 @@ mod tests {
         test_parser!(compound_unit("'a * 'kph / 'b") -> ok,
             UnitExpr::Div(
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("a"), span1)),
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
                     span2,
                 )),
-                Box::new(UnitExpr::Unit(Some("b"), span5)),
+                Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                 span4,
             )
         );
@@ -567,10 +567,10 @@ mod tests {
         let span5 = Span { offset: 13, line: 1, fragment: CompleteStr("") };
         test_parser!(compound_unit("'a * ('kph / 'b)") -> ok,
             UnitExpr::Mul(
-                Box::new(UnitExpr::Unit(Some("a"), span1)),
+                Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
                 Box::new(UnitExpr::Div(
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
-                    Box::new(UnitExpr::Unit(Some("b"), span5)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                     span4,
                 )),
                 span2,
@@ -587,15 +587,15 @@ mod tests {
         test_parser!(compound_unit("'a * ('kph / 'b) * 'b") -> ok,
             UnitExpr::Mul(
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("a"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
                     Box::new(UnitExpr::Div(
-                        Box::new(UnitExpr::Unit(Some("kph"), span3)),
-                        Box::new(UnitExpr::Unit(Some("b"), span5)),
+                        Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
+                        Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                         span4,
                     )),
                     span2,
                 )),
-                Box::new(UnitExpr::Unit(Some("b"), span7)),
+                Box::new(UnitExpr::Unit(UnitName::from("b"), span7)),
                 span6,
             )
         );
@@ -608,11 +608,11 @@ mod tests {
         test_parser!(compound_unit("'a / 'kph * 'b") -> ok,
             UnitExpr::Mul(
                 Box::new(UnitExpr::Div(
-                    Box::new(UnitExpr::Unit(Some("a"), span1)),
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
                     span2,
                 )),
-                Box::new(UnitExpr::Unit(Some("b"), span5)),
+                Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                 span4,
             )
         );
@@ -624,10 +624,10 @@ mod tests {
         let span5 = Span { offset: 13, line: 1, fragment: CompleteStr("") };
         test_parser!(compound_unit("'a / ('kph * 'b)") -> ok,
             UnitExpr::Div(
-                Box::new(UnitExpr::Unit(Some("a"), span1)),
+                Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
-                    Box::new(UnitExpr::Unit(Some("b"), span5)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                     span4,
                 )),
                 span2,
@@ -645,17 +645,17 @@ mod tests {
         test_parser!(compound_unit("'b * 'a ^ 2 * ('e / 'f)") -> ok,
             UnitExpr::Mul(
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("b"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span1)),
                     Box::new(UnitExpr::Pow(
-                        Box::new(UnitExpr::Unit(Some("a"), span3)),
+                        Box::new(UnitExpr::Unit(UnitName::from("a"), span3)),
                         Decimal::new(2, 0),
                         span4,
                     )),
                     span2,
                 )),
                 Box::new(UnitExpr::Div(
-                    Box::new(UnitExpr::Unit(Some("e"), span7)),
-                    Box::new(UnitExpr::Unit(Some("f"), span9)),
+                    Box::new(UnitExpr::Unit(UnitName::from("e"), span7)),
+                    Box::new(UnitExpr::Unit(UnitName::from("f"), span9)),
                     span8,
                 )),
                 span6,
@@ -670,15 +670,15 @@ mod tests {
         test_parser!(compound_unit("'a 'b / 'c 'd") -> ok,
             UnitExpr::Mul(
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("a"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
                     Box::new(UnitExpr::Div(
-                        Box::new(UnitExpr::Unit(Some("b"), span2)),
-                        Box::new(UnitExpr::Unit(Some("c"), span4)),
+                        Box::new(UnitExpr::Unit(UnitName::from("b"), span2)),
+                        Box::new(UnitExpr::Unit(UnitName::from("c"), span4)),
                         span3,
                     )),
                     span2,
                 )),
-                Box::new(UnitExpr::Unit(Some("d"), span5)),
+                Box::new(UnitExpr::Unit(UnitName::from("d"), span5)),
                 span5,
             )
         );
@@ -697,20 +697,20 @@ mod tests {
             UnitExpr::Mul(
                 Box::new(UnitExpr::Div(
                     Box::new(UnitExpr::Mul(
-                        Box::new(UnitExpr::Unit(Some("a"), span1)),
-                        Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                        Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
+                        Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
                         span2,
                     )),
-                    Box::new(UnitExpr::Unit(Some("b"), span5)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                     span4,
                 )),
                 Box::new(UnitExpr::Div(
                     Box::new(UnitExpr::Mul(
-                        Box::new(UnitExpr::Unit(Some("a"), span6)),
-                        Box::new(UnitExpr::Unit(Some("kph"), span8)),
+                        Box::new(UnitExpr::Unit(UnitName::from("a"), span6)),
+                        Box::new(UnitExpr::Unit(UnitName::from("kph"), span8)),
                         span7,
                     )),
-                    Box::new(UnitExpr::Unit(Some("b"), span10)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span10)),
                     span9,
                 )),
                 span6,
@@ -764,11 +764,11 @@ mod tests {
         test_parser!(unitterm("'a * 'kph / 'b") -> ok,
             UnitExpr::Div(
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("a"), span1)),
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
                     span2,
                 )),
-                Box::new(UnitExpr::Unit(Some("b"), span5)),
+                Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                 span4,
             )
         );
@@ -780,10 +780,10 @@ mod tests {
         let span5 = Span { offset: 13, line: 1, fragment: CompleteStr("") };
         test_parser!(unitterm("'a * ('kph / 'b)") -> ok,
             UnitExpr::Mul(
-                Box::new(UnitExpr::Unit(Some("a"), span1)),
+                Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
                 Box::new(UnitExpr::Div(
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
-                    Box::new(UnitExpr::Unit(Some("b"), span5)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                     span4,
                 )),
                 span2,
@@ -803,11 +803,11 @@ mod tests {
         test_parser!(unitterm("'a / 'kph * 'b") -> ok,
             UnitExpr::Mul(
                 Box::new(UnitExpr::Div(
-                    Box::new(UnitExpr::Unit(Some("a"), span1)),
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
                     span2,
                 )),
-                Box::new(UnitExpr::Unit(Some("b"), span5)),
+                Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                 span4,
             )
         );
@@ -819,10 +819,10 @@ mod tests {
         let span5 = Span { offset: 13, line: 1, fragment: CompleteStr("") };
         test_parser!(unitterm("'a / ('kph * 'b)") -> ok,
             UnitExpr::Div(
-                Box::new(UnitExpr::Unit(Some("a"), span1)),
+                Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("kph"), span3)),
-                    Box::new(UnitExpr::Unit(Some("b"), span5)),
+                    Box::new(UnitExpr::Unit(UnitName::from("kph"), span3)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span5)),
                     span4,
                 )),
                 span2,
@@ -840,17 +840,17 @@ mod tests {
         test_parser!(unitterm("'b * 'a ^ 2 * ('e / 'f)") -> ok,
             UnitExpr::Mul(
                 Box::new(UnitExpr::Mul(
-                    Box::new(UnitExpr::Unit(Some("b"), span1)),
+                    Box::new(UnitExpr::Unit(UnitName::from("b"), span1)),
                     Box::new(UnitExpr::Pow(
-                        Box::new(UnitExpr::Unit(Some("a"), span3)),
+                        Box::new(UnitExpr::Unit(UnitName::from("a"), span3)),
                         Decimal::new(2, 0),
                         span4,
                     )),
                     span2,
                 )),
                 Box::new(UnitExpr::Div(
-                    Box::new(UnitExpr::Unit(Some("e"), span7)),
-                    Box::new(UnitExpr::Unit(Some("f"), span9)),
+                    Box::new(UnitExpr::Unit(UnitName::from("e"), span7)),
+                    Box::new(UnitExpr::Unit(UnitName::from("f"), span9)),
                     span8,
                 )),
                 span6,
@@ -909,7 +909,7 @@ mod tests {
                 Box::new(UnitExpr::Pow(
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Pow(
-                            Box::new(UnitExpr::Unit(Some("a"), span1)),
+                            Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
                             Decimal::new(2, 0),
                             span2
                         )),
@@ -974,11 +974,11 @@ mod tests {
     fn unit_parser() {
         let span = Span { offset: 0, line: 1, fragment: CompleteStr("") };
         test_parser!(unit("") -> err);
-        test_parser!(unit("'a") -> ok, (Some("a"), span));
-        test_parser!(unit("'km") -> ok, (Some("km"), span));
-        test_parser!(unit("'_") -> ok, (None, span));
-        test_parser!(unit("'a_b") -> ok, (Some("a_b"), span));
-        test_parser!(unit("'kph") -> ok, (Some("kph"), span));
+        test_parser!(unit("'a") -> ok, (UnitName::from("a"), span));
+        test_parser!(unit("'km") -> ok, (UnitName::from("km"), span));
+        test_parser!(unit("'_") -> ok, (UnitName::unitless(), span));
+        test_parser!(unit("'a_b") -> ok, (UnitName::from("a_b"), span));
+        test_parser!(unit("'kph") -> ok, (UnitName::from("kph"), span));
         test_parser!(unit("'_a") -> err);
     }
 
