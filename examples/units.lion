@@ -9,11 +9,9 @@ fn(x 'deg) -> 'rad { x * (pi 'rad) / (180 'deg) }
 fn(x 'rad) -> 'deg { x * (180 'deg) / (pi 'rad) }
 
 #[unit]
-#[prefix(SI)]
 fn(x '_) -> 'm { x }
 
 #[unit]
-#[prefix(SI, transform=[lowercase])]
 fn(x '_) -> 'L { x }
 
 #[converter]

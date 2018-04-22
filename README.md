@@ -91,7 +91,7 @@ fn(x 'rad) -> 'deg { x * (180 'deg) / (pi 'rad) }
 // path will always be used to perform the conversion.
 
 // Units can take advantage of predefined prefix systems. For example, rather
-// than defining m, cm, mm, nm, etc., you can just use the `#[prefix(SI)]`
+// than defining m, cm, mm, nm, etc., you can just use the `#[unit(prefix = SI)]`
 // annotation. This automatically defines conversions from 'm to 'cm, 'mm, etc.
 // The conversions are defined in both directions. That means that from this
 // point onward, you can just use 'm to define conversions to other units and it
@@ -100,20 +100,17 @@ fn(x 'rad) -> 'deg { x * (180 'deg) / (pi 'rad) }
 // silence this warning by using the #[overwrite('unitname)] annotation.
 // The `#[overwrite('unitname)]` annotation can be used in any case where this
 // warning occurs.
-#[unit]
-#[prefix(SI)]
+#[unit(prefix = SI)]
 //#[overwrite('mm)] // Use this to resolve conflicts
 fn(x '_) -> 'm { x }
 // Equivalent: unit!('m, prefix = SI)
 
-#[unit]
 // Instead of mL, this will define ml
-#[prefix(SI, transform=[lowercase])]
+#[unit(prefix = SI, transform=[lowercase])]
 fn(x '_) -> 'L { x }
 
-#[unit]
 // Instead of mmeter and kmeter, this will produce millimeter and kilometer
-#[prefix(SI, transform=[long])]
+#[unit(prefix = SI, transform=[long])]
 fn(x '_) -> 'meter { x }
 
 // All units must be a SINGLE case-sensitive identifier. You cannot for example
@@ -150,7 +147,7 @@ prefix_system! {
         // prefix => conversions
         // Each conversion function will be transformed to include the full unit
         // e.g. fn(x) -> 'k { ... } will become fn(x) -> 'km { ... } when the
-        //      `#[prefix(SI)]` annotation is applied to the unit 'm
+        //      `#[unit(prefix = SI)]` annotation is applied to the unit 'm
         E => {
             // Convert from base unit to prefixed base unit
             // The unit listed in this type must match the one before `=>`
