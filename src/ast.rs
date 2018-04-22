@@ -2,7 +2,7 @@ use std::fmt;
 
 use rust_decimal::Decimal;
 
-use parser::Span;
+pub use parser::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program<'i> {
