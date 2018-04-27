@@ -1,3 +1,5 @@
+// Angles
+
 #[unit]
 fn(x '_) -> 'deg { x }
 #[unit]
@@ -8,13 +10,55 @@ fn(x 'deg) -> 'rad { x * (pi 'rad) / (180 'deg) }
 #[converter]
 fn(x 'rad) -> 'deg { x * (180 'deg) / (pi 'rad) }
 
-#[unit]
-fn(x '_) -> 'm { x }
+// Length
 
+#[unit] //TODO: SI prefixes
+fn(x '_) -> 'm { x }
 #[unit]
+fn(x '_) -> 'in { x }
+
+#[converter]
+fn(x 'in) -> 'm { x * 0.0254 }
+#[converter]
+fn(x 'm) -> 'in { x / 0.0254 }
+
+// Area
+
+//TODO: Does m^2 to cm^2 work?
+
+// Volume
+
+#[unit] //TODO: SI prefixes (lowercase)
 fn(x '_) -> 'L { x }
 
 #[converter]
 fn(x 'm^3) -> 'L { x * 1000 }
 #[converter]
 fn(x 'L) -> 'm^3 { x / 1000 }
+
+//TODO: 'cup, 'teaspoon, etc.
+//TODO: Conversions from these to each other and to other units of volume
+
+// Pressure
+
+// Pascal (Pa)
+#[unit] //TODO: SI prefixes
+fn(x '_) -> 'Pa { x }
+
+#[converter] //TODO: Alias?
+fn(x 'N/'m^2) -> 'Pa { x }
+#[converter]
+fn(x 'Pa) -> 'N/'m^2 { x }
+
+//TODO: 'bar, 'atm, 'Torr, 'lb/'in^2
+//TODO: https://en.wikipedia.org/wiki/Atmosphere_(unit)#Pressure_units_and_equivalencies
+
+// Force
+
+// Newton (N)
+#[unit] //TODO: SI prefixes
+fn(x '_) -> 'N { x }
+
+// Energy
+
+//TODO: 'J, 'kg*'m^2/'s^2, 'cal (Calorie), 'C * 'V (Coulomb * Volt)
