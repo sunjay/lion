@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use rust_decimal::Decimal;
+use nom::types::CompleteStr;
 
 use ast::*;
 
@@ -21,20 +22,21 @@ pub type Conversions<'a> = HashMap<(CanonicalUnit, CanonicalUnit), (FnArgs<'a>, 
 
 #[derive(Debug, Clone)]
 pub struct UnitGraph<'a> {
+    next_id: UnitID,
     unit_ids: HashMap<UnitName<'a>, UnitID>,
-    unit_symbols: HashMap<UnitID, UnitName<'a>>,
+    unit_symbols: HashMap<UnitID, (UnitName<'a>, Span<'a>)>,
     conversions: Conversions<'a>,
 }
 
 impl<'a> Default for UnitGraph<'a> {
     fn default() -> Self {
         let mut graph = UnitGraph {
+            next_id: Default::default(),
             unit_ids: Default::default(),
             unit_symbols: Default::default(),
             conversions: Default::default(),
         };
-        graph.insert_unit(UnitName::unitless(), false)
-            .expect("bug: '_ was already inserted for some reason");
+        graph.insert_unit(UnitName::unitless(), Span::new(CompleteStr("")));
 
         graph
     }
@@ -64,17 +66,22 @@ impl<'a> UnitGraph<'a> {
     /// Panics if the unit ID was not declared since that should not be possible
     pub fn unit_name(&self, unit: UnitID) -> UnitName<'a> {
         match self.unit_symbols.get(&unit) {
-            Some(&name) => name,
+            Some(&(name, _)) => name,
             None => unreachable!("Looked up an ID that did not exist"),
         }
     }
 
-    /// Creates the given unit
+    /// Creates the given unit if it does not exist yet
     ///
-    /// If the unit is already defined but overwrite is false, this will return an error
-    pub fn insert_unit(&mut self, name: UnitName, overwrite: bool) -> Result<(), ()> {
-        //TODO: Check if unit is defined or not
-        unimplemented!();
+    /// If it does exist, this does nothing
+    pub fn insert_unit(&mut self, name: UnitName<'a>, span: Span<'a>) {
+        if !self.unit_ids.contains_key(&name) {
+            self.next_id += 1;
+        }
+
+        let id = self.next_id - 1;
+        let id = *self.unit_ids.entry(name).or_insert(id);
+        self.unit_symbols.entry(id).or_insert((name, span));
     }
 
     /// Adds the given conversion function to the graph
@@ -91,7 +98,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] //TODO: Unignore once implemented
     fn unitless_exists() {
         let units = UnitGraph::default();
         // Test to make sure that if we lookup unitless from elsewhere in the AST we get the same
