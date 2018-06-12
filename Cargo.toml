@@ -4,13 +4,13 @@ version = "0.1.0"
 authors = ["Sunjay Varma <varma.sunjay@gmail.com>"]
 
 [dependencies]
-rust_decimal = "^0.8"
-# Temporarily relying on someone's fork until nom 4.0 is published and this
-# gets merged into nom_locate
-nom_locate = { git = "https://github.com/CAD97/nom_locate", branch = "patch-1" }
+rust_decimal = "^0.9"
+
+# TODO: Use the version on crates.io once it is published after Jun 11, 2018
+nom_locate = { git = "https://github.com/fflorent/nom_locate" }
 
 [dependencies.nom]
-version = "^4.0.0-beta2"
+version = "^4.0.0"
 features = ["verbose-errors"]
 
 [dev-dependencies]
