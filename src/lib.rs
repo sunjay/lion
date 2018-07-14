@@ -13,3 +13,4 @@ pub mod parser;
 pub mod unit_graph;
 pub mod context;
 pub mod symbols;
+pub mod canonical;

@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use rust_decimal::Decimal;
 
 use ast::*;
-use unit_graph::{UnitID, CanonicalUnit};
+use unit_graph::UnitID;
+use canonical::CanonicalUnit;
 
 #[derive(Debug, Clone)]
 pub enum SymType<'a> {

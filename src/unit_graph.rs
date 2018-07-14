@@ -1,21 +1,14 @@
 use std::collections::HashMap;
 
-use rust_decimal::Decimal;
 use nom::types::CompleteStr;
 
+use canonical::CanonicalUnit;
 use ast::*;
 
 pub type UnitID = usize;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UndeclaredUnit<'a>(UnitName<'a>);
-
-/// A `CanonicalUnit` is a unit expression in canonical form
-///
-/// e.g. 'a^x 'b^y 'c^z
-///      where 'a, 'b, 'c are units and x, y, z are integers
-#[derive(Debug, Clone, Default, Hash, PartialEq, Eq)]
-pub struct CanonicalUnit(Vec<(UnitID, Decimal)>);
 
 /// Represents a set of conversion functions
 pub type Conversions<'a> = HashMap<(CanonicalUnit, CanonicalUnit), (FnArgs<'a>, Block<'a>)>;
