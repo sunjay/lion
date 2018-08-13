@@ -5,13 +5,14 @@ authors = ["Sunjay Varma <varma.sunjay@gmail.com>"]
 
 [dependencies]
 rust_decimal = "0.10"
+smallvec = "0.6"
 
 [dependencies.nom]
 version = "4.0.0"
 features = ["verbose-errors"]
 
 [dependencies.nom_locate]
-git = "https://github.com/fflorent/nom_locate" 
+git = "https://github.com/fflorent/nom_locate"
 features = ["verbose-errors"]
 
 [dev-dependencies]

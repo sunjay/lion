@@ -1,6 +1,16 @@
 use std::ops::Div;
 
+use smallvec::SmallVec;
+
 use unit_graph::UnitID;
+
+/// We assume that most compound units won't involve more than this many units. This allows us to
+/// store most unit representations entirely on the stack while "spilling" over to the heap if our
+/// assumption turns out to be false. This constant can be changed over time based on experience.
+/// The value of this constant affects the memory overhead of the compiler significantly if most
+/// units are much smaller than this constant and it affects the compiler's performance
+/// significantly if most units are larger than this constant.
+const MAX_ASSUMED_UNIT_SIZE: usize = 8;
 
 /// A CanonicalUnit is a unit expression in canonical form
 ///
@@ -13,7 +23,7 @@ use unit_graph::UnitID;
 /// The number of terms in a CanonicalUnit can be zero. In that case, the CanonicalUnit represents
 /// a "unitless" quantity (denoted '_)
 #[derive(Debug, Clone, Default, Hash, PartialEq, Eq)]
-pub struct CanonicalUnit(Vec<(UnitID, i64)>);
+pub struct CanonicalUnit(SmallVec<[(UnitID, i64); MAX_ASSUMED_UNIT_SIZE]>);
 
 /// Ensure that the terms are sorted and without duplicates
 fn ensure_unit_invariants(terms: &[(UnitID, i64)]) {
@@ -21,16 +31,16 @@ fn ensure_unit_invariants(terms: &[(UnitID, i64)]) {
     for (term, x) in terms {
         if *x == 0 {
             panic!("bug: exponent in canonical unit was zero: {:?}",
-                CanonicalUnit(terms.to_vec()));
+                CanonicalUnit(SmallVec::from_slice(terms)));
         }
         if let Some(last) = last {
             if term == last {
                 panic!("bug: duplicate unit in canonical representation: {:?}",
-                    CanonicalUnit(terms.to_vec()));
+                    CanonicalUnit(SmallVec::from_slice(terms)));
             }
             else if term < last {
                 panic!("bug: unsorted unit in canonical representation: {:?}",
-                    CanonicalUnit(terms.to_vec()));
+                    CanonicalUnit(SmallVec::from_slice(terms)));
             }
         }
         else {
@@ -52,7 +62,7 @@ impl<'a> Div<&'a CanonicalUnit> for &'a CanonicalUnit {
     type Output = CanonicalUnit;
 
     fn div<'b>(self, other: &'b CanonicalUnit) -> Self::Output {
-        let mut terms = Vec::new();
+        let mut terms = smallvec![];
 
         let CanonicalUnit(lhs) = self;
         let CanonicalUnit(rhs) = other;
@@ -138,7 +148,7 @@ mod tests {
 
     macro_rules! unit {
         ($($unit_name:ident ^ $exp:expr)*) => {
-            CanonicalUnit(vec![$(($unit_name, $exp)),*])
+            CanonicalUnit(smallvec![$(($unit_name, $exp)),*])
         };
     }
 
