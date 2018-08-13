@@ -51,10 +51,10 @@ named!(program(Span) -> Program,
     )), |decls| Program {decls})
 );
 
-named!(decl(Span) -> Decl, alt!(
+named!(decl(Span) -> Decl, ws_comments!(alt!(
     function => { |func| Decl::Function(func) } |
     macro_invoke => { |mi| Decl::MacroInvoke(mi) }
-));
+)));
 
 named!(macro_invoke(Span) -> MacroInvoke, ws_comments!(do_parse!(
     span: position!() >>
