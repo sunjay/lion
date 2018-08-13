@@ -1,16 +1,17 @@
 use std::ops::Div;
 
-use rust_decimal::Decimal;
-
 use unit_graph::UnitID;
 
-/// A `CanonicalUnit` is a unit expression in canonical form
+/// A CanonicalUnit is a unit expression in canonical form
 ///
 /// e.g. 'a^x 'b^y 'c^z
 ///      where 'a, 'b, 'c are units and x, y, z are integers
 ///
 /// The elements are guaranteed to be sorted by UnitID (ascending) and not have any duplicate
-/// UnitIDs. No exponent can be zero.
+/// UnitIDs. No exponent will be zero.
+///
+/// The number of terms in a CanonicalUnit can be zero. In that case, the CanonicalUnit represents
+/// a "unitless" quantity (denoted '_)
 #[derive(Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct CanonicalUnit(Vec<(UnitID, i64)>);
 
@@ -53,8 +54,8 @@ impl<'a> Div<&'a CanonicalUnit> for &'a CanonicalUnit {
     fn div<'b>(self, other: &'b CanonicalUnit) -> Self::Output {
         let mut terms = Vec::new();
 
-        let lhs = &self.0;
-        let rhs = &other.0;
+        let CanonicalUnit(lhs) = self;
+        let CanonicalUnit(rhs) = other;
         unit_invariants_debug!(lhs);
         unit_invariants_debug!(rhs);
         let mut lhs_i = 0;
@@ -106,11 +107,47 @@ impl<'a> Div<&'a CanonicalUnit> for &'a CanonicalUnit {
 mod tests {
     use super::*;
 
+    /// Generate variables for some UnitIDs
+    ///
+    /// unit_ids!(a, b, c) generates:
+    ///
+    ///    let a: UnitID = 0;
+    ///    let b: UnitID = 1;
+    ///    let c: UnitID = 2;
+    macro_rules! unit_ids {
+        // Use default counter
+        ($name:ident, $($rest:tt)*) => {
+            unit_ids!(0, $name, $($rest)*);
+        };
+        // Need to make the comma optional
+        ($name:ident) => {
+            unit_ids!(0, $name);
+        };
+        // Increment a given counter
+        ($count:expr, $name:ident, $($rest:tt)*) => {
+            unit_ids!($count, $name);
+            unit_ids!($count + 1, $($rest)*);
+        };
+        // Need to make the comma optional
+        ($count:expr, $name:ident) => {
+            let $name: UnitID = $count;
+        };
+        // Base case
+        ($count:expr) => ();
+    }
+
+    macro_rules! unit {
+        ($($unit_name:ident ^ $exp:expr)*) => {
+            CanonicalUnit(vec![$(($unit_name, $exp)),*])
+        };
+    }
+
     #[test]
     fn division() {
-        let unit1 = CanonicalUnit(vec![(0, 1), (1, 1)]);
-        let unit2 = CanonicalUnit(vec![(0, 1), (1, 2), (2, 3)]);
-        let expected = CanonicalUnit(vec![(1, -1), (2, -3)]);
+        unit_ids!(a, b, c);
+        let unit1 = unit!(a^1 b^1);
+        let unit2 = unit!(a^1 b^2 c^3);
+        let expected = unit!(b^-1 c^-3);
         assert_eq!(unit1.div(&unit2), expected);
     }
 }
