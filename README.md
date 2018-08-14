@@ -215,6 +215,8 @@ conversion 1 'm^3 == 1000 'L;
 
 // This is syntactic sugar for both defining a unit and a 1:1 conversion between
 // that unit and another (possibly compound) unit
+//
+// Any attributes like #[prefix(...)] will be passed on to the unit declaration
 unit 'kph alias 'km / 'hour;
 
 // This will generate the following code:

@@ -1,26 +1,26 @@
 // Angles
 
-#[unit]
-fn(x '_) -> 'deg { x }
-#[unit]
-fn(x '_) -> 'rad { x }
+/// pi is defined to be unitless
+///
+/// Cast it to 'rad using pi 'rad as necessary
+pub const pi '_ = 3.1415926535897932384626433832;
 
-#[converter]
-fn(x 'deg) -> 'rad { x * (pi 'rad) / (180 'deg) }
-#[converter]
-fn(x 'rad) -> 'deg { x * (180 'deg) / (pi 'rad) }
+/// Degrees (angle)
+unit 'deg;
+/// Radians (angle)
+unit 'rad;
+
+conversion 180 'deg == pi 'rad;
 
 // Length
 
-#[unit] //TODO: SI prefixes
-fn(x '_) -> 'm { x }
-#[unit]
-fn(x '_) -> 'in { x }
+/// Meters
+#[prefix(SI)]
+unit 'm;
+/// Inches
+unit 'in;
 
-#[converter]
-fn(x 'in) -> 'm { x * 0.0254 }
-#[converter]
-fn(x 'm) -> 'in { x / 0.0254 }
+conversion 0.0254 'm == 1 'in;
 
 // Area
 
@@ -28,13 +28,10 @@ fn(x 'm) -> 'in { x / 0.0254 }
 
 // Volume
 
-#[unit] //TODO: SI prefixes (lowercase)
-fn(x '_) -> 'L { x }
+#[prefix(SI, transform=[lowercase])]
+unit 'L;
 
-#[converter]
-fn(x 'm^3) -> 'L { x * 1000 }
-#[converter]
-fn(x 'L) -> 'm^3 { x / 1000 }
+conversion 1 'm^3 == 1000 'L;
 
 //TODO: 'cup, 'teaspoon, etc.
 //TODO: Conversions from these to each other and to other units of volume
@@ -42,13 +39,8 @@ fn(x 'L) -> 'm^3 { x / 1000 }
 // Pressure
 
 // Pascal (Pa)
-#[unit] //TODO: SI prefixes
-fn(x '_) -> 'Pa { x }
-
-#[converter] //TODO: Alias?
-fn(x 'N/'m^2) -> 'Pa { x }
-#[converter]
-fn(x 'Pa) -> 'N/'m^2 { x }
+#[prefix(SI)]
+unit 'Pa alias 'N/'m^2;
 
 //TODO: 'bar, 'atm, 'Torr, 'lb/'in^2
 //TODO: https://en.wikipedia.org/wiki/Atmosphere_(unit)#Pressure_units_and_equivalencies
@@ -56,8 +48,8 @@ fn(x 'Pa) -> 'N/'m^2 { x }
 // Force
 
 // Newton (N)
-#[unit] //TODO: SI prefixes
-fn(x '_) -> 'N { x }
+#[prefix(SI)]
+unit 'N;
 
 // Energy
 
