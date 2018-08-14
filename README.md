@@ -40,15 +40,16 @@ Error: Cannot convert from 'm / 's to 's / 'm
 
 ## Features
 
-* Variables and functions can declare which units they expect
+* Units in variables and functions are inferred when necessary and checked to
+  make sure each operation is mathematically sound
   ```rust
   // Here we are annotating the unit of the parameter radius and the unit
   // of the return type
   fn circle_area(radius 'm) -> 'm^2 {
       // If this unit was not provided, it would be inferred from the simplified
       // unit of the expression on the right hand side. Since it is provided,
-      // lion will check to make sure the right hand side results in the
-      // declared unit.
+      // lion will check to make sure the right hand side results in something
+      // that is convertable to the declared unit.
       let square_radius 'm ^ 2 = radius ^ 2;
       pi * square_radius
   }
