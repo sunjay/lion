@@ -239,42 +239,28 @@ named!(factor_as(Span) -> Expr, ws_comments!(do_parse!(
     (result)
 )));
 
-macro_rules! maybe_convert_unit {
-    ($expr:expr, $unit:expr, $unit_span:expr) => {
-        match $unit {
-            None => $expr,
-            Some(unit) => Expr::ConvertTo(
-                Box::new($expr),
-                unit,
-                $unit_span,
-            ),
-        }
-    };
-}
-
 named!(factor(Span) -> Expr, ws_comments!(alt!(
     tuple!(numeric_literal, position!(), opt!(compound_unit)) => {
         |(num, unit_span, unit): (_, _, Option<_>)| Expr::Number(num, default_unitless!(unit, unit_span))
     } |
-    tuple!(position!(), fncall, position!(), opt!(compound_unit)) => {
-        |(span, (path, args), unit_span, unit)| {
-            maybe_convert_unit!(Expr::Call(path, args, span), unit, unit_span)
-        }
+    tuple!(position!(), fncall) => {
+        |(span, (path, args))| Expr::Call(path, args, span)
     } |
     tuple!(position!(), ident_path, position!(), opt!(compound_unit)) => {
-        |(span, path, unit_span, unit)| {
-            maybe_convert_unit!(Expr::Ident(path, span), unit, unit_span)
+        |(span, path, unit_span, unit)| match unit {
+            None => Expr::Ident(path, span),
+            Some(unit) => Expr::ConvertTo(
+                Box::new(Expr::Ident(path, span)),
+                unit,
+                unit_span,
+            ),
         }
     } |
-    tuple!(delimited!(t_left_paren, expr, t_right_paren), position!(), opt!(compound_unit)) => {
-        |(expr, unit_span, unit)| {
-            maybe_convert_unit!(expr, unit, unit_span)
-        }
+    tuple!(delimited!(t_left_paren, expr, t_right_paren)) => {
+        |expr| expr
     } |
-    tuple!(block, position!(), opt!(compound_unit)) => {
-        |(block, unit_span, unit)| {
-            maybe_convert_unit!(Expr::Block(Box::new(block)), unit, unit_span)
-        }
+    tuple!(block) => {
+        |block| Expr::Block(Box::new(block))
     } |
     tuple!(position!(), t_return, expr) => {
         |(span, _, return_expr)| Expr::Return(Box::new(return_expr), span)
