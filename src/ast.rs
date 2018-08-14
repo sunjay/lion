@@ -13,6 +13,9 @@ pub struct Program<'i> {
 pub enum Decl<'i> {
     MacroInvoke(MacroInvoke<'i>),
     Function(Function<'i>),
+    Constant(Constant<'i>),
+    UnitDecl(UnitDecl<'i>),
+    ConversionDecl(ConversionDecl<'i>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,11 +31,34 @@ pub struct Function<'i> {
     pub name: Ident<'i>,
     pub args: FnArgs<'i>,
     // None means that the function returns ()
-    // To return unitless, use `-> '_` since '_ represents unitless
-    //FIXME: In the future this will be replaced with a real way to represent
+    // To return a unitless number, use `-> '_` since '_ represents unitless
+    //FIXME: In the future this Option type will be replaced with a real way to represent
     // types in the AST
     pub ret: Option<UnitExpr<'i>>,
     pub body: Block<'i>,
+    pub span: Span<'i>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Constant<'i> {
+    pub name: Ident<'i>,
+    pub unit: Option<UnitExpr<'i>>,
+    pub value: Expr<'i>,
+    pub span: Span<'i>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnitDecl<'i> {
+    pub attrs: Vec<Attribute<'i>>,
+    pub unit_name: UnitName<'i>,
+    pub alias_for: Option<UnitExpr<'i>>,
+    pub span: Span<'i>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConversionDecl<'i> {
+    pub left: Expr<'i>,
+    pub right: Expr<'i>,
     pub span: Span<'i>,
 }
 
@@ -55,8 +81,17 @@ pub struct Block<'i> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<'i> {
     Function(Function<'i>),
-    Let(Ident<'i>, Option<UnitExpr<'i>>, Expr<'i>, Span<'i>),
+    Let(LetDecl<'i>),
     Expr(Expr<'i>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LetDecl<'i> {
+    pub label: Ident<'i>,
+    // If this is None, the unit will be inferred
+    pub expected_unit: Option<UnitExpr<'i>>,
+    pub value: Expr<'i>,
+    pub span: Span<'i>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -142,6 +177,12 @@ pub enum Token<'i> {
     UnitExpr(UnitExpr<'i>),
     IdentPath(IdentPath<'i>),
     NumericLiteral(NumericLiteral<'i>),
+    Equals,
+    NotEquals,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThanOrEqual,
+    LessThan,
     Plus,
     Minus,
     Star,
@@ -153,10 +194,15 @@ pub enum Token<'i> {
     Semi,
     Return,
     Unit,
+    For,
     As,
     Arrow,
+    Alias,
     Let,
+    Const,
     Becomes,
+    UnitKeyword,
+    Conversion,
 }
 
 #[cfg(test)]

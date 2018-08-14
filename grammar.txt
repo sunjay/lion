@@ -1,5 +1,5 @@
 program := BOF decl* EOF
-decl := macro_invoke t_semi | function | constant | unit_decl | conversion_factor
+decl := constant | unit_decl | conversion_factor | function | macro_invoke t_semi
 
 macro_invoke := macro_name macro_args
 macro_name := ident_path "!"
@@ -12,7 +12,9 @@ macro_args := t_left_paren tt* t_right_paren
 // The types we support are: numbers (with units or unitless), bool, ()
 // For the time being, we are representing this situation with None in the AST.
 
-function := attribute* "fn" ident? fnargs return_unit? block
+//TODO: Implement real privacy semantics -- pub is required for now to avoid
+// having to make breaking changes
+function := attribute* "pub" "fn" ident? fnargs return_unit? block
 fnargs := t_left_paren (fnarg t_comma)* fnarg? t_right_paren
 fnarg := ident compound_unit?
 return_unit := t_arrow compound_unit
@@ -20,13 +22,15 @@ return_unit := t_arrow compound_unit
 // "matching" means that `[stuff=[]]` should parse in its entirety
 attribute := t_hash t_left_bracket ident tt* t_right_bracket
 block := t_left_brace statement* expr? t_right_brace
-statement := function | var_decl | attribute* expr t_semi
-var_decl := attribute* t_let ident compound_unit? t_becomes expr t_semi
+statement := function | var_decl | expr t_semi
+var_decl := t_let ident compound_unit? t_becomes expr t_semi
 
-constant := attribute* t_const ident compound_unit? t_becomes expr t_semi
+//TODO: Implement real privacy semantics -- pub is required for now to avoid
+// having to make breaking changes
+constant := "pub" t_const ident compound_unit? t_becomes expr t_semi
 
 unit_decl := attribute* t_unit_decl unit (t_alias compound_unit)? t_semi
-conversion_factor := attribute* t_conversion_decl expr t_eq expr t_semi
+conversion_factor := t_conversion_decl expr t_eq expr t_semi
 
 // Precedence: (), compound_unit, ^, *, /, %, +, -
 expr := term | expr (t_plus | t_minus) term
@@ -76,6 +80,7 @@ t_right_paren := ")"
 t_left_bracket := "["
 t_right_bracket := "]"
 t_eq := "=="
+t_ne := "!="
 t_gt := ">"
 t_ge := ">="
 t_le := "<="
@@ -94,7 +99,7 @@ t_unit := "()"
 t_for := "for"
 t_as := "as"
 t_arrow := "->"
-t_const := "alias"
+t_alias := "alias"
 t_let := "let"
 t_const := "const"
 t_becomes := "="
@@ -115,6 +120,7 @@ tt :=
     ident_path |
     numeric_literal |
     t_eq |
+    t_ne |
     t_gt |
     t_ge |
     t_le |

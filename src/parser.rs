@@ -52,15 +52,49 @@ named!(program(Span) -> Program,
 );
 
 named!(decl(Span) -> Decl, ws_comments!(alt!(
-    function => { |func| Decl::Function(func) } |
-    macro_invoke => { |mi| Decl::MacroInvoke(mi) }
+    constant => { Decl::Constant } |
+    unit_decl => { Decl::UnitDecl } |
+    conversion_factor => { Decl::ConversionDecl } |
+    function => { Decl::Function } |
+    terminated!(macro_invoke, t_semi) => { Decl::MacroInvoke }
+)));
+
+named!(constant(Span) -> Constant, ws_comments!(do_parse!(
+    span: position!() >>
+    tag!("pub") >>
+    t_const >>
+    name: ident >>
+    unit: opt!(compound_unit) >>
+    t_becomes >>
+    value: expr >>
+    t_semi >>
+    (Constant {name, unit, value, span})
+)));
+
+named!(unit_decl(Span) -> UnitDecl, ws_comments!(do_parse!(
+    attrs: many0!(attribute) >>
+    span: position!() >>
+    t_unit_decl >>
+    unit: unit >>
+    alias_for: opt!(preceded!(t_alias, compound_unit)) >>
+    t_semi >>
+    (UnitDecl {attrs, unit_name: unit.0, alias_for, span})
+)));
+
+named!(conversion_factor(Span) -> ConversionDecl, ws_comments!(do_parse!(
+    span: position!() >>
+    t_conversion_decl >>
+    left: expr >>
+    t_eq >>
+    right: expr >>
+    t_semi >>
+    (ConversionDecl {left, right, span})
 )));
 
 named!(macro_invoke(Span) -> MacroInvoke, ws_comments!(do_parse!(
     span: position!() >>
     name: macro_name >>
     tokens: macro_args >>
-    t_semi >>
     (MacroInvoke {
         name,
         tokens,
@@ -78,6 +112,7 @@ named!(macro_args(Span) -> Vec<Token>, alt!(
 named!(function(Span) -> Function, ws_comments!(do_parse!(
     attrs: many0!(attribute) >>
     span: position!() >>
+    tag!("pub") >>
     t_fn >>
     name: opt!(ident) >>
     args: fnargs >>
@@ -131,20 +166,20 @@ named!(block(Span) -> Block, ws_comments!(do_parse!(
 )));
 
 named!(statement(Span) -> Statement, ws_comments!(alt!(
-    function => { |func| Statement::Function(func) } |
-    var_decl => { |(name, unit, expr, span)| Statement::Let(name, unit, expr, span) } |
-    do_parse!(e: expr >> t_semi >> (e)) => { |expr| Statement::Expr(expr) }
+    function => { Statement::Function } |
+    let_decl => { Statement::Let } |
+    terminated!(expr, t_semi) => { Statement::Expr }
 )));
 
-named!(var_decl(Span) -> (Ident, Option<UnitExpr>, Expr, Span), ws_comments!(do_parse!(
+named!(let_decl(Span) -> LetDecl, ws_comments!(do_parse!(
     span: position!() >>
     t_let >>
-    name: ident >>
-    unit: opt!(compound_unit) >>
+    label: ident >>
+    expected_unit: opt!(compound_unit) >>
     t_becomes >>
-    rhs: expr >>
+    value: expr >>
     t_semi >>
-    ((name, unit, rhs, span))
+    (LetDecl {label, expected_unit, value, span})
 )));
 
 named!(expr(Span) -> Expr, complete!(ws_comments!(do_parse!(
@@ -372,6 +407,12 @@ named!(t_left_paren(Span) -> Span, tag!("("));
 named!(t_right_paren(Span) -> Span, tag!(")"));
 named!(t_left_bracket(Span) -> Span, tag!("["));
 named!(t_right_bracket(Span) -> Span, tag!("]"));
+named!(t_eq(Span) -> Span, tag!("=="));
+named!(t_ne(Span) -> Span, tag!("!="));
+named!(t_gt(Span) -> Span, tag!(">"));
+named!(t_ge(Span) -> Span, tag!(">="));
+named!(t_le(Span) -> Span, tag!("<="));
+named!(t_lt(Span) -> Span, tag!("<"));
 named!(t_plus(Span) -> Span, tag!("+"));
 named!(t_minus(Span) -> Span, tag!("-"));
 named!(t_star(Span) -> Span, tag!("*"));
@@ -382,13 +423,18 @@ named!(t_comma(Span) -> Span, tag!(","));
 named!(t_hash(Span) -> Span, tag!("#"));
 named!(t_semi(Span) -> Span, tag!(";"));
 named!(t_unit(Span) -> Span, tag!("()"));
+named!(t_for(Span) -> Span, tag!("for"));
 named!(t_arrow(Span) -> Span, tag!("->"));
 named!(t_becomes(Span) -> Span, tag!("="));
 
 keyword!(t_fn, "fn");
 keyword!(t_return, "return");
 keyword!(t_as, "as");
+keyword!(t_alias, "alias");
 keyword!(t_let, "let");
+keyword!(t_const, "const");
+keyword!(t_unit_decl, "unit");
+keyword!(t_conversion_decl, "conversion");
 
 named!(whitespace_comment(Span) -> Span, alt!(comment | whitespace));
 
@@ -408,6 +454,12 @@ named!(tt(Span) -> Token, ws_comments!(alt!(
     compound_unit => { Token::UnitExpr } |
     ident_path => { Token::IdentPath } |
     numeric_literal => { Token::NumericLiteral } |
+    t_eq => { |_| Token::Equals } |
+    t_ne => { |_| Token::NotEquals } |
+    t_gt => { |_| Token::GreaterThan } |
+    t_ge => { |_| Token::GreaterThanOrEqual } |
+    t_le => { |_| Token::LessThanOrEqual } |
+    t_lt => { |_| Token::LessThan } |
     t_plus => { |_| Token::Plus } |
     t_minus => { |_| Token::Minus } |
     t_star => { |_| Token::Star } |
@@ -419,10 +471,15 @@ named!(tt(Span) -> Token, ws_comments!(alt!(
     t_semi => { |_| Token::Semi } |
     t_return => { |_| Token::Return } |
     t_unit => { |_| Token::Unit } |
+    t_for => { |_| Token::For } |
     t_as => { |_| Token::As } |
     t_arrow => { |_| Token::Arrow } |
+    t_alias => { |_| Token::Alias } |
     t_let => { |_| Token::Let } |
-    t_becomes => { |_| Token::Becomes }
+    t_const => { |_| Token::Const } |
+    t_becomes => { |_| Token::Becomes } |
+    t_unit_decl => { |_| Token::UnitKeyword } |
+    t_conversion_decl => { |_| Token::Conversion }
 )));
 
 #[cfg(test)]
@@ -477,14 +534,14 @@ mod tests {
          // hiiii
         ") -> ok);
         test_parser!(program("
-        fn foo() {}
-        fn foo() {}
+        pub fn foo() {}
+        pub fn foo() {}
 
         // foo is a foo
-        fn foo() {}
+        pub fn foo() {}
         ") -> ok);
         test_parser!(program("
-        fn velocity() -> 'm / 's {
+        pub fn velocity() -> 'm / 's {
             let F = 5.2 'N;
             let m = 150 'lbs;
             let t = 30 'min;
@@ -499,30 +556,30 @@ mod tests {
     #[test]
     fn function_parser() {
         test_parser!(function("") -> err);
-        test_parser!(function("fn main() {}") -> ok);
-        test_parser!(function("fn main() -> 'a {}") -> ok);
-        test_parser!(function("fn() -> 'a {}") -> ok);
-        test_parser!(function("fn main() -> 'km / 'h {
+        test_parser!(function("pub fn main() {}") -> ok);
+        test_parser!(function("pub fn main() -> 'a {}") -> ok);
+        test_parser!(function("pub fn() -> 'a {}") -> ok);
+        test_parser!(function("pub fn main() -> 'km / 'h {
 
         }") -> ok);
         test_parser!(function("fnmain() -> 'a {}") -> err);
     }
 
     #[test]
-    fn var_decl_parser() {
+    fn let_decl_parser() {
         let span1 = Span { offset: 0, line: 1, fragment: CompleteStr("") };
         let span4 = Span { offset: 8, line: 1, fragment: CompleteStr("") };
         let span5 = Span { offset: 12, line: 1, fragment: CompleteStr("") };
-        test_parser!(var_decl("let F = 5.2 'N;") -> ok,
-            (
-                "F",
-                None,
-                Expr::Number(
+        test_parser!(let_decl("let F = 5.2 'N;") -> ok,
+            LetDecl {
+                label: "F",
+                expected_unit: None,
+                value: Expr::Number(
                     NumericLiteral {value: Decimal::from_scientific("5.2e0").unwrap(), span: span4},
                     UnitExpr::Unit(UnitName::from("N"), span5),
                 ),
-                span1,
-            )
+                span: span1,
+            }
         );
     }
 

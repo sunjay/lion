@@ -31,6 +31,9 @@ impl<'a> Context<'a> {
             match *decl {
                 Decl::MacroInvoke(_) => unimplemented!(),
                 Decl::Function(ref func) => self.walk_fn_decl(func)?,
+                Decl::Constant(_) => unimplemented!(),
+                Decl::UnitDecl(_) => unimplemented!(),
+                Decl::ConversionDecl(_) => unimplemented!(),
             }
         }
         Ok(())
