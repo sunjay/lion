@@ -149,6 +149,7 @@ conversion 180 'deg == pi 'rad;
 // conversion 1001 'm == 1 'km; // Also not allowed, conflicts with (1)
 //
 // Rules about conversions:
+// * The units on both sides must be distinct
 // * At least one of the units in a defined conversion factor must be
 //   locally defined in the current package (or file if using path imports)
 //   * You cannot define conversions for units you do not define
@@ -156,6 +157,11 @@ conversion 180 'deg == pi 'rad;
 //   only allowed to be defined once for a given unordered pair of units
 // * If more than one package defines a conversion between an unordered pair
 //   of units, the defined conversion factors must be equivalent
+// * The conversion cannot be between two different dimensions of the same unit
+//   * This is not a rigorous check. `'m == 'm^2` will be rejected, but it is
+//     up to you to make sure that `'L == 'm^2` is not accidentally defined
+// * The unit of the expression on either side cannot be '_ since a conversion
+//   between dimensions of units is invalid and '_ has dimension zero
 //
 //   Example:
 //       conversion 1000 'm == 1 'km; // In package A that defines 'm
@@ -209,7 +215,7 @@ conversion 1 'm^3 == 1000 'L;
 
 // This is syntactic sugar for both defining a unit and a 1:1 conversion between
 // that unit and another (possibly compound) unit
-alias 'kph for 'km / 'hour;
+unit 'kph alias 'km / 'hour;
 
 // This will generate the following code:
 //

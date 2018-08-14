@@ -1,14 +1,16 @@
 program := BOF decl* EOF
-decl := macro_invoke | function
+decl := macro_invoke t_semi | function | constant | unit_decl | conversion_factor
 
-macro_invoke := macro_name macro_args t_semi
+macro_invoke := macro_name macro_args
 macro_name := ident_path "!"
-macro_args := t_left_paren tt* t_right_paren | t_left_brace tt* t_right_brace | t_left_bracket tt* t_right_bracket
+macro_args := t_left_paren tt* t_right_paren
+            | t_left_brace tt* t_right_brace
+            | t_left_bracket tt* t_right_bracket
 
 //TODO: Semantics: if no return_unit is provided the return type is "()". To
 // support this in the grammar, we should actually allow specifying types.
 // The types we support are: numbers (with units or unitless), bool, ()
-// For the time being, we are just representing this with None.
+// For the time being, we are representing this situation with None in the AST.
 
 function := attribute* "fn" ident? fnargs return_unit? block
 fnargs := t_left_paren (fnarg t_comma)* fnarg? t_right_paren
@@ -21,29 +23,37 @@ block := t_left_brace statement* expr? t_right_brace
 statement := function | var_decl | expr t_semi
 var_decl := t_let ident compound_unit? t_becomes expr t_semi
 
+constant := t_const ident compound_unit? t_becomes expr t_semi
+
+unit_decl := t_unit_decl unit (t_alias compound_unit)? t_semi
+conversion_factor := t_conversion_decl expr t_eq expr t_semi
+
 // Precedence: (), compound_unit, ^, *, /, %, +, -
 expr := term | expr (t_plus | t_minus) term
 term := pow | term (t_star | t_slash | t_percent) pow
 pow := factor | pow t_caret factor
-factor := factor t_as compound_unit | numeric_literal compound_unit?
-        | fncall compound_unit? | ident_path compound_unit?
-        | t_left_paren expr t_right_paren compound_unit? | block compound_unit?
-        | t_return expr | t_unit // t_unit = (), not a "unit"
+factor := factor t_as compound_unit
+        // Literals and identifiers can be followed by a unit
+        | numeric_literal compound_unit? | ident_path compound_unit?
+        // Pretty much everything else must be converted using `as`
+        | fncall | macro_invoke | t_left_paren expr t_right_paren
+        | block | t_return expr | t_unit // t_unit = (), not a "unit"
 fncall := ident_path t_left_paren (expr t_comma)* expr? t_right_paren
 
-// A compound_unit is an expr with ONLY units, constant operators,
-// and a limited set of operators: multiplication, division, and exponentiation
-// We support `'m 's^-2` as an alias for `'m * 's^-2` (see first rule below)
+// A compound_unit is an expr with ONLY units, integer constants, and a limited
+// set of operators: multiplication, division, and exponentiation by a constant
+// We support `'m 's^-2` to mean the same as `'m * 's^-2` (see first rule below)
 // This sort of multiplication is only for units, not for general expressions
-// i.e. `'cm ^ -3 / 'L` but not `2 'cm`
 // Precedence: (), ^, *, /
 compound_unit := unitterm+
 unitterm := unitpow | unitterm (t_star | t_slash) unitpow
-//TODO: integer_literal could potentially be any constexpr
+//TODO: integer_literal could potentially be any constexpr that evaluates to '_
 unitpow := unitfactor | unitpow t_caret integer_literal
 unitfactor := unit | t_left_paren compound_unit t_right_paren
 
 // units cannot start with "_" but are otherwise identical to ident
+// The special unit '_ represents a "unitless" quantity (i.e. a unit with
+// dimension zero)
 unit := "'" alpha (alpha | digit | "_")*
 ident_path := ident ("::" ident)*
 //TODO: Disable keywords && ident != "_"
@@ -65,6 +75,11 @@ t_left_paren := "("
 t_right_paren := ")"
 t_left_bracket := "["
 t_right_bracket := "]"
+t_eq := "=="
+t_gt := ">"
+t_ge := ">="
+t_le := "<="
+t_lt := "<"
 t_plus := "+"
 t_minus := "-"
 t_star := "*"
@@ -76,10 +91,15 @@ t_hash := "#"
 t_semi := ";"
 t_return := "return"
 t_unit := "()"
+t_for := "for"
 t_as := "as"
 t_arrow := "->"
+t_const := "alias"
 t_let := "let"
+t_const := "const"
 t_becomes := "="
+t_unit_decl := "unit"
+t_conversion_decl := "conversion"
 
 // tt = token tree (any tokens)
 tt :=
@@ -94,6 +114,11 @@ tt :=
     compound_unit |
     ident_path |
     numeric_literal |
+    t_eq |
+    t_gt |
+    t_ge |
+    t_le |
+    t_lt |
     t_plus |
     t_minus |
     t_star |
@@ -105,11 +130,17 @@ tt :=
     t_semi |
     t_return |
     t_unit |
+    t_for |
     t_as |
     t_arrow |
+    t_alias |
     t_let |
-    t_becomes
+    t_const |
+    t_becomes |
+    t_unit_decl |
+    t_conversion_decl
 
+// Comments and whitespace are implicitly removed from everywhere within the grammar
 newline := "\n" | "\r\n"
 whitespace := " " | "\t" | newline
 comment := "//" (!newline)*
