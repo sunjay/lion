@@ -20,13 +20,13 @@ return_unit := t_arrow compound_unit
 // "matching" means that `[stuff=[]]` should parse in its entirety
 attribute := t_hash t_left_bracket ident tt* t_right_bracket
 block := t_left_brace statement* expr? t_right_brace
-statement := function | var_decl | expr t_semi
-var_decl := t_let ident compound_unit? t_becomes expr t_semi
+statement := function | var_decl | attribute* expr t_semi
+var_decl := attribute* t_let ident compound_unit? t_becomes expr t_semi
 
-constant := t_const ident compound_unit? t_becomes expr t_semi
+constant := attribute* t_const ident compound_unit? t_becomes expr t_semi
 
-unit_decl := t_unit_decl unit (t_alias compound_unit)? t_semi
-conversion_factor := t_conversion_decl expr t_eq expr t_semi
+unit_decl := attribute* t_unit_decl unit (t_alias compound_unit)? t_semi
+conversion_factor := attribute* t_conversion_decl expr t_eq expr t_semi
 
 // Precedence: (), compound_unit, ^, *, /, %, +, -
 expr := term | expr (t_plus | t_minus) term
