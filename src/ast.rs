@@ -103,13 +103,14 @@ pub enum Expr<'i> {
     Mod(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Pow(Box<Expr<'i>>, Box<Expr<'i>>, Span<'i>),
     Call(IdentPath<'i>, Vec<Expr<'i>>, Span<'i>),
+    MacroCall(MacroInvoke<'i>),
     Number(NumericLiteral<'i>, UnitExpr<'i>),
     // Used for both "as" and for "() 'newunit" syntax
     ConvertTo(Box<Expr<'i>>, UnitExpr<'i>, Span<'i>),
     Ident(IdentPath<'i>, Span<'i>),
     Return(Box<Expr<'i>>, Span<'i>),
     Block(Box<Block<'i>>),
-    UnitValue, // ()
+    UnitValue(Span<'i>), // ()
 }
 
 #[derive(Debug, Clone, PartialEq)]

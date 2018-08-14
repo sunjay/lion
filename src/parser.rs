@@ -161,8 +161,8 @@ named!(block(Span) -> Block, ws_comments!(do_parse!(
     span: position!() >>
     body: many0!(statement) >>
     ret: opt!(expr) >>
-    t_right_brace >>
-    (Block {body, ret: ret.unwrap_or(Expr::UnitValue), span})
+    end_span: t_right_brace >>
+    (Block {body, ret: ret.unwrap_or(Expr::UnitValue(end_span)), span})
 )));
 
 named!(statement(Span) -> Statement, ws_comments!(alt!(
@@ -246,6 +246,7 @@ named!(factor(Span) -> Expr, ws_comments!(alt!(
     tuple!(position!(), fncall) => {
         |(span, (path, args))| Expr::Call(path, args, span)
     } |
+    macro_invoke => { Expr::MacroCall } |
     tuple!(position!(), ident_path, position!(), opt!(compound_unit)) => {
         |(span, path, unit_span, unit)| match unit {
             None => Expr::Ident(path, span),
@@ -256,16 +257,14 @@ named!(factor(Span) -> Expr, ws_comments!(alt!(
             ),
         }
     } |
-    tuple!(delimited!(t_left_paren, expr, t_right_paren)) => {
-        |expr| expr
-    } |
-    tuple!(block) => {
+    delimited!(t_left_paren, expr, t_right_paren) |
+    block => {
         |block| Expr::Block(Box::new(block))
     } |
     tuple!(position!(), t_return, expr) => {
         |(span, _, return_expr)| Expr::Return(Box::new(return_expr), span)
     } |
-    t_unit => { |_| Expr::UnitValue }
+    t_unit => { Expr::UnitValue }
 )));
 
 named!(fncall(Span) -> (IdentPath, Vec<Expr>), ws_comments!(do_parse!(
