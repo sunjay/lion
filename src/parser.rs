@@ -1022,6 +1022,63 @@ mod tests {
         test_parser!(unit("'a_b") -> ok, (UnitName::from("a_b"), span));
         test_parser!(unit("'kph") -> ok, (UnitName::from("kph"), span));
         test_parser!(unit("'_a") -> err);
+
+        // Must parse greek letters:
+        test_parser!(unit("'\u{03b1}\u{03bf}\u{03a6}xx01\u{03a3}") -> ok);
+        test_parser!(unit("'μm") -> ok); // micro meters
+
+        // http://kestrel.nmt.edu/~raymond/software/howtos/greekscape.xhtml
+        test_parser!(unit("'\u{03b1}") -> ok);
+        test_parser!(unit("'\u{03b2}") -> ok);
+        test_parser!(unit("'\u{03b3}") -> ok);
+        test_parser!(unit("'\u{03b4}") -> ok);
+        test_parser!(unit("'\u{03b5}") -> ok);
+        test_parser!(unit("'\u{03b6}") -> ok);
+        test_parser!(unit("'\u{03b7}") -> ok);
+        test_parser!(unit("'\u{03b8}") -> ok);
+        test_parser!(unit("'\u{03b9}") -> ok);
+        test_parser!(unit("'\u{03ba}") -> ok);
+        test_parser!(unit("'\u{03bb}") -> ok);
+        test_parser!(unit("'\u{03bc}") -> ok);
+        test_parser!(unit("'\u{03bd}") -> ok);
+        test_parser!(unit("'\u{03be}") -> ok);
+        test_parser!(unit("'\u{03bf}") -> ok);
+        test_parser!(unit("'\u{03c0}") -> ok);
+        test_parser!(unit("'\u{03c1}") -> ok);
+        test_parser!(unit("'\u{03c2}") -> ok);
+        test_parser!(unit("'\u{03c3}") -> ok);
+        test_parser!(unit("'\u{03c4}") -> ok);
+        test_parser!(unit("'\u{03c5}") -> ok);
+        test_parser!(unit("'\u{03c6}") -> ok);
+        test_parser!(unit("'\u{03c7}") -> ok);
+        test_parser!(unit("'\u{03c8}") -> ok);
+        test_parser!(unit("'\u{03c9}") -> ok);
+
+        test_parser!(unit("'\u{0391}") -> ok);
+        test_parser!(unit("'\u{0392}") -> ok);
+        test_parser!(unit("'\u{0393}") -> ok);
+        test_parser!(unit("'\u{0394}") -> ok);
+        test_parser!(unit("'\u{0395}") -> ok);
+        test_parser!(unit("'\u{0396}") -> ok);
+        test_parser!(unit("'\u{0397}") -> ok);
+        test_parser!(unit("'\u{0398}") -> ok);
+        test_parser!(unit("'\u{0399}") -> ok);
+        test_parser!(unit("'\u{039a}") -> ok);
+        test_parser!(unit("'\u{039b}") -> ok);
+        test_parser!(unit("'\u{039c}") -> ok);
+        test_parser!(unit("'\u{039d}") -> ok);
+        test_parser!(unit("'\u{039e}") -> ok);
+        test_parser!(unit("'\u{039f}") -> ok);
+        test_parser!(unit("'\u{03a0}") -> ok);
+        test_parser!(unit("'\u{03a1}") -> ok);
+        //test_parser!(unit("'\u{03a2}") -> ok); // reserved, not a letter!
+        test_parser!(unit("'\u{03a3}") -> ok);
+        test_parser!(unit("'\u{03a4}") -> ok);
+        test_parser!(unit("'\u{03a5}") -> ok);
+        test_parser!(unit("'\u{03a6}") -> ok);
+        test_parser!(unit("'\u{03a7}") -> ok);
+        test_parser!(unit("'\u{03a8}") -> ok);
+        test_parser!(unit("'\u{03a9}") -> ok);
     }
 
     #[test]
@@ -1072,6 +1129,62 @@ mod tests {
         test_parser!(ident("-123.456e-10") -> err);
         test_parser!(ident("-123.456E10") -> err);
         test_parser!(ident("-123.456E-10") -> err);
+
+        // Must parse greek letters:
+        test_parser!(ident("\u{03b1}\u{03bf}\u{03a6}xx01\u{03a3}") -> ok);
+
+        // http://kestrel.nmt.edu/~raymond/software/howtos/greekscape.xhtml
+        test_parser!(ident("\u{03b1}") -> ok);
+        test_parser!(ident("\u{03b2}") -> ok);
+        test_parser!(ident("\u{03b3}") -> ok);
+        test_parser!(ident("\u{03b4}") -> ok);
+        test_parser!(ident("\u{03b5}") -> ok);
+        test_parser!(ident("\u{03b6}") -> ok);
+        test_parser!(ident("\u{03b7}") -> ok);
+        test_parser!(ident("\u{03b8}") -> ok);
+        test_parser!(ident("\u{03b9}") -> ok);
+        test_parser!(ident("\u{03ba}") -> ok);
+        test_parser!(ident("\u{03bb}") -> ok);
+        test_parser!(ident("\u{03bc}") -> ok);
+        test_parser!(ident("\u{03bd}") -> ok);
+        test_parser!(ident("\u{03be}") -> ok);
+        test_parser!(ident("\u{03bf}") -> ok);
+        test_parser!(ident("\u{03c0}") -> ok);
+        test_parser!(ident("\u{03c1}") -> ok);
+        test_parser!(ident("\u{03c2}") -> ok);
+        test_parser!(ident("\u{03c3}") -> ok);
+        test_parser!(ident("\u{03c4}") -> ok);
+        test_parser!(ident("\u{03c5}") -> ok);
+        test_parser!(ident("\u{03c6}") -> ok);
+        test_parser!(ident("\u{03c7}") -> ok);
+        test_parser!(ident("\u{03c8}") -> ok);
+        test_parser!(ident("\u{03c9}") -> ok);
+
+        test_parser!(ident("\u{0391}") -> ok);
+        test_parser!(ident("\u{0392}") -> ok);
+        test_parser!(ident("\u{0393}") -> ok);
+        test_parser!(ident("\u{0394}") -> ok);
+        test_parser!(ident("\u{0395}") -> ok);
+        test_parser!(ident("\u{0396}") -> ok);
+        test_parser!(ident("\u{0397}") -> ok);
+        test_parser!(ident("\u{0398}") -> ok);
+        test_parser!(ident("\u{0399}") -> ok);
+        test_parser!(ident("\u{039a}") -> ok);
+        test_parser!(ident("\u{039b}") -> ok);
+        test_parser!(ident("\u{039c}") -> ok);
+        test_parser!(ident("\u{039d}") -> ok);
+        test_parser!(ident("\u{039e}") -> ok);
+        test_parser!(ident("\u{039f}") -> ok);
+        test_parser!(ident("\u{03a0}") -> ok);
+        test_parser!(ident("\u{03a1}") -> ok);
+        //test_parser!(ident("\u{03a2}") -> ok); // reserved, not a letter!
+        test_parser!(ident("\u{03a3}") -> ok);
+        test_parser!(ident("\u{03a4}") -> ok);
+        test_parser!(ident("\u{03a5}") -> ok);
+        test_parser!(ident("\u{03a6}") -> ok);
+        test_parser!(ident("\u{03a7}") -> ok);
+        test_parser!(ident("\u{03a8}") -> ok);
+        test_parser!(ident("\u{03a9}") -> ok);
     }
 
     #[test]
