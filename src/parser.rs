@@ -692,7 +692,7 @@ mod tests {
                     Box::new(UnitExpr::Unit(UnitName::from("b"), span1)),
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Unit(UnitName::from("a"), span3)),
-                        Decimal::new(2, 0),
+                        2,
                         span4,
                     )),
                     span2,
@@ -887,7 +887,7 @@ mod tests {
                     Box::new(UnitExpr::Unit(UnitName::from("b"), span1)),
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Unit(UnitName::from("a"), span3)),
-                        Decimal::new(2, 0),
+                        2,
                         span4,
                     )),
                     span2,
@@ -954,16 +954,16 @@ mod tests {
                     Box::new(UnitExpr::Pow(
                         Box::new(UnitExpr::Pow(
                             Box::new(UnitExpr::Unit(UnitName::from("a"), span1)),
-                            Decimal::new(2, 0),
+                            2,
                             span2
                         )),
-                        Decimal::new(3, 0),
+                        3,
                         span3,
                     )),
-                    Decimal::new(4, 0),
+                    4,
                     span4,
                 )),
-                Decimal::new(5, 0),
+                5,
                 span5,
             )
         );
