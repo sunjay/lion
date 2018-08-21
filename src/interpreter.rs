@@ -7,9 +7,17 @@ use symbols::SymbolTable;
 #[derive(Debug, Clone)]
 pub enum DeclError<'a> {
     UndeclaredUnit {
+        name: UnitName<'a>,
+        span: Span<'a>,
+    },
+    DuplicateUnitDecl {
+        name: UnitName<'a>,
+        span: Span<'a>,
+    },
+    UnknownAttribute {
         name: Ident<'a>,
         span: Span<'a>,
-    }
+    },
 }
 
 #[derive(Debug, Clone, Default)]
@@ -20,7 +28,7 @@ pub struct Interpreter<'a> {
 
 impl<'a> Interpreter<'a> {
     /// Load declarations into the global scope of the interpreter
-    pub fn load_decls<'b>(&mut self, program: &Program<'b>) -> Result<(), DeclError<'b>> {
+    pub fn load_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         // We need to do this in several passes in order to satisfy the potential items each type
         // of declaration might need.
 
@@ -46,52 +54,61 @@ impl<'a> Interpreter<'a> {
     ///
     /// Any declared macros will be collected along the way and used as necessary while
     /// recursively expanding the macros
-    fn expand_macros<'b, 'c>(&self, program: Cow<'c, Program<'b>>) -> Result<Cow<'c, Program<'b>>, DeclError<'b>> {
+    fn expand_macros<'c>(&self, program: Cow<'c, Program<'a>>) -> Result<Cow<'c, Program<'a>>, DeclError<'a>> {
         // By using Cow here, we avoid an unnecessary clone if the program has no macros
 
         for decl in &program.decls {
-            match *decl {
-                //TODO: Macro declarations will be processed here eventually
+            //TODO: Macro declarations will be processed here eventually
 
-                Decl::MacroInvoke(_) => unimplemented!(),
-                _ => {},
+            if let Decl::MacroInvoke(_) = decl {
+                unimplemented!();
             }
         }
         Ok(program)
     }
 
     /// Load declared units into the global unit graph of the interpreter
-    fn load_unit_decls<'b>(&mut self, program: &Program<'b>) -> Result<(), DeclError<'b>> {
+    fn load_unit_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         for decl in &program.decls {
-            match *decl {
+            if let &Decl::UnitDecl(UnitDecl {ref attrs, unit_name, ref alias_for, span}) = decl {
                 //TODO: insert the unit into the unit graph and add the single conversion from
                 //unitless to the unit
-                Decl::UnitDecl(_) => unimplemented!(),
-                _ => {},
+
+                for &Attribute {name, tokens: _, span} in attrs {
+                    match name {
+                        "prefix" => {}, //TODO
+                        _ => return Err(DeclError::UnknownAttribute {name, span}),
+                    }
+                }
+
+                self.units.insert_unit(unit_name, span)
+                    .map_err(|_| DeclError::DuplicateUnitDecl {name: unit_name, span})?;
+
+                if let Some(_unit) = alias_for {
+                    unimplemented!();
+                }
             }
         }
         Ok(())
     }
 
     /// Load declared constants and `const fn`s into the global scope of the interpreter
-    fn load_const_decls<'b>(&mut self, program: &Program<'b>) -> Result<(), DeclError<'b>> {
+    fn load_const_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         for decl in &program.decls {
-            match *decl {
-                //TODO: const fn declarations will be processed and unit checked here eventually
+            //TODO: const fn declarations will be processed and unit checked here eventually
 
-                Decl::Constant(_) => unimplemented!(),
-                _ => {},
+            if let Decl::Constant(_) = decl {
+                unimplemented!();
             }
         }
         Ok(())
     }
 
     /// Load unit conversions and evaluate any const exprs found within them
-    fn load_conversion_decls<'b>(&mut self, program: &Program<'b>) -> Result<(), DeclError<'b>> {
+    fn load_conversion_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         for decl in &program.decls {
-            match *decl {
-                Decl::ConversionDecl(_) => unimplemented!(),
-                _ => {},
+            if let Decl::ConversionDecl(_) = decl {
+                unimplemented!();
             }
         }
         Ok(())
@@ -99,11 +116,10 @@ impl<'a> Interpreter<'a> {
 
     /// Load function declarations into the global scope and check their bodies to ensure that any
     /// conversions are valid
-    fn load_fn_decls<'b>(&mut self, program: &Program<'b>) -> Result<(), DeclError<'b>> {
+    fn load_fn_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         for decl in &program.decls {
-            match *decl {
-                Decl::Function(_) => unimplemented!(),
-                _ => {},
+            if let Decl::Function(_) = decl {
+                unimplemented!();
             }
         }
         Ok(())

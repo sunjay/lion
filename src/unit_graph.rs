@@ -10,6 +10,10 @@ pub type UnitID = usize;
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct UndeclaredUnit<'a>(UnitName<'a>);
 
+/// Attempt to insert a unit twice
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct DuplicateUnit<'a>(UnitName<'a>);
+
 /// Represents a set of conversion functions
 pub type Conversions<'a> = HashMap<(CanonicalUnit, CanonicalUnit), (FnArgs<'a>, Block<'a>)>;
 
@@ -29,7 +33,8 @@ impl<'a> Default for UnitGraph<'a> {
             unit_symbols: Default::default(),
             conversions: Default::default(),
         };
-        graph.insert_unit(UnitName::unitless(), Span::new(CompleteStr("")));
+        graph.insert_unit(UnitName::unitless(), Span::new(CompleteStr("")))
+            .unwrap_or_else(|_| unreachable!("'_ was already declared"));
 
         graph
     }
@@ -41,7 +46,7 @@ impl<'a> UnitGraph<'a> {
     /// In lion programs, this is denoted '_
     pub fn unitless(&self) -> UnitID {
         self.unit_id(UnitName::unitless())
-            .expect("bug: '_ was not defined")
+            .unwrap_or_else(|_| unreachable!("bug: '_ was not defined"))
     }
 
     /// Returns the unique unit ID for the given unit name.
@@ -66,8 +71,8 @@ impl<'a> UnitGraph<'a> {
 
     /// Creates the given unit if it does not exist yet
     ///
-    /// If it does exist, this does nothing
-    pub fn insert_unit(&mut self, name: UnitName<'a>, span: Span<'a>) {
+    /// If it does exist, this function will return an error
+    pub fn insert_unit(&mut self, name: UnitName<'a>, span: Span<'a>) -> Result<(), DuplicateUnit<'a>> {
         if !self.unit_ids.contains_key(&name) {
             self.next_id += 1;
         }
@@ -75,11 +80,12 @@ impl<'a> UnitGraph<'a> {
         let id = self.next_id - 1;
         let id = *self.unit_ids.entry(name).or_insert(id);
         self.unit_symbols.entry(id).or_insert((name, span));
+        //TODO: return error
+
+        Ok(())
     }
 
     /// Adds the given conversion function to the graph
-    ///
-    /// If the conversion is already defined but overwrite is false, this will return an error
     pub fn add_conversion(&mut self, from: UnitExpr, to: UnitExpr, overwrite: bool) -> Result<(), ()> {
         //TODO: Check if all units in CanonicalUnits are declared and return an Err if not
         unimplemented!()
