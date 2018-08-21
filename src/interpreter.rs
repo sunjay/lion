@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use ast::*;
 use unit_graph::UnitGraph;
 use symbols::SymbolTable;
+use canonical::{self, CanonicalUnit};
 
 #[derive(Debug, Clone)]
 pub enum DeclError<'a> {
@@ -18,6 +19,25 @@ pub enum DeclError<'a> {
         name: Ident<'a>,
         span: Span<'a>,
     },
+    DuplicateConst {
+        name: Ident<'a>,
+        span: Span<'a>,
+    },
+    UnsupportedConstExpr {
+        expr: Expr<'a>,
+        span: Span<'a>,
+    },
+    MismatchedUnit {
+        expected: UnitExpr<'a>,
+        found: UnitExpr<'a>,
+        span: Span<'a>,
+    },
+}
+
+impl<'a> From<canonical::UndeclaredUnit<'a>> for DeclError<'a> {
+    fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
+        DeclError::UndeclaredUnit {name, span}
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -93,8 +113,27 @@ impl<'a> Interpreter<'a> {
         for decl in &program.decls {
             //TODO: const fn declarations will be processed and unit checked here eventually
 
-            if let Decl::Constant(_) = decl {
-                unimplemented!();
+            if let &Decl::Constant(Constant {name, unit: ref unit_expr, ref value, span}) = decl {
+                let unit = CanonicalUnit::from_unit_expr(unit_expr, &self.units)?;
+                let value = match value {
+                    &Expr::Number(NumericLiteral {ref value, span: const_span}, ref const_unit) => {
+                        // Units must match
+                        if CanonicalUnit::from_unit_expr(const_unit, &self.units)? == unit {
+                            *value
+                        }
+                        else {
+                            return Err(DeclError::MismatchedUnit {
+                                expected: unit_expr.clone(),
+                                found: const_unit.clone(),
+                                span: const_span,
+                            })
+                        }
+                    },
+                    _ => return Err(DeclError::UnsupportedConstExpr {expr: value.clone(), span}),
+                };
+                self.symbols.insert_const(name, value, unit, span).map_err(|_| {
+                    DeclError::DuplicateConst {name, span}
+                })?;
             }
         }
         Ok(())

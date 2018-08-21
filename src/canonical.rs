@@ -2,7 +2,13 @@ use std::ops::Div;
 
 use smallvec::SmallVec;
 
-use unit_graph::UnitID;
+use ast::{UnitExpr, UnitName, Span};
+use unit_graph::{UnitGraph, UnitID};
+
+pub struct UndeclaredUnit<'a> {
+    pub name: UnitName<'a>,
+    pub span: Span<'a>,
+}
 
 /// We assume that most compound units won't involve more than this many units. This allows us to
 /// store most unit representations entirely on the stack while "spilling" over to the heap if our
@@ -54,6 +60,19 @@ macro_rules! unit_invariants_debug {
         #[cfg(debug)]
         ensure_unit_invariants(&$name);
     };
+}
+
+impl CanonicalUnit {
+    pub fn from_unit_expr<'a>(expr: &UnitExpr<'a>, units: &UnitGraph) -> Result<Self, UndeclaredUnit<'a>> {
+        use self::UnitExpr::*;
+        match expr {
+            &Unit(name, span) => units.unit_id(name).map(Self::from).map_err(|_| UndeclaredUnit {
+                name,
+                span,
+            }),
+            _ => unimplemented!(), //TODO
+        }
+    }
 }
 
 impl From<UnitID> for CanonicalUnit {

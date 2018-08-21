@@ -42,7 +42,7 @@ pub struct Function<'i> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Constant<'i> {
     pub name: Ident<'i>,
-    pub unit: Option<UnitExpr<'i>>,
+    pub unit: UnitExpr<'i>,
     pub value: Expr<'i>,
     pub span: Span<'i>,
 }

@@ -64,11 +64,12 @@ named!(constant(Span) -> Constant, ws_comments!(do_parse!(
     tag!("pub") >>
     t_const >>
     name: ident >>
+    unit_span: position!() >>
     unit: opt!(compound_unit) >>
     t_becomes >>
     value: expr >>
     t_semi >>
-    (Constant {name, unit, value, span})
+    (Constant {name, unit: default_unitless!(unit, unit_span), value, span})
 )));
 
 named!(unit_decl(Span) -> UnitDecl, ws_comments!(do_parse!(
