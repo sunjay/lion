@@ -134,7 +134,7 @@ pub enum UnitExpr<'i> {
     // For both 'a * 'b and 'a 'b
     Mul(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
     Div(Box<UnitExpr<'i>>, Box<UnitExpr<'i>>, Span<'i>),
-    Pow(Box<UnitExpr<'i>>, Decimal, Span<'i>),
+    Pow(Box<UnitExpr<'i>>, i64, Span<'i>),
 }
 
 // If the quantity is unitless, then we return None

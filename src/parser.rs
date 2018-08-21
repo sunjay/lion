@@ -1,6 +1,7 @@
 pub use nom::Err as Error;
 use nom::{alpha, digit, recognize_float, sp, types::CompleteStr};
 use nom_locate::LocatedSpan;
+use num_traits::cast::ToPrimitive;
 use rust_decimal::Decimal;
 
 use ast::*;
@@ -307,8 +308,8 @@ named!(unitpow(Span) -> UnitExpr, ws_comments!(do_parse!(
     result: fold_many0!(
         ws_comments!(tuple!(position!(), t_caret, integer_literal)),
         first,
-        |acc, (span, op, rhs): (_, Span, _)| match op.fragment.0 {
-            "^" => UnitExpr::Pow(Box::new(acc), rhs, span),
+        |acc, (span, op, rhs): (_, Span, Decimal)| match op.fragment.0 {
+            "^" => UnitExpr::Pow(Box::new(acc), rhs.to_i64().expect("i64 overflow"), span),
             _ => unreachable!(),
         }
     ) >>

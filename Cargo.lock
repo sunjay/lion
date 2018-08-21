@@ -45,6 +45,7 @@ version = "0.1.0"
 dependencies = [
  "nom 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nom_locate 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-traits 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust_decimal 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
