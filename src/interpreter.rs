@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use rust_decimal::Decimal;
+
 use ast::*;
 use ir::{Number, ConversionRatio};
 use unit_graph::UnitGraph;
@@ -149,7 +151,24 @@ impl<'a> Interpreter<'a> {
         for decl in &program.decls {
             match decl {
                 // Aliases need to be processed later when all the units have already been walked
-                Decl::UnitDecl(UnitDecl {unit_name, alias_for, ..}) if alias_for.is_some() => unimplemented!(),
+                Decl::UnitDecl(UnitDecl {unit_name, alias_for: Some(alias), ..}) => {
+                    let unit_id = self.units.unit_id(*unit_name)
+                        .expect("bug: unit should have already been declared");
+                    let left_unit = CanonicalUnit::from(unit_id);
+                    let right_unit = CanonicalUnit::from_unit_expr(alias, &self.units)?;
+
+                    // Alias means: 1 left_unit == 1 right_unit
+                    self.units.add_conversion(ConversionRatio {
+                        left: Number {
+                            value: Decimal::from(1),
+                            unit: left_unit,
+                        },
+                        right: Number {
+                            value: Decimal::from(1),
+                            unit: right_unit,
+                        },
+                    })
+                },
                 Decl::ConversionDecl(ConversionDecl {left, right, ..}) => {
                     let left = self.reduce_const_expr(left)?;
                     let right = self.reduce_const_expr(right)?;
