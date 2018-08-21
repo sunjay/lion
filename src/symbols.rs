@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use rust_decimal::Decimal;
 
-use ast::*;
-use ir;
+use ast::{Ident, Span};
+use ir::{Number, Function};
 use canonical::CanonicalUnit;
 
 pub struct DuplicateSymbol<'a>(pub Ident<'a>);
@@ -11,11 +11,10 @@ pub struct DuplicateSymbol<'a>(pub Ident<'a>);
 #[derive(Debug, Clone)]
 enum SymType<'a> {
     Constant {
-        value: Decimal,
-        unit: CanonicalUnit,
+        value: Number,
         span: Span<'a>,
     },
-    Function(ir::Function<'a>, Span<'a>),
+    Function(Function<'a>, Span<'a>),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -25,16 +24,25 @@ pub struct SymbolTable<'a> {
 }
 
 impl<'a> SymbolTable<'a> {
+    /// Returns the value of the constant with the given name if and only if a constant with that
+    /// name is declared
+    pub fn get_const(&self, name: Ident<'a>) -> Option<&Number> {
+        self.table.get(&name).and_then(|sym| match sym {
+            SymType::Constant {value, ..} => Some(value),
+            _ => None,
+        }).or(None)
+    }
+
     pub fn insert_const(&mut self, name: Ident<'a>, value: Decimal, unit: CanonicalUnit, span: Span<'a>) -> Result<(), DuplicateSymbol> {
         if self.table.contains_key(&name) {
             return Err(DuplicateSymbol(name));
         }
 
-        self.table.insert(name, SymType::Constant {value, unit, span});
+        self.table.insert(name, SymType::Constant {value: Number {value, unit}, span});
         Ok(())
     }
 
-    pub fn insert_function(&mut self, name: Ident<'a>, function: ir::Function<'a>, span: Span<'a>) -> Result<(), DuplicateSymbol> {
+    pub fn insert_function(&mut self, name: Ident<'a>, function: Function<'a>, span: Span<'a>) -> Result<(), DuplicateSymbol> {
         if self.table.contains_key(&name) {
             return Err(DuplicateSymbol(name));
         }

@@ -63,15 +63,24 @@ macro_rules! unit_invariants_debug {
 }
 
 impl CanonicalUnit {
+    /// Canonicalizes a unit
     pub fn from_unit_expr<'a>(expr: &UnitExpr<'a>, units: &UnitGraph) -> Result<Self, UndeclaredUnit<'a>> {
         use self::UnitExpr::*;
+        //TODO: Make sure unit is sorted
         match expr {
+            Unit(name, _) if name.is_unitless() => Ok(CanonicalUnit(smallvec![])),
             &Unit(name, span) => units.unit_id(name).map(Self::from).map_err(|_| UndeclaredUnit {
                 name,
                 span,
             }),
             _ => unimplemented!(), //TODO
         }
+    }
+
+    /// Returns true if this represents having no unit
+    pub fn is_unitless(&self) -> bool {
+        // "Unitless" means has no units
+        self.0.is_empty()
     }
 }
 

@@ -1,12 +1,17 @@
 use std::borrow::Cow;
 
 use ast::*;
+use ir::{Number, ConversionRatio};
 use unit_graph::UnitGraph;
 use symbols::SymbolTable;
 use canonical::{self, CanonicalUnit};
 
 #[derive(Debug, Clone)]
 pub enum DeclError<'a> {
+    UndeclaredName {
+        name: Ident<'a>,
+        span: Span<'a>,
+    },
     UndeclaredUnit {
         name: UnitName<'a>,
         span: Span<'a>,
@@ -145,7 +150,11 @@ impl<'a> Interpreter<'a> {
             match decl {
                 // Aliases need to be processed later when all the units have already been walked
                 Decl::UnitDecl(UnitDecl {unit_name, alias_for, ..}) if alias_for.is_some() => unimplemented!(),
-                Decl::ConversionDecl(_) => unimplemented!(),
+                Decl::ConversionDecl(ConversionDecl {left, right, ..}) => {
+                    let left = self.reduce_const_expr(left)?;
+                    let right = self.reduce_const_expr(right)?;
+                    self.units.add_conversion(ConversionRatio {left, right});
+                },
                 _ => {},
             }
         }
@@ -161,6 +170,46 @@ impl<'a> Interpreter<'a> {
             }
         }
         Ok(())
+    }
+
+    fn reduce_const_expr(&self, expr: &Expr<'a>) -> Result<Number, DeclError<'a>> {
+        match expr {
+            &Expr::Number(NumericLiteral {value, span: _}, ref unit) => {
+                let unit = CanonicalUnit::from_unit_expr(unit, &self.units)?;
+                Ok(Number {value, unit})
+            },
+            &Expr::Ident(ref path, span) => {
+                if path.len() != 1 { unimplemented!() }
+                let name = path.first().unwrap();
+                self.symbols.get_const(name).cloned().ok_or_else(|| DeclError::UndeclaredName {name, span})
+            },
+            Expr::ConvertTo(expr, target_unit, _) => {
+                let number = self.reduce_const_expr(expr)?;
+                let target_unit = CanonicalUnit::from_unit_expr(target_unit, &self.units)?;
+                if number.unit == target_unit {
+                    // No conversion necessary
+                    Ok(number)
+                }
+                // Can convert from unitless to any unit
+                else if number.unit.is_unitless() {
+                    Ok(Number {
+                        value: number.value,
+                        unit: target_unit,
+                    })
+                }
+                else {
+                    //TODO: Convert
+                    unimplemented!();
+                }
+            },
+            Expr::Add(_, _, span) | Expr::Sub(_, _, span) | Expr::Mul(_, _, span) |
+            Expr::Div(_, _, span) | Expr::Mod(_, _, span) | Expr::Pow(_, _, span) |
+            Expr::Call(_, _, span) | Expr::MacroCall(MacroInvoke {span, ..}) |
+            Expr::Return(_, span) | Expr::UnitValue(span) => {
+                Err(DeclError::UnsupportedConstExpr {expr: expr.clone(), span: *span})
+            },
+            Expr::Block(_) => unimplemented!(),
+        }
     }
 }
 

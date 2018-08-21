@@ -150,7 +150,7 @@ impl<'i> From<&'i str> for UnitName<'i> {
     }
 }
 
-impl<'a> fmt::Display for UnitName<'a> {
+impl<'i> fmt::Display for UnitName<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "'{}", match self.0 {
             None => "_",
@@ -162,6 +162,10 @@ impl<'a> fmt::Display for UnitName<'a> {
 impl<'i> UnitName<'i> {
     pub fn unitless() -> Self {
         UnitName(None)
+    }
+
+    pub fn is_unitless(&self) -> bool {
+        self.0.is_none()
     }
 }
 
