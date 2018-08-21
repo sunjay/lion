@@ -65,21 +65,34 @@ macro_rules! unit_invariants_debug {
 impl CanonicalUnit {
     /// Returns the canonical unit that represents unitless
     pub fn unitless() -> Self {
-        CanonicalUnit(smallvec![])
+        CanonicalUnit(SmallVec::new())
     }
 
     /// Canonicalizes a unit
     pub fn from_unit_expr<'a>(expr: &UnitExpr<'a>, units: &UnitGraph) -> Result<Self, UndeclaredUnit<'a>> {
         use self::UnitExpr::*;
         //TODO: Make sure unit is sorted
-        match expr {
-            Unit(name, _) if name.is_unitless() => Ok(CanonicalUnit::unitless()),
+        Ok(match expr {
+            Unit(name, _) if name.is_unitless() => CanonicalUnit::unitless(),
             &Unit(name, span) => units.unit_id(name).map(Self::from).map_err(|_| UndeclaredUnit {
                 name,
                 span,
-            }),
-            _ => unimplemented!(), //TODO
-        }
+            })?,
+            Mul(lhs, rhs, _) => {
+                let lhs = CanonicalUnit::from_unit_expr(lhs, units)?;
+                let rhs = CanonicalUnit::from_unit_expr(rhs, units)?;
+                lhs * rhs
+            },
+            Div(lhs, rhs, _) => {
+                let lhs = CanonicalUnit::from_unit_expr(lhs, units)?;
+                let rhs = CanonicalUnit::from_unit_expr(rhs, units)?;
+                lhs / rhs
+            },
+            Pow(lhs, exp, _) => {
+                let lhs = CanonicalUnit::from_unit_expr(lhs, units)?;
+                lhs ^ *exp
+            },
+        })
     }
 
     /// Returns true if this represents having no unit
