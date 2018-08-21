@@ -70,7 +70,7 @@ impl<'a> Interpreter<'a> {
     /// Load declared units into the global unit graph of the interpreter
     fn load_unit_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         for decl in &program.decls {
-            if let &Decl::UnitDecl(UnitDecl {ref attrs, unit_name, ref alias_for, span}) = decl {
+            if let &Decl::UnitDecl(UnitDecl {ref attrs, unit_name, span, ..}) = decl {
                 //TODO: insert the unit into the unit graph and add the single conversion from
                 //unitless to the unit
 
@@ -83,10 +83,6 @@ impl<'a> Interpreter<'a> {
 
                 self.units.insert_unit(unit_name, span)
                     .map_err(|_| DeclError::DuplicateUnitDecl {name: unit_name, span})?;
-
-                if let Some(_unit) = alias_for {
-                    unimplemented!();
-                }
             }
         }
         Ok(())
@@ -107,8 +103,11 @@ impl<'a> Interpreter<'a> {
     /// Load unit conversions and evaluate any const exprs found within them
     fn load_conversion_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         for decl in &program.decls {
-            if let Decl::ConversionDecl(_) = decl {
-                unimplemented!();
+            match decl {
+                // Aliases need to be processed later when all the units have already been walked
+                Decl::UnitDecl(UnitDecl {unit_name, alias_for, ..}) if alias_for.is_some() => unimplemented!(),
+                Decl::ConversionDecl(_) => unimplemented!(),
+                _ => {},
             }
         }
         Ok(())
