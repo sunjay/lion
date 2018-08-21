@@ -84,6 +84,26 @@ pub struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
+    pub fn print_unit(&self, unit: &CanonicalUnit) {
+        let mut names = unit.iter_unit_names(&self.units);
+
+        let print_unit = |(unit_name, exp)| {
+            if exp != 1 {
+                print!("{}^{}", unit_name, exp);
+            }
+            else {
+                print!("{}", unit_name);
+            }
+        };
+        if let Some(pair) = names.next() {
+            print_unit(pair);
+        }
+        for pair in names {
+            print!(" ");
+            print_unit(pair);
+        }
+    }
+
     /// Load declarations into the global scope of the interpreter
     pub fn load_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         // We need to do this in several passes in order to satisfy the potential items each type

@@ -100,6 +100,11 @@ impl CanonicalUnit {
         // "Unitless" means has no units
         self.0.is_empty()
     }
+
+    /// Iterator over the unit names and exponents
+    pub fn iter_unit_names<'a>(&'a self, units: &'a UnitGraph<'a>) -> impl Iterator<Item=(UnitName<'a>, i64)> {
+        self.0.iter().map(move |&(id, exp)| (units.unit_name(id), exp))
+    }
 }
 
 impl From<UnitID> for CanonicalUnit {
