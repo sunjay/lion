@@ -91,8 +91,16 @@ impl<'a> UnitGraph<'a> {
 
     /// Adds the given conversion ratio to the graph
     pub fn add_conversion(&mut self, ratio: ConversionRatio) -> Result<(), ()> {
-        //TODO: Check if all units in CanonicalUnits are declared and return an Err if not
-        unimplemented!()
+        let left_id = if !self.graph_ids.contains_key(&ratio.left.unit) {
+            self.conversions.add_node(ratio.left.unit.clone())
+        } else { self.graph_ids[&ratio.left.unit] };
+        let right_id = if !self.graph_ids.contains_key(&ratio.right.unit) {
+            self.conversions.add_node(ratio.right.unit.clone())
+        } else { self.graph_ids[&ratio.right.unit] };
+
+        self.conversions.update_edge(left_id, right_id, ratio);
+
+        Ok(())
     }
 }
 
