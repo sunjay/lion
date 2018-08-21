@@ -231,23 +231,3 @@ impl<'a> Interpreter<'a> {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use parser::parse_program;
-
-    #[test]
-    #[ignore] //TODO: Unignore once implemented
-    fn multitype_function() {
-        let input = r#"
-        #[unit]
-        #[converter]
-        fn(x '_) -> 'deg { x }
-        "#;
-        let program = parse_program(input).unwrap();
-
-        let mut inter = Interpreter::default();
-        inter.load_decls(&program).unwrap_err();
-    }
-}
