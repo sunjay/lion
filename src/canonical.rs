@@ -51,10 +51,15 @@ fn ensure_unit_invariants(terms: &[(UnitID, i64)]) {
 
 macro_rules! unit_invariants_debug {
     ($name:ident) => {
-        if cfg!(debug) {
-            ensure_unit_invariants(&$name);
-        }
+        #[cfg(debug)]
+        ensure_unit_invariants(&$name);
     };
+}
+
+impl From<UnitID> for CanonicalUnit {
+    fn from(id: UnitID) -> Self {
+        CanonicalUnit(smallvec![(id, 1)])
+    }
 }
 
 //FIXME: Implement Mul and invert and then make Div = left * invert(right)

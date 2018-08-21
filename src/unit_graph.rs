@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use nom::types::CompleteStr;
+use petgraph::graph::{UnGraph, NodeIndex, DefaultIx};
 
 use canonical::CanonicalUnit;
 use ast::*;
+use ir::ConversionRatio;
 
 pub type UnitID = usize;
 
@@ -14,15 +16,13 @@ pub struct UndeclaredUnit<'a>(UnitName<'a>);
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DuplicateUnit<'a>(UnitName<'a>);
 
-/// Represents a set of conversion functions
-pub type Conversions<'a> = HashMap<(CanonicalUnit, CanonicalUnit), (FnArgs<'a>, Block<'a>)>;
-
 #[derive(Debug, Clone)]
 pub struct UnitGraph<'a> {
     next_id: UnitID,
     unit_ids: HashMap<UnitName<'a>, UnitID>,
     unit_symbols: HashMap<UnitID, (UnitName<'a>, Span<'a>)>,
-    conversions: Conversions<'a>,
+    graph_ids: HashMap<CanonicalUnit, NodeIndex<DefaultIx>>,
+    conversions: UnGraph<CanonicalUnit, ConversionRatio>,
 }
 
 impl<'a> Default for UnitGraph<'a> {
@@ -31,6 +31,7 @@ impl<'a> Default for UnitGraph<'a> {
             next_id: Default::default(),
             unit_ids: Default::default(),
             unit_symbols: Default::default(),
+            graph_ids: Default::default(),
             conversions: Default::default(),
         };
         graph.insert_unit(UnitName::unitless(), Span::new(CompleteStr("")))
@@ -73,20 +74,28 @@ impl<'a> UnitGraph<'a> {
     ///
     /// If it does exist, this function will return an error
     pub fn insert_unit(&mut self, name: UnitName<'a>, span: Span<'a>) -> Result<(), DuplicateUnit<'a>> {
-        if !self.unit_ids.contains_key(&name) {
-            self.next_id += 1;
+        if self.unit_ids.contains_key(&name) {
+            return Err(DuplicateUnit(name));
         }
 
-        let id = self.next_id - 1;
-        let id = *self.unit_ids.entry(name).or_insert(id);
-        self.unit_symbols.entry(id).or_insert((name, span));
-        //TODO: return error
+
+        let id = self.next_id;
+        self.next_id += 1;
+        assert!(self.unit_ids.insert(name, id).is_none(),
+            "bug: failed to detect duplicate declaration");
+        assert!(self.unit_symbols.insert(id, (name, span)).is_none(),
+            "bug: failed to detect duplicate declaration");
+
+        let node = CanonicalUnit::from(id);
+        let graph_id = self.conversions.add_node(node.clone());
+        assert!(self.graph_ids.insert(node, graph_id).is_none(),
+            "bug: failed to detect duplicate declaration");
 
         Ok(())
     }
 
-    /// Adds the given conversion function to the graph
-    pub fn add_conversion(&mut self, from: UnitExpr, to: UnitExpr, overwrite: bool) -> Result<(), ()> {
+    /// Adds the given conversion ratio to the graph
+    pub fn add_conversion(&mut self, ratio: ConversionRatio) -> Result<(), ()> {
         //TODO: Check if all units in CanonicalUnits are declared and return an Err if not
         unimplemented!()
     }

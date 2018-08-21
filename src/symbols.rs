@@ -17,9 +17,7 @@ pub enum SymType<'a> {
         value: Decimal,
         unit: UnitExpr<'a>,
     },
-    Function {
-        body: ir::Function<'a>,
-    },
+    Function(ir::Function<'a>),
 }
 
 #[derive(Debug, Clone, Default)]
