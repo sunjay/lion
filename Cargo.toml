@@ -8,6 +8,7 @@ rust_decimal = "0.10"
 smallvec = "0.6"
 petgraph = "0.4"
 num-traits = "0.2"
+linefeed = "0.5"
 
 [dependencies.nom]
 version = "4.0.0"

@@ -1,11 +1,15 @@
 extern crate lion;
 extern crate nom;
+extern crate linefeed;
+
+use std::io::Error as IOError;
 
 use nom::{Err::Error, Context::Code};
-use lion::parser::{parse_program, Span};
+use linefeed::{Interface, ReadResult};
+use lion::parser::{parse_program, parse_expr, Span};
 use lion::interpreter::Interpreter;
 
-fn main() {
+fn main() -> Result<(), IOError> {
     let input = include_str!("../../examples/units.lion");
     let program = parse_program(input).unwrap_or_else(|err| match err {
         Error(Code(Span { line, .. }, _)) =>
@@ -15,4 +19,15 @@ fn main() {
 
     let mut interpreter = Interpreter::default();
     interpreter.load_decls(&program).unwrap();
+
+    let reader = Interface::new("lion")?;
+    reader.set_prompt("% ")?;
+
+    while let ReadResult::Input(input) = reader.read_line()? {
+        let input = input.trim();
+        println!("got input {:?}", input);
+        println!("{:#?}", parse_expr(input));
+    }
+
+    Ok(())
 }
