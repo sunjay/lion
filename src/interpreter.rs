@@ -235,7 +235,16 @@ impl<'a> Interpreter<'a> {
             Expr::ConvertTo(expr, target_unit, span) => {
                 let number = self.reduce_const_expr(expr)?;
                 let target_unit = CanonicalUnit::from_unit_expr(target_unit, &self.units)?;
-                self.convert(number, target_unit).map_err(|err| DeclError::ConversionFailed(err, *span))
+                if number.unit.is_unitless() {
+                    Ok(Number {
+                        value: number.value,
+                        unit: target_unit,
+                    })
+                }
+                else {
+                    self.convert(number, target_unit)
+                        .map_err(|err| DeclError::ConversionFailed(err, *span))
+                }
             },
             Expr::Add(_, _, span) | Expr::Sub(_, _, span) | Expr::Mul(_, _, span) |
             Expr::Div(_, _, span) | Expr::Mod(_, _, span) | Expr::Pow(_, _, span) |
@@ -262,23 +271,46 @@ impl<'a> Interpreter<'a> {
             Expr::ConvertTo(expr, target_unit, span) => {
                 let number = self.evaluate_expr(expr)?;
                 let target_unit = CanonicalUnit::from_unit_expr(target_unit, &self.units)?;
-                self.convert(number, target_unit).map_err(|err| EvalError::ConversionFailed(err, *span))?
+                if number.unit.is_unitless() {
+                    Number {
+                        value: number.value,
+                        unit: target_unit,
+                    }
+                }
+                else {
+                    self.convert(number, target_unit)
+                        .map_err(|err| EvalError::ConversionFailed(err, *span))?
+                }
+            },
+            Expr::Add(lhs, rhs, span) => {
+                let lhs = self.evaluate_expr(lhs)?;
+                let rhs = self.convert(self.evaluate_expr(rhs)?, lhs.unit.clone())
+                    .map_err(|err| EvalError::ConversionFailed(err, *span))?;
+                Number {
+                    value: lhs.value + rhs.value,
+                    unit: lhs.unit,
+                }
+            },
+            Expr::Sub(lhs, rhs, span) => {
+                let lhs = self.evaluate_expr(lhs)?;
+                let rhs = self.convert(self.evaluate_expr(rhs)?, lhs.unit.clone())
+                    .map_err(|err| EvalError::ConversionFailed(err, *span))?;
+                Number {
+                    value: lhs.value - rhs.value,
+                    unit: lhs.unit,
+                }
             },
             _ => unimplemented!(),
         })
     }
 
+    /// Attempts to convert the given value to the given unit
+    ///
+    /// Does not automatically promote unitless to the target unit as that is not valid in all cases
     fn convert(&self, value: Number, target_unit: CanonicalUnit) -> Result<Number, ConvertError> {
         if value.unit == target_unit {
             // No conversion necessary
             Ok(value)
-        }
-        // Can convert from unitless to any unit
-        else if value.unit.is_unitless() {
-            Ok(Number {
-                value: value.value,
-                unit: target_unit,
-            })
         }
         else {
             //TODO: Convert
