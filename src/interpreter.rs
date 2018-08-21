@@ -39,7 +39,7 @@ pub enum DeclError<'a> {
         found: UnitExpr<'a>,
         span: Span<'a>,
     },
-    ConversionFailed(ConvertError, Span<'a>),
+    ConversionFailed(ConversionFailed, Span<'a>),
 }
 
 impl<'a> From<canonical::UndeclaredUnit<'a>> for DeclError<'a> {
@@ -63,7 +63,7 @@ pub enum EvalError<'a> {
         found: UnitExpr<'a>,
         span: Span<'a>,
     },
-    ConversionFailed(ConvertError, Span<'a>),
+    ConversionFailed(ConversionFailed, Span<'a>),
 }
 
 impl<'a> From<canonical::UndeclaredUnit<'a>> for EvalError<'a> {
@@ -73,9 +73,10 @@ impl<'a> From<canonical::UndeclaredUnit<'a>> for EvalError<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub enum ConvertError {
+pub struct ConversionFailed {
+    start: CanonicalUnit,
+    end: CanonicalUnit,
 }
-
 
 #[derive(Debug, Clone, Default)]
 pub struct Interpreter<'a> {
@@ -343,14 +344,19 @@ impl<'a> Interpreter<'a> {
     /// Attempts to convert the given value to the given unit
     ///
     /// Does not automatically promote unitless to the target unit as that is not valid in all cases
-    fn convert(&self, value: Number, target_unit: CanonicalUnit) -> Result<Number, ConvertError> {
-        if value.unit == target_unit {
+    fn convert(&self, number: Number, target_unit: CanonicalUnit) -> Result<Number, ConversionFailed> {
+        if number.unit == target_unit {
             // No conversion necessary
-            Ok(value)
+            Ok(number)
         }
         else {
-            //TODO: Convert
-            unimplemented!();
+            let path = self.units.conversion_path(&number.unit, &target_unit)
+                .ok_or_else(|| ConversionFailed {start: number.unit.clone(), end: target_unit.clone()})?;
+            let factor = path.conversion_factor();
+            Ok(Number {
+                value: number.value * factor,
+                unit: target_unit,
+            })
         }
     }
 }
