@@ -25,8 +25,14 @@ fn main() -> Result<(), IOError> {
 
     while let ReadResult::Input(input) = reader.read_line()? {
         let input = input.trim();
-        println!("got input {:?}", input);
-        println!("{:#?}", parse_expr(input));
+        let expr = parse_expr(input).unwrap_or_else(|err| match err {
+            Error(Code(Span { line, .. }, _)) =>
+                panic!("Syntax Error: Line {}: {}", line, input.lines().nth(line as usize).unwrap()),
+            _ => unreachable!(),
+        });
+
+        let result = interpreter.evaluate_expr(&expr);
+        println!("{:?}", result);
     }
 
     Ok(())

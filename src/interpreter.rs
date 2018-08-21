@@ -39,6 +39,7 @@ pub enum DeclError<'a> {
         found: UnitExpr<'a>,
         span: Span<'a>,
     },
+    ConversionFailed(ConvertError, Span<'a>),
 }
 
 impl<'a> From<canonical::UndeclaredUnit<'a>> for DeclError<'a> {
@@ -46,6 +47,35 @@ impl<'a> From<canonical::UndeclaredUnit<'a>> for DeclError<'a> {
         DeclError::UndeclaredUnit {name, span}
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum EvalError<'a> {
+    UndeclaredName {
+        name: Ident<'a>,
+        span: Span<'a>,
+    },
+    UndeclaredUnit {
+        name: UnitName<'a>,
+        span: Span<'a>,
+    },
+    MismatchedUnit {
+        expected: UnitExpr<'a>,
+        found: UnitExpr<'a>,
+        span: Span<'a>,
+    },
+    ConversionFailed(ConvertError, Span<'a>),
+}
+
+impl<'a> From<canonical::UndeclaredUnit<'a>> for EvalError<'a> {
+    fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
+        EvalError::UndeclaredUnit {name, span}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ConvertError {
+}
+
 
 #[derive(Debug, Clone, Default)]
 pub struct Interpreter<'a> {
@@ -202,24 +232,10 @@ impl<'a> Interpreter<'a> {
                 let name = path.first().unwrap();
                 self.symbols.get_const(name).cloned().ok_or_else(|| DeclError::UndeclaredName {name, span})
             },
-            Expr::ConvertTo(expr, target_unit, _) => {
+            Expr::ConvertTo(expr, target_unit, span) => {
                 let number = self.reduce_const_expr(expr)?;
                 let target_unit = CanonicalUnit::from_unit_expr(target_unit, &self.units)?;
-                if number.unit == target_unit {
-                    // No conversion necessary
-                    Ok(number)
-                }
-                // Can convert from unitless to any unit
-                else if number.unit.is_unitless() {
-                    Ok(Number {
-                        value: number.value,
-                        unit: target_unit,
-                    })
-                }
-                else {
-                    //TODO: Convert
-                    unimplemented!();
-                }
+                self.convert(number, target_unit).map_err(|err| DeclError::ConversionFailed(err, *span))
             },
             Expr::Add(_, _, span) | Expr::Sub(_, _, span) | Expr::Mul(_, _, span) |
             Expr::Div(_, _, span) | Expr::Mod(_, _, span) | Expr::Pow(_, _, span) |
@@ -228,6 +244,45 @@ impl<'a> Interpreter<'a> {
                 Err(DeclError::UnsupportedConstExpr {expr: expr.clone(), span: *span})
             },
             Expr::Block(_) => unimplemented!(),
+        }
+    }
+
+    pub fn evaluate_expr(&self, expr: &Expr<'a>) -> Result<Number, EvalError<'a>> {
+        Ok(match expr {
+            &Expr::Number(NumericLiteral {value, span: _}, ref unit) => {
+                let unit = CanonicalUnit::from_unit_expr(unit, &self.units)?;
+                Number {value, unit}
+            },
+            &Expr::Ident(ref path, span) => {
+                if path.len() != 1 { unimplemented!() }
+                let name = path.first().unwrap();
+                //TODO: Allow getting variables defined with `let` in the interpreter
+                self.symbols.get_const(name).cloned().ok_or_else(|| EvalError::UndeclaredName {name, span})?
+            },
+            Expr::ConvertTo(expr, target_unit, span) => {
+                let number = self.evaluate_expr(expr)?;
+                let target_unit = CanonicalUnit::from_unit_expr(target_unit, &self.units)?;
+                self.convert(number, target_unit).map_err(|err| EvalError::ConversionFailed(err, *span))?
+            },
+            _ => unimplemented!(),
+        })
+    }
+
+    fn convert(&self, value: Number, target_unit: CanonicalUnit) -> Result<Number, ConvertError> {
+        if value.unit == target_unit {
+            // No conversion necessary
+            Ok(value)
+        }
+        // Can convert from unitless to any unit
+        else if value.unit.is_unitless() {
+            Ok(Number {
+                value: value.value,
+                unit: target_unit,
+            })
+        }
+        else {
+            //TODO: Convert
+            unimplemented!();
         }
     }
 }
