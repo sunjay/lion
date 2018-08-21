@@ -12,6 +12,21 @@ unit 'rad;
 
 conversion 180 'deg == pi 'rad;
 
+// Time
+
+/// Seconds
+#[prefix(SI)]
+unit 's;
+unit 'min;
+unit 'hours;
+unit 'days;
+unit 'weeks;
+
+conversion 60 's == 1 'min;
+conversion 60 'min == 1 'hours;
+conversion 24 'hours == 1 'days;
+conversion 7 'days == 1 'weeks;
+
 // Length
 
 /// Meters
