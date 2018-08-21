@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rust_decimal::Decimal;
 
 use ast::*;
-use unit_graph::UnitID;
+use ir;
 use canonical::CanonicalUnit;
 
 #[derive(Debug, Clone)]
@@ -16,6 +16,9 @@ pub enum SymType<'a> {
     Constant {
         value: Decimal,
         unit: UnitExpr<'a>,
+    },
+    Function {
+        body: ir::Function<'a>,
     },
 }
 
