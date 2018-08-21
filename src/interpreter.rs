@@ -300,6 +300,22 @@ impl<'a> Interpreter<'a> {
                     unit: lhs.unit,
                 }
             },
+            Expr::Mul(lhs, rhs, _) => {
+                let lhs = self.evaluate_expr(lhs)?;
+                let rhs = self.evaluate_expr(rhs)?;
+                Number {
+                    value: lhs.value * rhs.value,
+                    unit: lhs.unit * rhs.unit,
+                }
+            },
+            Expr::Div(lhs, rhs, _) => {
+                let lhs = self.evaluate_expr(lhs)?;
+                let rhs = self.evaluate_expr(rhs)?;
+                Number {
+                    value: lhs.value / rhs.value,
+                    unit: lhs.unit / rhs.unit,
+                }
+            },
             _ => unimplemented!(),
         })
     }
