@@ -30,6 +30,7 @@ fn main() -> Result<(), IOError> {
                 panic!("Syntax Error: Line {}: {}", line, input.lines().nth(line as usize).unwrap()),
             _ => unreachable!(),
         });
+        reader.add_history_unique(input.to_string());
 
         let result = interpreter.evaluate_expr(&expr);
         println!("{:?}", result);
