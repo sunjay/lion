@@ -18,9 +18,8 @@ pub struct DuplicateUnit<'a>(UnitName<'a>);
 
 #[derive(Debug, Clone)]
 pub struct UnitGraph<'a> {
-    next_id: UnitID,
     unit_ids: HashMap<UnitName<'a>, UnitID>,
-    unit_symbols: HashMap<UnitID, (UnitName<'a>, Span<'a>)>,
+    units: Vec<(UnitName<'a>, Span<'a>)>,
     graph_ids: HashMap<CanonicalUnit, NodeIndex<DefaultIx>>,
     conversions: UnGraph<CanonicalUnit, ConversionRatio>,
 }
@@ -28,9 +27,8 @@ pub struct UnitGraph<'a> {
 impl<'a> Default for UnitGraph<'a> {
     fn default() -> Self {
         let mut graph = UnitGraph {
-            next_id: Default::default(),
             unit_ids: Default::default(),
-            unit_symbols: Default::default(),
+            units: Default::default(),
             graph_ids: Default::default(),
             conversions: Default::default(),
         };
@@ -64,7 +62,7 @@ impl<'a> UnitGraph<'a> {
     ///
     /// Panics if the unit ID was not declared since that should not be possible
     pub fn unit_name(&self, unit: UnitID) -> UnitName<'a> {
-        match self.unit_symbols.get(&unit) {
+        match self.units.get(unit) {
             Some(&(name, _)) => name,
             None => unreachable!("Looked up an ID that did not exist"),
         }
@@ -78,13 +76,10 @@ impl<'a> UnitGraph<'a> {
             return Err(DuplicateUnit(name));
         }
 
-
-        let id = self.next_id;
-        self.next_id += 1;
+        let id = self.unit_ids.len();
         assert!(self.unit_ids.insert(name, id).is_none(),
             "bug: failed to detect duplicate declaration");
-        assert!(self.unit_symbols.insert(id, (name, span)).is_none(),
-            "bug: failed to detect duplicate declaration");
+        self.units.push((name, span));
 
         let node = CanonicalUnit::from(id);
         let graph_id = self.conversions.add_node(node.clone());
