@@ -1,7 +1,7 @@
 use std::fmt;
 use std::borrow::Cow;
 
-use rust_decimal::Decimal;
+use bigdecimal::BigDecimal;
 
 pub use parser::Span;
 
@@ -125,7 +125,7 @@ pub type Ident<'i> = &'i str;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NumericLiteral<'i> {
-    pub value: Decimal,
+    pub value: BigDecimal,
     pub span: Span<'i>,
 }
 

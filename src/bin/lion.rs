@@ -35,7 +35,7 @@ fn main() -> Result<(), IOError> {
 
         match interpreter.evaluate_expr(&expr) {
             Ok(Number {value, unit}) => {
-                print!("{}", value.round_dp(5));
+                print!("{}", value);
                 if !unit.is_unitless() {
                     print!(" ");
                     interpreter.print_unit(&unit);

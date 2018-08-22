@@ -1,6 +1,7 @@
 use std::borrow::Cow;
+use std::str::FromStr;
 
-use rust_decimal::Decimal;
+use bigdecimal::BigDecimal;
 
 use ast::*;
 use ir::{Number, ConversionRatio};
@@ -182,7 +183,7 @@ impl<'a> Interpreter<'a> {
                     &Expr::Number(NumericLiteral {ref value, span: const_span}, ref const_unit) => {
                         // Units must match
                         if CanonicalUnit::from_unit_expr(const_unit, &self.units)? == unit {
-                            *value
+                            value.clone()
                         }
                         else {
                             return Err(DeclError::MismatchedUnit {
@@ -216,11 +217,11 @@ impl<'a> Interpreter<'a> {
                     // Alias means: 1 left_unit == 1 right_unit
                     self.units.add_conversion(ConversionRatio {
                         left: Number {
-                            value: Decimal::from(1),
+                            value: BigDecimal::from(1),
                             unit: left_unit,
                         },
                         right: Number {
-                            value: Decimal::from(1),
+                            value: BigDecimal::from(1),
                             unit: right_unit,
                         },
                     })
@@ -272,26 +273,26 @@ impl<'a> Interpreter<'a> {
 
     fn apply_si_prefix_system(&mut self, unit_name: &UnitName<'a>, span: Span<'a>, tokens: &[Token<'a>]) -> Result<(), DeclError<'a>> {
         let prefixes = [
-            //("Y", Decimal::from_scientific("1e24").unwrap()),
-            //("Z", Decimal::from_scientific("1e21").unwrap()),
-            ("E", Decimal::from_scientific("1e18").unwrap()),
-            ("P", Decimal::from_scientific("1e15").unwrap()),
-            ("T", Decimal::from_scientific("1e12").unwrap()),
-            ("G", Decimal::from_scientific("1e9").unwrap()),
-            ("M", Decimal::from_scientific("1e6").unwrap()),
-            ("k", Decimal::from_scientific("1e3").unwrap()),
-            ("h", Decimal::from_scientific("1e2").unwrap()),
-            ("da", Decimal::from_scientific("1e1").unwrap()),
-            ("d", Decimal::from_scientific("1e-1").unwrap()),
-            ("c", Decimal::from_scientific("1e-2").unwrap()),
-            ("m", Decimal::from_scientific("1e-3").unwrap()),
-            ("u", Decimal::from_scientific("1e-6").unwrap()),
-            ("n", Decimal::from_scientific("1e-9").unwrap()),
-            ("p", Decimal::from_scientific("1e-12").unwrap()),
-            ("f", Decimal::from_scientific("1e-15").unwrap()),
-            ("a", Decimal::from_scientific("1e-18").unwrap()),
-            ("z", Decimal::from_scientific("1e-21").unwrap()),
-            ("y", Decimal::from_scientific("1e-24").unwrap()),
+            ("Y", BigDecimal::from_str("1e24").unwrap()),
+            ("Z", BigDecimal::from_str("1e21").unwrap()),
+            ("E", BigDecimal::from_str("1e18").unwrap()),
+            ("P", BigDecimal::from_str("1e15").unwrap()),
+            ("T", BigDecimal::from_str("1e12").unwrap()),
+            ("G", BigDecimal::from_str("1e9").unwrap()),
+            ("M", BigDecimal::from_str("1e6").unwrap()),
+            ("k", BigDecimal::from_str("1e3").unwrap()),
+            ("h", BigDecimal::from_str("1e2").unwrap()),
+            ("da", BigDecimal::from_str("1e1").unwrap()),
+            ("d", BigDecimal::from_str("1e-1").unwrap()),
+            ("c", BigDecimal::from_str("1e-2").unwrap()),
+            ("m", BigDecimal::from_str("1e-3").unwrap()),
+            ("u", BigDecimal::from_str("1e-6").unwrap()),
+            ("n", BigDecimal::from_str("1e-9").unwrap()),
+            ("p", BigDecimal::from_str("1e-12").unwrap()),
+            ("f", BigDecimal::from_str("1e-15").unwrap()),
+            ("a", BigDecimal::from_str("1e-18").unwrap()),
+            ("z", BigDecimal::from_str("1e-21").unwrap()),
+            ("y", BigDecimal::from_str("1e-24").unwrap()),
         ];
 
         //TODO: Process tokens for more arguments
@@ -299,17 +300,17 @@ impl<'a> Interpreter<'a> {
         let unit_id = self.units.unit_id(unit_name)
             .expect("bug: unit must be declared before prefix system is applied");
         let unit = CanonicalUnit::from(unit_id);
-        for &(prefix, factor) in prefixes.iter() {
+        for &(prefix, ref factor) in prefixes.iter() {
             let prefix_unit_name = UnitName::from(prefix.to_string() + unit_name.as_ref());
             let prefix_unit_id = self.units.insert_unit(prefix_unit_name.clone(), span)
                 .map_err(|_| DeclError::DuplicateUnitDecl {name: prefix_unit_name.clone(), span})?;
             let prefix_unit = CanonicalUnit::from(prefix_unit_id);
             let left = Number {
-                value: factor,
+                value: factor.clone(),
                 unit: unit.clone(),
             };
             let right = Number {
-                value: Decimal::from(1),
+                value: BigDecimal::from(1),
                 unit: prefix_unit,
             };
             self.units.add_conversion(ConversionRatio {left, right});
@@ -320,9 +321,9 @@ impl<'a> Interpreter<'a> {
 
     fn reduce_const_expr(&self, expr: &Expr<'a>) -> Result<Number, DeclError<'a>> {
         match expr {
-            &Expr::Number(NumericLiteral {value, span: _}, ref unit) => {
+            &Expr::Number(NumericLiteral {ref value, span: _}, ref unit) => {
                 let unit = CanonicalUnit::from_unit_expr(unit, &self.units)?;
-                Ok(Number {value, unit})
+                Ok(Number {value: value.clone(), unit})
             },
             &Expr::Ident(ref path, span) => {
                 if path.len() != 1 { unimplemented!() }
@@ -355,9 +356,9 @@ impl<'a> Interpreter<'a> {
 
     pub fn evaluate_expr(&self, expr: &Expr<'a>) -> Result<Number, EvalError<'a>> {
         Ok(match expr {
-            &Expr::Number(NumericLiteral {value, span: _}, ref unit) => {
+            &Expr::Number(NumericLiteral {ref value, span: _}, ref unit) => {
                 let unit = CanonicalUnit::from_unit_expr(unit, &self.units)?;
-                Number {value, unit}
+                Number {value: value.clone(), unit}
             },
             &Expr::Ident(ref path, span) => {
                 if path.len() != 1 { unimplemented!() }

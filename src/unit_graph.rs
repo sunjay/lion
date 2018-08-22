@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque, HashSet};
 
 use nom::types::CompleteStr;
 use petgraph::graph::{UnGraph, NodeIndex, DefaultIx};
-use rust_decimal::Decimal;
+use bigdecimal::BigDecimal;
 
 use canonical::CanonicalUnit;
 use ast::*;
@@ -26,8 +26,8 @@ pub struct ConversionPath {
 
 impl ConversionPath {
     /// Reduces the path into the factor that transforms start to end
-    pub fn conversion_factor(self) -> Decimal {
-        let mut factor = Decimal::from(1);
+    pub fn conversion_factor(self) -> BigDecimal {
+        let mut factor = BigDecimal::from(1);
 
         let mut current = self.start;
         for ratio in self.ratio_path {
@@ -191,8 +191,8 @@ mod tests {
         let units = UnitGraph::default();
         // Test to make sure that if we lookup unitless from elsewhere in the AST we get the same
         // value back as calling units.unitless()
-        assert_eq!(units.unitless(), units.unit_id(UnitName::unitless()).unwrap());
+        assert_eq!(units.unitless(), units.unit_id(&UnitName::unitless()).unwrap());
         // Check that the unit name of the return value of units.unitless() is unitless
-        assert_eq!(units.unit_name(units.unitless()), UnitName::unitless());
+        assert_eq!(units.unit_name(units.unitless()), &UnitName::unitless());
     }
 }

@@ -7,7 +7,7 @@ extern crate nom_locate;
 #[macro_use]
 extern crate smallvec;
 extern crate num_traits;
-extern crate rust_decimal;
+extern crate bigdecimal;
 extern crate petgraph;
 
 #[cfg(test)]

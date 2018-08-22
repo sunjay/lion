@@ -1,6 +1,6 @@
 //! Intermediate representation for type checked items
 
-use rust_decimal::Decimal;
+use bigdecimal::BigDecimal;
 use canonical::CanonicalUnit;
 
 use ast;
@@ -28,6 +28,6 @@ pub struct ConversionRatio {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Number {
-    pub value: Decimal,
+    pub value: BigDecimal,
     pub unit: CanonicalUnit,
 }
