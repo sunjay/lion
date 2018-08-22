@@ -26,6 +26,13 @@ pub enum DeclError<'a> {
         name: Ident<'a>,
         span: Span<'a>,
     },
+    PrefixSystemSyntaxError {
+        span: Span<'a>,
+    },
+    UnknownPrefixSystem {
+        name: Ident<'a>,
+        span: Span<'a>,
+    },
     DuplicateConst {
         name: Ident<'a>,
         span: Span<'a>,
@@ -148,19 +155,17 @@ impl<'a> Interpreter<'a> {
     /// Load declared units into the global unit graph of the interpreter
     fn load_unit_decls(&mut self, program: &Program<'a>) -> Result<(), DeclError<'a>> {
         for decl in &program.decls {
-            if let &Decl::UnitDecl(UnitDecl {ref attrs, unit_name, span, ..}) = decl {
-                //TODO: insert the unit into the unit graph and add the single conversion from
-                //unitless to the unit
+            if let &Decl::UnitDecl(UnitDecl {ref attrs, ref unit_name, span, ..}) = decl {
+                // Must be inserted before prefix system attributes are computed
+                self.units.insert_unit(unit_name.clone(), span)
+                    .map_err(|_| DeclError::DuplicateUnitDecl {name: unit_name.clone(), span})?;
 
-                for &Attribute {name, tokens: _, span} in attrs {
+                for &Attribute {name, ref tokens, span} in attrs {
                     match name {
-                        "prefix" => {}, //TODO
+                        "prefix" => self.apply_prefix_system(unit_name, span, tokens)?,
                         _ => return Err(DeclError::UnknownAttribute {name, span}),
                     }
                 }
-
-                self.units.insert_unit(unit_name, span)
-                    .map_err(|_| DeclError::DuplicateUnitDecl {name: unit_name, span})?;
             }
         }
         Ok(())
@@ -203,7 +208,7 @@ impl<'a> Interpreter<'a> {
             match decl {
                 // Aliases need to be processed later when all the units have already been walked
                 Decl::UnitDecl(UnitDecl {unit_name, alias_for: Some(alias), ..}) => {
-                    let unit_id = self.units.unit_id(*unit_name)
+                    let unit_id = self.units.unit_id(unit_name)
                         .expect("bug: unit should have already been declared");
                     let left_unit = CanonicalUnit::from(unit_id);
                     let right_unit = CanonicalUnit::from_unit_expr(alias, &self.units)?;
@@ -239,6 +244,77 @@ impl<'a> Interpreter<'a> {
                 unimplemented!();
             }
         }
+        Ok(())
+    }
+
+    fn apply_prefix_system(&mut self, unit_name: &UnitName<'a>, span: Span<'a>, tokens: &[Token<'a>]) -> Result<(), DeclError<'a>> {
+        if tokens.len() != 1 {
+            return Err(DeclError::PrefixSystemSyntaxError {span});
+        }
+
+        match tokens[0] {
+            Token::Parens(ref tokens) if tokens.len() >= 1 => match tokens[0] {
+                Token::Expr(Expr::Ident(ref path, span)) => if path.len() == 1 {
+                    match path[0] {
+                        "SI" => self.apply_si_prefix_system(unit_name, span, &tokens[1..])?,
+                        name => return Err(DeclError::UnknownPrefixSystem {name, span}),
+                    }
+                } else {
+                    return Err(DeclError::PrefixSystemSyntaxError {span});
+                },
+                _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
+            },
+            _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
+        }
+
+        Ok(())
+    }
+
+    fn apply_si_prefix_system(&mut self, unit_name: &UnitName<'a>, span: Span<'a>, tokens: &[Token<'a>]) -> Result<(), DeclError<'a>> {
+        let prefixes = [
+            //("Y", Decimal::from_scientific("1e24").unwrap()),
+            //("Z", Decimal::from_scientific("1e21").unwrap()),
+            ("E", Decimal::from_scientific("1e18").unwrap()),
+            ("P", Decimal::from_scientific("1e15").unwrap()),
+            ("T", Decimal::from_scientific("1e12").unwrap()),
+            ("G", Decimal::from_scientific("1e9").unwrap()),
+            ("M", Decimal::from_scientific("1e6").unwrap()),
+            ("k", Decimal::from_scientific("1e3").unwrap()),
+            ("h", Decimal::from_scientific("1e2").unwrap()),
+            ("da", Decimal::from_scientific("1e1").unwrap()),
+            ("d", Decimal::from_scientific("1e-1").unwrap()),
+            ("c", Decimal::from_scientific("1e-2").unwrap()),
+            ("m", Decimal::from_scientific("1e-3").unwrap()),
+            ("u", Decimal::from_scientific("1e-6").unwrap()),
+            ("n", Decimal::from_scientific("1e-9").unwrap()),
+            ("p", Decimal::from_scientific("1e-12").unwrap()),
+            ("f", Decimal::from_scientific("1e-15").unwrap()),
+            ("a", Decimal::from_scientific("1e-18").unwrap()),
+            ("z", Decimal::from_scientific("1e-21").unwrap()),
+            ("y", Decimal::from_scientific("1e-24").unwrap()),
+        ];
+
+        //TODO: Process tokens for more arguments
+
+        let unit_id = self.units.unit_id(unit_name)
+            .expect("bug: unit must be declared before prefix system is applied");
+        let unit = CanonicalUnit::from(unit_id);
+        for &(prefix, factor) in prefixes.iter() {
+            let prefix_unit_name = UnitName::from(prefix.to_string() + unit_name.as_ref());
+            let prefix_unit_id = self.units.insert_unit(prefix_unit_name.clone(), span)
+                .map_err(|_| DeclError::DuplicateUnitDecl {name: prefix_unit_name.clone(), span})?;
+            let prefix_unit = CanonicalUnit::from(prefix_unit_id);
+            let left = Number {
+                value: factor,
+                unit: unit.clone(),
+            };
+            let right = Number {
+                value: Decimal::from(1),
+                unit: prefix_unit,
+            };
+            self.units.add_conversion(ConversionRatio {left, right});
+        }
+
         Ok(())
     }
 

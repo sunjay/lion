@@ -76,7 +76,7 @@ impl<'a> UnitGraph<'a> {
     ///
     /// In lion programs, this is denoted '_
     pub fn unitless(&self) -> UnitID {
-        self.unit_id(UnitName::unitless())
+        self.unit_id(&UnitName::unitless())
             .unwrap_or_else(|_| unreachable!("bug: '_ was not defined"))
     }
 
@@ -84,8 +84,8 @@ impl<'a> UnitGraph<'a> {
     /// Returns an Err if the name was not already a defined unit
     ///
     /// **Note:** name must be given without "'", i.e. to lookup 'foo, use unit_id("foo")
-    pub fn unit_id(&self, name: UnitName<'a>) -> Result<UnitID, UndeclaredUnit> {
-        self.unit_ids.get(&name).map(|id| *id).ok_or_else(|| UndeclaredUnit(name))
+    pub fn unit_id(&self, name: &UnitName<'a>) -> Result<UnitID, UndeclaredUnit> {
+        self.unit_ids.get(name).cloned().ok_or_else(|| UndeclaredUnit(name.clone()))
     }
 
     /// Returns the unit name for the given unit ID
@@ -93,9 +93,9 @@ impl<'a> UnitGraph<'a> {
     /// # Panics
     ///
     /// Panics if the unit ID was not declared since that should not be possible
-    pub fn unit_name(&self, unit: UnitID) -> UnitName<'a> {
+    pub fn unit_name(&self, unit: UnitID) -> &UnitName<'a> {
         match self.units.get(unit) {
-            Some(&(name, _)) => name,
+            Some(&(ref name, _)) => name,
             None => unreachable!("Looked up an ID that did not exist"),
         }
     }
@@ -103,13 +103,13 @@ impl<'a> UnitGraph<'a> {
     /// Creates the given unit if it does not exist yet
     ///
     /// If it does exist, this function will return an error
-    pub fn insert_unit(&mut self, name: UnitName<'a>, span: Span<'a>) -> Result<(), DuplicateUnit<'a>> {
+    pub fn insert_unit(&mut self, name: UnitName<'a>, span: Span<'a>) -> Result<UnitID, DuplicateUnit<'a>> {
         if self.unit_ids.contains_key(&name) {
             return Err(DuplicateUnit(name));
         }
 
         let id = self.unit_ids.len();
-        assert!(self.unit_ids.insert(name, id).is_none(),
+        assert!(self.unit_ids.insert(name.clone(), id).is_none(),
             "bug: failed to detect duplicate declaration");
         self.units.push((name, span));
 
@@ -118,7 +118,7 @@ impl<'a> UnitGraph<'a> {
         assert!(self.graph_ids.insert(node, graph_id).is_none(),
             "bug: failed to detect duplicate declaration");
 
-        Ok(())
+        Ok(id)
     }
 
     /// Adds the given conversion ratio to the graph

@@ -74,9 +74,9 @@ impl CanonicalUnit {
         //TODO: Make sure unit is sorted
         Ok(match expr {
             Unit(name, _) if name.is_unitless() => CanonicalUnit::unitless(),
-            &Unit(name, span) => units.unit_id(name).map(Self::from).map_err(|_| UndeclaredUnit {
-                name,
-                span,
+            Unit(name, span) => units.unit_id(name).map(Self::from).map_err(|_| UndeclaredUnit {
+                name: name.clone(),
+                span: span.clone(),
             })?,
             Mul(lhs, rhs, _) => {
                 let lhs = CanonicalUnit::from_unit_expr(lhs, units)?;
@@ -102,7 +102,7 @@ impl CanonicalUnit {
     }
 
     /// Iterator over the unit names and exponents
-    pub fn iter_unit_names<'a>(&'a self, units: &'a UnitGraph<'a>) -> impl Iterator<Item=(UnitName<'a>, i64)> {
+    pub fn iter_unit_names<'a>(&'a self, units: &'a UnitGraph<'a>) -> impl Iterator<Item=(&UnitName<'a>, i64)> {
         self.0.iter().map(move |&(id, exp)| (units.unit_name(id), exp))
     }
 }

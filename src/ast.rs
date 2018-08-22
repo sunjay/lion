@@ -1,4 +1,5 @@
 use std::fmt;
+use std::borrow::Cow;
 
 use rust_decimal::Decimal;
 
@@ -139,14 +140,31 @@ pub enum UnitExpr<'i> {
 
 // If the quantity is unitless, then we return None
 // Unitless is represented in the syntax as '_
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct UnitName<'i>(Option<&'i str>);
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UnitName<'i>(Option<Cow<'i, str>>);
 
 impl<'i> From<&'i str> for UnitName<'i> {
     fn from(name: &'i str) -> Self {
         assert!(!name.is_empty(), "unit name cannot be empty");
         assert_ne!(name, "_", "bug: to get '_, use UnitName::unitless()");
-        UnitName(Some(name))
+        UnitName(Some(Cow::from(name)))
+    }
+}
+
+impl<'i> From<String> for UnitName<'i> {
+    fn from(name: String) -> Self {
+        assert!(!name.is_empty(), "unit name cannot be empty");
+        assert_ne!(name, "_", "bug: to get '_, use UnitName::unitless()");
+        UnitName(Some(Cow::from(name)))
+    }
+}
+
+impl<'i> AsRef<str> for UnitName<'i> {
+    fn as_ref(&self) -> &str {
+        match self.0 {
+            Some(ref name) => name,
+            None => unreachable!(),
+        }
     }
 }
 
@@ -154,7 +172,7 @@ impl<'i> fmt::Display for UnitName<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "'{}", match self.0 {
             None => "_",
-            Some(name) => name,
+            Some(ref name) => name,
         })
     }
 }
