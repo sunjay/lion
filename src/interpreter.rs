@@ -2,12 +2,36 @@ use std::borrow::Cow;
 use std::str::FromStr;
 
 use bigdecimal::BigDecimal;
+use num_traits::ToPrimitive;
 
 use ast::*;
 use ir::{Number, ConversionRatio};
 use unit_graph::UnitGraph;
 use symbols::SymbolTable;
 use canonical::{self, CanonicalUnit};
+
+#[derive(Debug, Clone)]
+pub enum ConstExprError<'a> {
+    UndeclaredName {
+        name: Ident<'a>,
+        span: Span<'a>,
+    },
+    UndeclaredUnit {
+        name: UnitName<'a>,
+        span: Span<'a>,
+    },
+    UnsupportedConstExpr {
+        expr: Expr<'a>,
+        span: Span<'a>,
+    },
+    ConversionFailed(ConversionFailed, Span<'a>),
+}
+
+impl<'a> From<canonical::UndeclaredUnit<'a>> for ConstExprError<'a> {
+    fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
+        ConstExprError::UndeclaredUnit {name, span}
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum DeclError<'a> {
@@ -42,21 +66,24 @@ pub enum DeclError<'a> {
         name: Ident<'a>,
         span: Span<'a>,
     },
-    UnsupportedConstExpr {
-        expr: Expr<'a>,
-        span: Span<'a>,
-    },
     MismatchedUnit {
         expected: UnitExpr<'a>,
-        found: UnitExpr<'a>,
+        found: CanonicalUnit,
         span: Span<'a>,
     },
     ConversionFailed(ConversionFailed, Span<'a>),
+    ConstExprError(ConstExprError<'a>),
 }
 
 impl<'a> From<canonical::UndeclaredUnit<'a>> for DeclError<'a> {
     fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
         DeclError::UndeclaredUnit {name, span}
+    }
+}
+
+impl<'a> From<ConstExprError<'a>> for DeclError<'a> {
+    fn from(err: ConstExprError<'a>) -> Self {
+        DeclError::ConstExprError(err)
     }
 }
 
@@ -76,7 +103,17 @@ pub enum EvalError<'a> {
         span: Span<'a>,
     },
     ConversionFailed(ConversionFailed, Span<'a>),
+    ConstExprError(ConstExprError<'a>),
     DivideByZero {
+        span: Span<'a>,
+    },
+    ExponentMustBeUnitless {
+        found: CanonicalUnit,
+        span: Span<'a>,
+    },
+    /// Exponents must be unitless integer const expressions
+    UnsupportedExponent {
+        value: Number,
         span: Span<'a>,
     },
 }
@@ -84,6 +121,12 @@ pub enum EvalError<'a> {
 impl<'a> From<canonical::UndeclaredUnit<'a>> for EvalError<'a> {
     fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
         EvalError::UndeclaredUnit {name, span}
+    }
+}
+
+impl<'a> From<ConstExprError<'a>> for EvalError<'a> {
+    fn from(err: ConstExprError<'a>) -> Self {
+        EvalError::ConstExprError(err)
     }
 }
 
@@ -285,24 +328,17 @@ impl<'a> Interpreter<'a> {
             //TODO: const fn declarations will be processed and unit checked here eventually
 
             if let &Decl::Constant(Constant {name, unit: ref unit_expr, ref value, span}) = decl {
-                let unit = CanonicalUnit::from_unit_expr(unit_expr, &self.units)?;
-                let value = match value {
-                    &Expr::Number(NumericLiteral {ref value, span: const_span}, ref const_unit) => {
-                        // Units must match
-                        if CanonicalUnit::from_unit_expr(const_unit, &self.units)? == unit {
-                            value.clone()
-                        }
-                        else {
-                            return Err(DeclError::MismatchedUnit {
-                                expected: unit_expr.clone(),
-                                found: const_unit.clone(),
-                                span: const_span,
-                            })
-                        }
-                    },
-                    _ => return Err(DeclError::UnsupportedConstExpr {expr: value.clone(), span}),
-                };
-                self.symbols.insert_const(name, value, unit, span).map_err(|_| {
+                let target_unit = CanonicalUnit::from_unit_expr(unit_expr, &self.units)?;
+                let value = self.reduce_const_expr(value)?;
+                if value.unit != target_unit {
+                    return Err(DeclError::MismatchedUnit {
+                        expected: unit_expr.clone(),
+                        found: value.unit,
+                        span,
+                    });
+                }
+
+                self.symbols.insert_const(name, value, span).map_err(|_| {
                     DeclError::DuplicateConst {name, span}
                 })?;
             }
@@ -437,7 +473,7 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn reduce_const_expr(&self, expr: &Expr<'a>) -> Result<Number, DeclError<'a>> {
+    fn reduce_const_expr(&self, expr: &Expr<'a>) -> Result<Number, ConstExprError<'a>> {
         match expr {
             &Expr::Number(NumericLiteral {ref value, span: _}, ref unit) => {
                 let unit = CanonicalUnit::from_unit_expr(unit, &self.units)?;
@@ -446,7 +482,7 @@ impl<'a> Interpreter<'a> {
             &Expr::Ident(ref path, span) => {
                 if path.len() != 1 { unimplemented!() }
                 let name = path.first().unwrap();
-                self.symbols.get_const(name).cloned().ok_or_else(|| DeclError::UndeclaredName {name, span})
+                self.symbols.get_const(name).cloned().ok_or_else(|| ConstExprError::UndeclaredName {name, span})
             },
             Expr::ConvertTo(expr, target_unit, span) => {
                 let number = self.reduce_const_expr(expr)?;
@@ -459,7 +495,7 @@ impl<'a> Interpreter<'a> {
                 }
                 else {
                     self.convert(number, target_unit)
-                        .map_err(|err| DeclError::ConversionFailed(err, *span))
+                        .map_err(|err| ConstExprError::ConversionFailed(err, *span))
                 }
             },
             Expr::Add(_, _, span) | Expr::Sub(_, _, span) | Expr::Mul(_, _, span) |
@@ -468,7 +504,7 @@ impl<'a> Interpreter<'a> {
             Expr::Div(_, _, span) | Expr::Mod(_, _, span) | Expr::Pow(_, _, span) |
             Expr::Call(_, _, span) | Expr::MacroCall(MacroInvoke {span, ..}) |
             Expr::Return(_, span) | Expr::UnitValue(span) => {
-                Err(DeclError::UnsupportedConstExpr {expr: expr.clone(), span: *span})
+                Err(ConstExprError::UnsupportedConstExpr {expr: expr.clone(), span: *span})
             },
             Expr::Block(_) => unimplemented!(),
         }
@@ -546,6 +582,47 @@ impl<'a> Interpreter<'a> {
                 //TODO: Figure out how units are going to work for remainder operator
                 //TODO: catch remainder by zero when we support remainder (EvalError::ModuloByZero)
                 unimplemented!();
+            },
+            Expr::Pow(lhs, rhs, span) => {
+                let lhs = self.evaluate_expr(lhs)?;
+                // Since all units must be known statically at compile time, the rhs must be
+                // a constexpr that evaluates to a unitless integer
+                let rhs = self.reduce_const_expr(rhs)?;
+                if !rhs.unit.is_unitless() {
+                    return Err(EvalError::ExponentMustBeUnitless {found: rhs.unit, span: *span});
+                }
+
+                let exponent = rhs.value.to_i64()
+                    .ok_or_else(|| EvalError::UnsupportedExponent {value: rhs.clone(), span: *span})?;
+                if BigDecimal::from(exponent) != rhs.value {
+                    return Err(EvalError::UnsupportedExponent {value: rhs, span: *span});
+                }
+
+                match exponent {
+                    // Anything to the power of zero is 1 '_
+                    0 => Number {
+                        value: BigDecimal::from(1),
+                        unit: CanonicalUnit::unitless(),
+                    },
+                    // Anything to the power of 1 is itself
+                    1 => lhs,
+                    2 => Number {
+                        value: lhs.value.square(),
+                        unit: lhs.unit^2,
+                    },
+                    3 => Number {
+                        value: lhs.value.cube(),
+                        unit: lhs.unit^3,
+                    },
+                    // BigDecimal doesn't support pow, so we're calculating it imprecisely until
+                    // supported: https://github.com/akubera/bigdecimal-rs/issues/45
+                    _ => Number {
+                        value: BigDecimal::from(
+                            lhs.value.to_f64().expect("cannot represent with f64").powi(exponent as i32)
+                        ),
+                        unit: lhs.unit^exponent,
+                    },
+                }
             },
             _ => unimplemented!(),
         })

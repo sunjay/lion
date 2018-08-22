@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
-use bigdecimal::BigDecimal;
-
 use ast::{Ident, Span};
 use ir::{Number, Function};
-use canonical::CanonicalUnit;
 
 pub struct DuplicateSymbol<'a>(pub Ident<'a>);
 
@@ -33,12 +30,12 @@ impl<'a> SymbolTable<'a> {
         }).or(None)
     }
 
-    pub fn insert_const(&mut self, name: Ident<'a>, value: BigDecimal, unit: CanonicalUnit, span: Span<'a>) -> Result<(), DuplicateSymbol> {
+    pub fn insert_const(&mut self, name: Ident<'a>, value: Number, span: Span<'a>) -> Result<(), DuplicateSymbol> {
         if self.table.contains_key(&name) {
             return Err(DuplicateSymbol(name));
         }
 
-        self.table.insert(name, SymType::Constant {value: Number {value, unit}, span});
+        self.table.insert(name, SymType::Constant {value, span});
         Ok(())
     }
 
