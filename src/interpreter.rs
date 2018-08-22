@@ -464,6 +464,7 @@ impl<'a> Interpreter<'a> {
             },
             Expr::Add(_, _, span) | Expr::Sub(_, _, span) | Expr::Mul(_, _, span) |
             //TODO: catch divisions by zero when we support division
+            //TODO: catch remainder by zero when we support remainder
             Expr::Div(_, _, span) | Expr::Mod(_, _, span) | Expr::Pow(_, _, span) |
             Expr::Call(_, _, span) | Expr::MacroCall(MacroInvoke {span, ..}) |
             Expr::Return(_, span) | Expr::UnitValue(span) => {
@@ -540,6 +541,11 @@ impl<'a> Interpreter<'a> {
                     value: lhs.value / rhs.value,
                     unit: lhs.unit / rhs.unit,
                 }
+            },
+            Expr::Mod(..) => {
+                //TODO: Figure out how units are going to work for remainder operator
+                //TODO: catch remainder by zero when we support remainder (EvalError::ModuloByZero)
+                unimplemented!();
             },
             _ => unimplemented!(),
         })
