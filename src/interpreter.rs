@@ -76,6 +76,9 @@ pub enum EvalError<'a> {
         span: Span<'a>,
     },
     ConversionFailed(ConversionFailed, Span<'a>),
+    DivideByZero {
+        span: Span<'a>,
+    },
 }
 
 impl<'a> From<canonical::UndeclaredUnit<'a>> for EvalError<'a> {
@@ -460,6 +463,7 @@ impl<'a> Interpreter<'a> {
                 }
             },
             Expr::Add(_, _, span) | Expr::Sub(_, _, span) | Expr::Mul(_, _, span) |
+            //TODO: catch divisions by zero when we support division
             Expr::Div(_, _, span) | Expr::Mod(_, _, span) | Expr::Pow(_, _, span) |
             Expr::Call(_, _, span) | Expr::MacroCall(MacroInvoke {span, ..}) |
             Expr::Return(_, span) | Expr::UnitValue(span) => {
@@ -523,11 +527,15 @@ impl<'a> Interpreter<'a> {
                     unit: lhs.unit * rhs.unit,
                 }
             },
-            Expr::Div(lhs, rhs, _) => {
+            Expr::Div(lhs, rhs, span) => {
                 let lhs = self.evaluate_expr(lhs)?;
                 let rhs = self.evaluate_expr(rhs)?;
                 // Attempt to convert if possible, but otherwise just leave it
                 let rhs = self.convert(rhs.clone(), lhs.unit.clone()).unwrap_or_else(|_| rhs);
+                if rhs.value == BigDecimal::from(0) {
+                    return Err(EvalError::DivideByZero {span: *span});
+                }
+
                 Number {
                     value: lhs.value / rhs.value,
                     unit: lhs.unit / rhs.unit,
