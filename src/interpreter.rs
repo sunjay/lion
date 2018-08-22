@@ -383,7 +383,6 @@ impl<'a> Interpreter<'a> {
             Some(Token::Comma) if tokens.len() > 1 => PrefixSystemArgs::from_tokens(&tokens[1..], span)?,
             _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
         };
-        println!("{:?}", args);
         let prefixes = [
             ("Y", "yotta", BigDecimal::from_str("1e24").unwrap()),
             ("Z", "zetta", BigDecimal::from_str("1e21").unwrap()),
