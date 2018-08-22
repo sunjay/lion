@@ -398,6 +398,8 @@ impl<'a> Interpreter<'a> {
             ("c", "centi", BigDecimal::from_str("1e-2").unwrap()),
             ("m", "milli", BigDecimal::from_str("1e-3").unwrap()),
             ("u", "micro", BigDecimal::from_str("1e-6").unwrap()),
+            // greek letter "mu"
+            ("\u{03BC}", "\u{03BC}", BigDecimal::from_str("1e-6").unwrap()),
             ("n", "nano", BigDecimal::from_str("1e-9").unwrap()),
             ("p", "pico", BigDecimal::from_str("1e-12").unwrap()),
             ("f", "femto", BigDecimal::from_str("1e-15").unwrap()),
