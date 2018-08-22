@@ -30,6 +30,10 @@ pub enum DeclError<'a> {
     PrefixSystemSyntaxError {
         span: Span<'a>,
     },
+    PrefixSystemUnknownTransform {
+        transform: Ident<'a>,
+        span: Span<'a>,
+    },
     UnknownPrefixSystem {
         name: Ident<'a>,
         span: Span<'a>,
@@ -84,6 +88,106 @@ impl<'a> From<canonical::UndeclaredUnit<'a>> for EvalError<'a> {
 pub struct ConversionFailed {
     start: CanonicalUnit,
     end: CanonicalUnit,
+}
+
+#[derive(Debug, Default)]
+struct PrefixSystemArgs {
+    lowercase: bool,
+    longprefix: bool,
+}
+
+impl PrefixSystemArgs {
+    pub fn from_tokens<'a>(mut tokens: &[Token<'a>], span: Span<'a>) -> Result<Self, DeclError<'a>> {
+        let mut args = PrefixSystemArgs::default();
+
+        loop {
+            tokens = args.expect_single_arg(tokens, span)?;
+            // Reached the end of the arguments
+            if tokens.is_empty() {
+                break;
+            }
+            // Must have at least one comma plus something else (i.e. no trailing comma allowed)
+            else if tokens.len() > 1 {
+                match tokens[0] {
+                    Token::Comma  => {},
+                    _ => return Err(DeclError::PrefixSystemSyntaxError {span})
+                }
+                tokens = &tokens[1..];
+            }
+            else {
+                return Err(DeclError::PrefixSystemSyntaxError {span});
+            }
+        }
+        Ok(args)
+    }
+
+    // Extracts a single argument and returns the remaining tokens
+    fn expect_single_arg<'a, 'b>(&mut self, tokens: &'b [Token<'a>], span: Span<'a>) -> Result<&'b [Token<'a>], DeclError<'a>> {
+        // Must at least have "ARG_NAME" "=" "VALUE"
+        if tokens.len() < 3 {
+            return Err(DeclError::PrefixSystemSyntaxError {span})
+        }
+        let arg_name = match tokens[0] {
+            Token::Expr(Expr::Ident(ref path, _)) if path.len() == 1 => path[0],
+            _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
+        };
+
+        match tokens[1] {
+            Token::Becomes => {}, // GOOD
+            _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
+        }
+
+        let value = &tokens[2];
+
+        match arg_name {
+            "transform" => self.collect_transforms(value, span)?,
+            _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
+        }
+
+        Ok(&tokens[3..])
+    }
+
+    fn collect_transforms<'a>(&mut self, value: &Token<'a>, span: Span<'a>) -> Result<(), DeclError<'a>> {
+        if let Token::Brackets(tokens) = value {
+            let mut tokens = &tokens[..];
+            while !tokens.is_empty() {
+                let (transform, span) = match tokens[0] {
+                    Token::Expr(Expr::Ident(ref path, span)) if path.len() == 1 => (path[0], span),
+                    _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
+                };
+
+                match transform {
+                    "lowercase" => self.lowercase = true,
+                    "longprefix" => self.longprefix = true,
+                    _ => return Err(DeclError::PrefixSystemUnknownTransform {transform, span}),
+                }
+
+                // If there is anything left now, we expect a comma AND something else after it
+                // (i.e. no trailing comma)
+                match tokens.len() {
+                    // must be at least one because we got to this point
+                    0 => unreachable!(),
+                    // at the end
+                    1 => tokens = &tokens[1..],
+                    // must be a trailing comma or some other problem
+                    2 => return Err(DeclError::PrefixSystemSyntaxError {span}),
+                    // must be a comma followed by some more stuff
+                    _ => {
+                        match tokens[1] {
+                            Token::Comma => {},
+                            _ => return Err(DeclError::PrefixSystemSyntaxError {span})
+                        }
+                        tokens = &tokens[2..];
+                    }
+                }
+            }
+
+            Ok(())
+        }
+        else {
+            Err(DeclError::PrefixSystemSyntaxError {span})
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -272,35 +376,45 @@ impl<'a> Interpreter<'a> {
     }
 
     fn apply_si_prefix_system(&mut self, unit_name: &UnitName<'a>, span: Span<'a>, tokens: &[Token<'a>]) -> Result<(), DeclError<'a>> {
+        let args = match tokens.get(0) {
+            None => PrefixSystemArgs::default(),
+            // If we have more tokens after the prefix system name, there must be a comma followed
+            // by at least one other thing (i.e. trailing comma is not allowed here)
+            Some(Token::Comma) if tokens.len() > 1 => PrefixSystemArgs::from_tokens(&tokens[1..], span)?,
+            _ => return Err(DeclError::PrefixSystemSyntaxError {span}),
+        };
+        println!("{:?}", args);
         let prefixes = [
-            ("Y", BigDecimal::from_str("1e24").unwrap()),
-            ("Z", BigDecimal::from_str("1e21").unwrap()),
-            ("E", BigDecimal::from_str("1e18").unwrap()),
-            ("P", BigDecimal::from_str("1e15").unwrap()),
-            ("T", BigDecimal::from_str("1e12").unwrap()),
-            ("G", BigDecimal::from_str("1e9").unwrap()),
-            ("M", BigDecimal::from_str("1e6").unwrap()),
-            ("k", BigDecimal::from_str("1e3").unwrap()),
-            ("h", BigDecimal::from_str("1e2").unwrap()),
-            ("da", BigDecimal::from_str("1e1").unwrap()),
-            ("d", BigDecimal::from_str("1e-1").unwrap()),
-            ("c", BigDecimal::from_str("1e-2").unwrap()),
-            ("m", BigDecimal::from_str("1e-3").unwrap()),
-            ("u", BigDecimal::from_str("1e-6").unwrap()),
-            ("n", BigDecimal::from_str("1e-9").unwrap()),
-            ("p", BigDecimal::from_str("1e-12").unwrap()),
-            ("f", BigDecimal::from_str("1e-15").unwrap()),
-            ("a", BigDecimal::from_str("1e-18").unwrap()),
-            ("z", BigDecimal::from_str("1e-21").unwrap()),
-            ("y", BigDecimal::from_str("1e-24").unwrap()),
+            ("Y", "yotta", BigDecimal::from_str("1e24").unwrap()),
+            ("Z", "zetta", BigDecimal::from_str("1e21").unwrap()),
+            ("E", "exa", BigDecimal::from_str("1e18").unwrap()),
+            ("P", "peta", BigDecimal::from_str("1e15").unwrap()),
+            ("T", "tera", BigDecimal::from_str("1e12").unwrap()),
+            ("G", "giga", BigDecimal::from_str("1e9").unwrap()),
+            ("M", "mega", BigDecimal::from_str("1e6").unwrap()),
+            ("k", "kilo", BigDecimal::from_str("1e3").unwrap()),
+            ("h", "hecto", BigDecimal::from_str("1e2").unwrap()),
+            ("da", "deca", BigDecimal::from_str("1e1").unwrap()),
+            ("d", "deci", BigDecimal::from_str("1e-1").unwrap()),
+            ("c", "centi", BigDecimal::from_str("1e-2").unwrap()),
+            ("m", "milli", BigDecimal::from_str("1e-3").unwrap()),
+            ("u", "micro", BigDecimal::from_str("1e-6").unwrap()),
+            ("n", "nano", BigDecimal::from_str("1e-9").unwrap()),
+            ("p", "pico", BigDecimal::from_str("1e-12").unwrap()),
+            ("f", "femto", BigDecimal::from_str("1e-15").unwrap()),
+            ("a", "atto", BigDecimal::from_str("1e-18").unwrap()),
+            ("z", "zepto", BigDecimal::from_str("1e-21").unwrap()),
+            ("y", "yocto", BigDecimal::from_str("1e-24").unwrap()),
         ];
-
-        //TODO: Process tokens for more arguments
 
         let unit_id = self.units.unit_id(unit_name)
             .expect("bug: unit must be declared before prefix system is applied");
         let unit = CanonicalUnit::from(unit_id);
-        for &(prefix, ref factor) in prefixes.iter() {
+        let unit_name = if args.lowercase {
+            unit_name.as_ref().to_lowercase()
+        } else { unit_name.as_ref().to_string() };
+        for &(short, long, ref factor) in prefixes.iter() {
+            let prefix = if args.longprefix { long } else { short };
             let prefix_unit_name = UnitName::from(prefix.to_string() + unit_name.as_ref());
             let prefix_unit_id = self.units.insert_unit(prefix_unit_name.clone(), span)
                 .map_err(|_| DeclError::DuplicateUnitDecl {name: prefix_unit_name.clone(), span})?;
