@@ -2,6 +2,8 @@
 
 use bigdecimal::BigDecimal;
 use canonical::CanonicalUnit;
+use unit_graph::UnitGraph;
+use display_string::DisplayString;
 
 use ast;
 
@@ -30,4 +32,15 @@ pub struct ConversionRatio {
 pub struct Number {
     pub value: BigDecimal,
     pub unit: CanonicalUnit,
+}
+
+impl DisplayString for Number {
+    fn display<'a>(&self, units: &UnitGraph) -> String {
+        let mut out = format!("{}", self.value);
+        if !self.unit.is_unitless() {
+            out += " ";
+            out += &self.unit.display(units);
+        }
+        out
+    }
 }

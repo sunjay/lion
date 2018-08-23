@@ -4,7 +4,9 @@ use smallvec::SmallVec;
 
 use ast::{UnitExpr, UnitName, Span};
 use unit_graph::{UnitGraph, UnitID};
+use display_string::DisplayString;
 
+#[derive(Debug, Clone)]
 pub struct UndeclaredUnit<'a> {
     pub name: UnitName<'a>,
     pub span: Span<'a>,
@@ -110,6 +112,36 @@ impl CanonicalUnit {
 impl From<UnitID> for CanonicalUnit {
     fn from(id: UnitID) -> Self {
         CanonicalUnit(smallvec![(id, 1)])
+    }
+}
+
+impl DisplayString for CanonicalUnit {
+    fn display<'a>(&self, units: &UnitGraph<'a>) -> String {
+        if self.is_unitless() {
+            return "'_".to_string();
+        }
+
+        fn print_unit<'b>(unit_name: &UnitName<'b>, exp: i64) -> String {
+            if exp != 1 {
+                format!("{}^{}", unit_name, exp)
+            }
+            else {
+                format!("{}", unit_name)
+            }
+        }
+
+        let mut names = self.iter_unit_names(units);
+
+        let mut out = String::new();
+        if let Some((unit_name, exp)) = names.next() {
+            out += &print_unit(unit_name, exp);
+        }
+        for (unit_name, exp) in names {
+            out += " ";
+            out += &print_unit(unit_name, exp);
+        }
+
+        out
     }
 }
 

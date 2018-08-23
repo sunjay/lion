@@ -9,6 +9,7 @@ use ir::{Number, ConversionRatio};
 use unit_graph::UnitGraph;
 use symbols::SymbolTable;
 use canonical::{self, CanonicalUnit};
+use display_string::DisplayString;
 
 #[derive(Debug, Clone)]
 pub enum ConstExprError<'a> {
@@ -30,6 +31,20 @@ pub enum ConstExprError<'a> {
 impl<'a> From<canonical::UndeclaredUnit<'a>> for ConstExprError<'a> {
     fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
         ConstExprError::UndeclaredUnit {name, span}
+    }
+}
+
+impl<'a> DisplayString for ConstExprError<'a> {
+    fn display<'b>(&self, units: &UnitGraph<'b>) -> String {
+        use self::ConstExprError::*;
+        match self {
+            UndeclaredName {name, span} => format!("Line {}: Undeclared name: {}", span.line, name),
+            UndeclaredUnit {name, span} => format!("Line {}: Undeclared unit: {}", span.line, name),
+            UnsupportedConstExpr {expr: _, span} => {
+                format!("Line {}: Unsupported Constant Expression: Only a limited set of constant expressions can be evaluated at compile time", span.line)
+            },
+            ConversionFailed(err, span) => format!("Line {}: {}", span.line, err.display(units)),
+        }
     }
 }
 
@@ -87,6 +102,32 @@ impl<'a> From<ConstExprError<'a>> for DeclError<'a> {
     }
 }
 
+impl<'a> DisplayString for DeclError<'a> {
+    fn display<'b>(&self, units: &UnitGraph<'b>) -> String {
+        use self::DeclError::*;
+        match self {
+            UndeclaredName {name, span} => format!("Line {}: Undeclared name: {}", span.line, name),
+            UndeclaredUnit {name, span} => format!("Line {}: Undeclared unit: {}", span.line, name),
+            DuplicateUnitDecl {name, span} => format!("Line {}: Unit was declared multiple times: {}", span.line, name),
+            UnknownAttribute {name, span} => format!("Line {}: Unknown attribute: {}", span.line, name),
+            PrefixSystemSyntaxError {span} => format!("Line {}: Syntax error in prefix system declaration", span.line),
+            PrefixSystemUnknownTransform {transform, span} => format!("Line {}: Unknown prefix system transform: `{}`", span.line, transform),
+            UnknownPrefixSystem {name, span} => format!("Line {}: Unknown prefix system: {}", span.line, name),
+            DuplicateConst {name, span} => format!("Line {}: const was declared multiple times: {}", span.line, name),
+            MismatchedUnit {expected, found, span} => {
+                format!("Line {}: Mismatched unit:\n    expected: {}\n    found: {}",
+                    span.line,
+                    //TODO: Format unit expr properly
+                    CanonicalUnit::from_unit_expr(expected, units).unwrap().display(units),
+                    found.display(units),
+                )
+            },
+            ConversionFailed(err, span) => format!("Line {}: {}", span.line, err.display(units)),
+            ConstExprError(err) => err.display(units),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum EvalError<'a> {
     UndeclaredName {
@@ -95,11 +136,6 @@ pub enum EvalError<'a> {
     },
     UndeclaredUnit {
         name: UnitName<'a>,
-        span: Span<'a>,
-    },
-    MismatchedUnit {
-        expected: UnitExpr<'a>,
-        found: UnitExpr<'a>,
         span: Span<'a>,
     },
     ConversionFailed(ConversionFailed, Span<'a>),
@@ -111,7 +147,7 @@ pub enum EvalError<'a> {
         found: CanonicalUnit,
         span: Span<'a>,
     },
-    /// Exponents must be unitless integer const expressions
+    /// Exponents must be unitless *integer const expressions*
     UnsupportedExponent {
         value: Number,
         span: Span<'a>,
@@ -130,10 +166,37 @@ impl<'a> From<ConstExprError<'a>> for EvalError<'a> {
     }
 }
 
+impl<'a> DisplayString for EvalError<'a> {
+    fn display<'b>(&self, units: &UnitGraph<'b>) -> String {
+        use self::EvalError::*;
+        match self {
+            UndeclaredName {name, span} => format!("Line {}: Undeclared name: {}", span.line, name),
+            UndeclaredUnit {name, span} => format!("Line {}: Undeclared unit: {}", span.line, name),
+            ConversionFailed(err, span) => format!("Line {}: {}", span.line, err.display(units)),
+            ConstExprError(err) => err.display(units),
+            DivideByZero {span} => format!("Line {}: attempt to divide by zero", span.line),
+            ExponentMustBeUnitless {found, span} => {
+                format!("Line {}: can only raise to the power of a unitless quantity\n    expected: '_\n    found: {}",
+                    span.line, found.display(units))
+            },
+            UnsupportedExponent {value, span} => {
+                format!("Line {}: Exponent must be a unitless integer constant expression\n    found: {}",
+                    span.line, value.display(units))
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ConversionFailed {
     start: CanonicalUnit,
     end: CanonicalUnit,
+}
+
+impl DisplayString for ConversionFailed {
+    fn display<'a>(&self, units: &UnitGraph<'a>) -> String {
+        format!("Cannot convert from {} to {}", self.start.display(units), self.end.display(units))
+    }
 }
 
 #[derive(Debug, Default)]
@@ -243,24 +306,8 @@ pub struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn print_unit(&self, unit: &CanonicalUnit) {
-        let mut names = unit.iter_unit_names(&self.units);
-
-        let print_unit = |(unit_name, exp)| {
-            if exp != 1 {
-                print!("{}^{}", unit_name, exp);
-            }
-            else {
-                print!("{}", unit_name);
-            }
-        };
-        if let Some(pair) = names.next() {
-            print_unit(pair);
-        }
-        for pair in names {
-            print!(" ");
-            print_unit(pair);
-        }
+    pub fn format_with_units<T: DisplayString>(&self, value: &T) -> String {
+        value.display(&self.units)
     }
 
     /// Load declarations into the global scope of the interpreter

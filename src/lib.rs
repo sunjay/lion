@@ -21,3 +21,4 @@ pub mod interpreter;
 pub mod symbols;
 pub mod canonical;
 pub mod ir;
+pub mod display_string;

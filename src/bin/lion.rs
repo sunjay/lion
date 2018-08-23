@@ -8,7 +8,6 @@ use nom::{Err::Error, Context::Code};
 use linefeed::{Interface, ReadResult};
 use lion::parser::{parse_program, parse_expr, Span};
 use lion::interpreter::Interpreter;
-use lion::ir::Number;
 
 fn main() -> Result<(), IOError> {
     let input = include_str!("../../examples/units.lion");
@@ -19,7 +18,9 @@ fn main() -> Result<(), IOError> {
     });
 
     let mut interpreter = Interpreter::default();
-    interpreter.load_decls(&program).unwrap();
+    interpreter.load_decls(&program).unwrap_or_else(|err| {
+        panic!("Error: {}", interpreter.format_with_units(&err));
+    });
 
     let reader = Interface::new("lion")?;
     reader.set_prompt("% ")?;
@@ -34,15 +35,8 @@ fn main() -> Result<(), IOError> {
         reader.add_history_unique(input.to_string());
 
         match interpreter.evaluate_expr(&expr) {
-            Ok(Number {value, unit}) => {
-                print!("{}", value);
-                if !unit.is_unitless() {
-                    print!(" ");
-                    interpreter.print_unit(&unit);
-                }
-                println!();
-            },
-            Err(err) => println!("{:?}", err),
+            Ok(result) => println!("{}", interpreter.format_with_units(&result)),
+            Err(err) => println!("Error: {}", interpreter.format_with_units(&err)),
         }
     }
 
