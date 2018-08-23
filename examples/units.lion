@@ -48,7 +48,7 @@ unit 'tonnes;
 /// Pound
 unit 'lbs;
 
-conversion 1 'tonne == 1000 'kg;
+conversion 1 'tonnes == 1000 'kg;
 conversion 1 'lbs == 0.45359237 'kg;
 
 // Area
@@ -90,16 +90,21 @@ conversion 1 'quarts == 1 'L;
 conversion 1/2 'gallons == 2 'L;
 conversion 1 'gallons == 4 'L;
 
-//TODO: more units of volume
-
 // Pressure
 
 // Pascal (Pa)
 #[prefix(SI)]
 unit 'Pa alias 'N/'m^2;
 
-//TODO: 'bar, 'atm, 'Torr, 'lb/'in^2
-//TODO: https://en.wikipedia.org/wiki/Atmosphere_(unit)#Pressure_units_and_equivalencies
+unit 'bar;
+unit 'atm;
+unit 'Torr;
+unit 'mmHg alias 'Torr;
+
+// https://en.wikipedia.org/wiki/Atmosphere_(unit)#Pressure_units_and_equivalencies
+conversion 1 'bar == 1e5 'Pa;
+conversion 1 'atm == 101325 'Pa;
+conversion 1 'Torr == 133.322368421 'Pa;
 
 // Force
 
