@@ -44,3 +44,15 @@ impl DisplayString for Number {
         out
     }
 }
+
+impl Number {
+    /// Tests whether abs(self - other) <= threshold
+    ///
+    /// Does not perform any conversions, so the units must be the same. Will panic if this
+    /// condition is not met.
+    pub fn approx_eq(&self, other: &Self, threshold: &BigDecimal) -> bool {
+        assert_eq!(self.unit, other.unit, "Cannot compare two quantities with different units");
+
+        (&self.value - &other.value).abs() <= *threshold
+    }
+}

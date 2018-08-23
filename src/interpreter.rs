@@ -684,7 +684,15 @@ mod tests {
                 .unwrap_or_else(|e| panic!("Evaluation failed: {}", $ctx.format_with_units(&e)));
             let expected = $ctx.evaluate_expr(&expected, EvalMode::Unrestricted)
                 .unwrap_or_else(|e| panic!("Evaluation failed for expected value: {}", $ctx.format_with_units(&e)));
-            assert_eq!(result, expected);
+
+            if result.unit != expected.unit {
+                panic!("Unit of result is different from expected unit.\n    expected: {}\n    found: {}",
+                    $ctx.format_with_units(&expected.unit), $ctx.format_with_units(&result.unit));
+            }
+
+            // Values need to be within a certain threshold of each other
+            let threshold = BigDecimal::from(1e-6);
+            assert!(result.approx_eq(&expected, &threshold));
         };
         ($ctx:ident, $input:expr => Err($expected_err:expr)) => {
             let expr = parse_expr!($input);
@@ -697,10 +705,26 @@ mod tests {
     }
 
     #[test]
-    fn basic_queries() {
+    fn readme() {
         let mut ctx = Interpreter::default();
         load_decls!(ctx, PRELUDE);
+        eval_test!(ctx, "2 + 2" => Ok("4"));
+        eval_test!(ctx, "2 'in + 2 'in" => Ok("4 'in"));
+        eval_test!(ctx, "2 'cm + 4 'in" => Ok("12.16 'cm"));
+        eval_test!(ctx, "4 'in + 2 'cm" => Ok("4.78740157 'in"));
+        eval_test!(ctx, "9.81 'm / 's^2" => Ok("9.81 'm / 's ^ 2"));
+        eval_test!(ctx, "9.81 'm * 's^-2" => Ok("9.81 'm 's ^ -2"));
+        eval_test!(ctx, "(9.81'm) * (1's^-2)" => Ok("9.81 'm 's ^ -2"));
+        eval_test!(ctx, "9.81 'm 's^-2" => Ok("9.81 'm 's ^ -2"));
         eval_test!(ctx, "1 'm as 'cm" => Ok("100 'cm"));
+        eval_test!(ctx, "10 'm * 's + 20 's * 'm" => Ok("30 'm * 's"));
+        eval_test!(ctx, "10 'm / 's + 20 's / 'm" => Err("Line 1: Cannot convert from 's 'm^-1 to 's^-1 'm"));
+    }
+
+    #[test]
+    fn conversions() {
+        let mut ctx = Interpreter::default();
+        load_decls!(ctx, PRELUDE);
         eval_test!(ctx, "1 'm as 'g" => Err("Line 1: Cannot convert from 'm to 'g"));
     }
 }
