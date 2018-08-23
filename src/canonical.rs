@@ -249,7 +249,6 @@ impl Div<CanonicalUnit> for CanonicalUnit {
     }
 }
 
-//FIXME: Implement Mul and invert and then make Div = left * invert(right)
 impl<'a> Div<&'a CanonicalUnit> for &'a CanonicalUnit {
     type Output = CanonicalUnit;
 
