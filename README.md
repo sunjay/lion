@@ -158,17 +158,18 @@ conversion 180 'deg == pi 'rad;
 //   only allowed to be defined once for a given unordered pair of units
 // * If more than one package defines a conversion between an unordered pair
 //   of units, the defined conversion factors must be equivalent
-// * The conversion cannot be between two different dimensions of the same unit
-//   * This is not a rigorous check. `'m == 'm^2` will be rejected, but it is
-//     up to you to make sure that `'L == 'm^2` is not accidentally defined
-// * The unit of the expression on either side cannot be '_ since a conversion
-//   between dimensions of units is invalid and '_ has dimension zero
-//
 //   Example:
 //       conversion 1000 'm == 1 'km; // In package A that defines 'm
 //       conversion 1 'km == 1000 'm; // In package B that defines 'km
 //       // Order does not matter
 //       conversion 1000 'm == 1 'km; // Package B could also do this
+// * The conversion cannot be between two different dimensions of the same unit
+//   * This is not a rigorous check. `'m == 'm^2` will be rejected, but it is
+//     up to you to make sure that `'L == 'm^2` is not accidentally defined
+// * The unit of the expression on either side cannot be '_ since a conversion
+//   between dimensions of units is invalid and '_ has dimension zero
+// * The expression on either side of the conversion cannot evaluate to zero
+//   since this can result in divide by zero errors
 // * Furthermore, if more than one conversion path exists between two units,
 //   then the cumulative conversion factor must be the same across all possible
 //   paths between those two units.
