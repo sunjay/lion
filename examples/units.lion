@@ -37,6 +37,20 @@ unit 'in;
 
 conversion 0.0254 'm == 1 'in;
 
+// Mass
+
+/// Gram
+#[prefix(SI)]
+unit 'g;
+/// Metric tonne
+#[prefix(SI, transform=[longprefix])]
+unit 'tonnes;
+/// Pound
+unit 'lbs;
+
+conversion 1 'tonne == 1000 'kg;
+conversion 1 'lbs == 0.45359237 'kg;
+
 // Area
 
 //TODO: Does m^2 to cm^2 work?
@@ -46,10 +60,37 @@ conversion 0.0254 'm == 1 'in;
 #[prefix(SI, transform=[lowercase])]
 unit 'L;
 
+unit 'teaspoons;
+unit 'tablespoons;
+unit 'gallons;
+unit 'cups;
+unit 'pints;
+unit 'quarts;
+
 conversion 1 'm^3 == 1000 'L;
 
-//TODO: 'cup, 'teaspoon, etc.
-//TODO: Conversions from these to each other and to other units of volume
+// https://www.exploratorium.edu/cooking/convert/measurements.html
+conversion 1/8 'teaspoons == .5 'ml;
+conversion 1/4 'teaspoons == 1 'ml;
+conversion 1/2 'teaspoons == 2 'ml;
+conversion 3/4 'teaspoons == 4 'ml;
+conversion 1 'teaspoons == 5 'ml;
+conversion 1 'tablespoons == 15 'ml;
+conversion 1/4 'cups == 59 'ml;
+conversion 1/3 'cups == 79 'ml;
+conversion 1/2 'cups == 118 'ml;
+conversion 2/3 'cups == 158 'ml;
+conversion 3/4 'cups == 177 'ml;
+conversion 1 'cups == 225 'ml;
+conversion 2 'cups == 450 'ml;
+conversion 1 'pints == 450 'ml;
+conversion 3 'cups == 675 'ml;
+conversion 4 'cups == 1 'L;
+conversion 1 'quarts == 1 'L;
+conversion 1/2 'gallons == 2 'L;
+conversion 1 'gallons == 4 'L;
+
+//TODO: more units of volume
 
 // Pressure
 
