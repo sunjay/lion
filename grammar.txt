@@ -65,8 +65,9 @@ ident := (alpha | "_") (alpha | digit | "_")*
 
 // We have different literals, but all numbers are expressed exactly using a
 // decimal/rational number data type
-numeric_literal := float_literal | integer_literal
+numeric_literal :=  fractional_literal | integer_literal | float_literal
 float_literal := sign? float_body float_exp?
+fractional_literal := integer_literal t_slash integer_literal
 float_body := (digit+ "." digit*) | (digit* "." digit+)
 float_exp := ("e" | "E") sign? digit+
 integer_literal := sign? digit+

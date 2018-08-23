@@ -358,9 +358,17 @@ named!(ident(Span) -> Ident,
 );
 
 named!(numeric_literal(Span) -> NumericLiteral, alt!(
+    tuple!(position!(), fractional_literal) => { |(span, value)| NumericLiteral {value, span} } |
     tuple!(position!(), integer_literal) => { |(span, value)| NumericLiteral {value, span} } |
     tuple!(position!(), float_literal) => { |(span, value)| NumericLiteral {value, span} }
 ));
+
+named!(fractional_literal(Span) -> BigDecimal, ws_comments!(do_parse!(
+    top: integer_literal >>
+    t_slash >>
+    bottom: integer_literal >>
+    (BigDecimal::from(top / bottom))
+)));
 
 named!(integer_literal(Span) -> BigDecimal, do_parse!(
     literal: flat_map!(recognize!(
@@ -579,6 +587,7 @@ mod tests {
         test_parser!(expr("1 + 3 'a * (4 / 6 'a)") -> ok);
         test_parser!(expr("1 + 3 'a * ((4 / 6 'a) / 22 'b ^ 2)") -> ok);
         test_parser!(expr("1 + 3 'a * ((4 / 6 'a) + (331.2 'a + 4.2) / 1 'b ^ 2)") -> ok);
+        test_parser!(expr("1 / 8 'a") -> ok);
     }
 
     #[test]
@@ -1224,6 +1233,9 @@ mod tests {
         test_parser!(numeric_literal("-123.456e-10") -> ok, NumericLiteral {value: BigDecimal::from_str("-123.456e-10").unwrap(), span});
         test_parser!(numeric_literal("-123.456E10") -> ok, NumericLiteral {value: BigDecimal::from_str("-123.456e10").unwrap(), span});
         test_parser!(numeric_literal("-123.456E-10") -> ok, NumericLiteral {value: BigDecimal::from_str("-123.456e-10").unwrap(), span});
+        test_parser!(numeric_literal("1/2") -> ok, NumericLiteral {value: BigDecimal::from_str("0.5").unwrap(), span});
+        test_parser!(numeric_literal("-1/2") -> ok, NumericLiteral {value: BigDecimal::from_str("-0.5").unwrap(), span});
+        test_parser!(numeric_literal("-1/-2") -> ok, NumericLiteral {value: BigDecimal::from_str("0.5").unwrap(), span});
     }
 
     #[test]
