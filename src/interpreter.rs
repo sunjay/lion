@@ -637,3 +637,70 @@ impl<'a> Interpreter<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nom::{Err::Error, Context::Code};
+    use parser::{parse_program, parse_expr, Span};
+
+    static PRELUDE: &str = include_str!("../examples/units.lion");
+
+    // These are all done in macros so that any errors lead back to the test function that failed
+
+    macro_rules! load_decls {
+        ($ctx:ident, $input:expr) => {
+            let _input = $input;
+            let program = parse_program(_input).unwrap_or_else(|err| match err {
+                Error(Code(Span { line, .. }, _)) =>
+                panic!("Syntax Error: Line {}: {}", line, _input.lines().nth(line as usize).unwrap()),
+                _ => unreachable!(),
+            });
+            $ctx.load_decls(&program).unwrap_or_else(|err| {
+                panic!("Error: {}", $ctx.format_with_units(&err));
+            });
+        };
+    }
+
+    macro_rules! parse_expr {
+        ($input:expr) => {
+            {
+                let _input = $input;
+                parse_expr(_input).unwrap_or_else(|err| match err {
+                    Error(Code(Span { line, .. }, _)) =>
+                    panic!("Syntax Error: Line {}: {}", line, _input.lines().nth(line as usize).unwrap()),
+                    _ => unreachable!(),
+                })
+            }
+        };
+    }
+
+    macro_rules! eval_test {
+        ($ctx:ident, $input:expr => Ok($expected:expr)) => {
+            let expr = parse_expr!($input);
+            let expected = parse_expr!($expected);
+
+            let result = $ctx.evaluate_expr(&expr, EvalMode::Unrestricted)
+                .unwrap_or_else(|e| panic!("Evaluation failed: {}", $ctx.format_with_units(&e)));
+            let expected = $ctx.evaluate_expr(&expected, EvalMode::Unrestricted)
+                .unwrap_or_else(|e| panic!("Evaluation failed for expected value: {}", $ctx.format_with_units(&e)));
+            assert_eq!(result, expected);
+        };
+        ($ctx:ident, $input:expr => Err($expected_err:expr)) => {
+            let expr = parse_expr!($input);
+
+            let err = $ctx.evaluate_expr(&expr, EvalMode::Unrestricted)
+                .map(|val| panic!("Evaluation succeeded when it should have failed. Result: {}", $ctx.format_with_units(&val)))
+                .unwrap_err();
+            assert_eq!($ctx.format_with_units(&err), $expected_err);
+        };
+    }
+
+    #[test]
+    fn basic_queries() {
+        let mut ctx = Interpreter::default();
+        load_decls!(ctx, PRELUDE);
+        eval_test!(ctx, "1 'm as 'cm" => Ok("100 'cm"));
+        eval_test!(ctx, "1 'm as 'g" => Err("Line 1: Cannot convert from 'm to 'g"));
+    }
+}
