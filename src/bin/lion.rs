@@ -7,7 +7,7 @@ use std::io::Error as IOError;
 use nom::{Err::Error, Context::Code};
 use linefeed::{Interface, ReadResult};
 use lion::parser::{parse_program, parse_expr, Span};
-use lion::interpreter::Interpreter;
+use lion::interpreter::{Interpreter, EvalMode};
 
 fn main() -> Result<(), IOError> {
     let input = include_str!("../../examples/units.lion");
@@ -34,7 +34,7 @@ fn main() -> Result<(), IOError> {
         });
         reader.add_history_unique(input.to_string());
 
-        match interpreter.evaluate_expr(&expr) {
+        match interpreter.evaluate_expr(&expr, EvalMode::Unrestricted) {
             Ok(result) => println!("{}", interpreter.format_with_units(&result)),
             Err(err) => println!("Error: {}", interpreter.format_with_units(&err)),
         }

@@ -11,41 +11,14 @@ use symbols::SymbolTable;
 use canonical::{self, CanonicalUnit};
 use display_string::DisplayString;
 
-#[derive(Debug, Clone)]
-pub enum ConstExprError<'a> {
-    UndeclaredName {
-        name: Ident<'a>,
-        span: Span<'a>,
-    },
-    UndeclaredUnit {
-        name: UnitName<'a>,
-        span: Span<'a>,
-    },
-    UnsupportedConstExpr {
-        expr: Expr<'a>,
-        span: Span<'a>,
-    },
-    ConversionFailed(ConversionFailed, Span<'a>),
-}
-
-impl<'a> From<canonical::UndeclaredUnit<'a>> for ConstExprError<'a> {
-    fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
-        ConstExprError::UndeclaredUnit {name, span}
-    }
-}
-
-impl<'a> DisplayString for ConstExprError<'a> {
-    fn display<'b>(&self, units: &UnitGraph<'b>) -> String {
-        use self::ConstExprError::*;
-        match self {
-            UndeclaredName {name, span} => format!("Line {}: Undeclared name: {}", span.line, name),
-            UndeclaredUnit {name, span} => format!("Line {}: Undeclared unit: {}", span.line, name),
-            UnsupportedConstExpr {expr: _, span} => {
-                format!("Line {}: Unsupported Constant Expression: Only a limited set of constant expressions can be evaluated at compile time", span.line)
-            },
-            ConversionFailed(err, span) => format!("Line {}: {}", span.line, err.display(units)),
-        }
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EvalMode {
+    /// Evaluate only constants and expressions consisting of constants and const functions
+    ///
+    /// No side effects allowed.
+    ConstOnly,
+    /// Evaluate the entire expression will the full power of the interpreter
+    Unrestricted,
 }
 
 #[derive(Debug, Clone)]
@@ -87,7 +60,7 @@ pub enum DeclError<'a> {
         span: Span<'a>,
     },
     ConversionFailed(ConversionFailed, Span<'a>),
-    ConstExprError(ConstExprError<'a>),
+    EvalError(EvalError<'a>),
 }
 
 impl<'a> From<canonical::UndeclaredUnit<'a>> for DeclError<'a> {
@@ -96,9 +69,9 @@ impl<'a> From<canonical::UndeclaredUnit<'a>> for DeclError<'a> {
     }
 }
 
-impl<'a> From<ConstExprError<'a>> for DeclError<'a> {
-    fn from(err: ConstExprError<'a>) -> Self {
-        DeclError::ConstExprError(err)
+impl<'a> From<EvalError<'a>> for DeclError<'a> {
+    fn from(err: EvalError<'a>) -> Self {
+        DeclError::EvalError(err)
     }
 }
 
@@ -123,7 +96,7 @@ impl<'a> DisplayString for DeclError<'a> {
                 )
             },
             ConversionFailed(err, span) => format!("Line {}: {}", span.line, err.display(units)),
-            ConstExprError(err) => err.display(units),
+            EvalError(err) => err.display(units),
         }
     }
 }
@@ -139,7 +112,6 @@ pub enum EvalError<'a> {
         span: Span<'a>,
     },
     ConversionFailed(ConversionFailed, Span<'a>),
-    ConstExprError(ConstExprError<'a>),
     DivideByZero {
         span: Span<'a>,
     },
@@ -152,17 +124,15 @@ pub enum EvalError<'a> {
         value: Number,
         span: Span<'a>,
     },
+    UnsupportedConstExpr {
+        expr: Expr<'a>,
+        span: Span<'a>,
+    },
 }
 
 impl<'a> From<canonical::UndeclaredUnit<'a>> for EvalError<'a> {
     fn from(canonical::UndeclaredUnit {name, span}: canonical::UndeclaredUnit<'a>) -> Self {
         EvalError::UndeclaredUnit {name, span}
-    }
-}
-
-impl<'a> From<ConstExprError<'a>> for EvalError<'a> {
-    fn from(err: ConstExprError<'a>) -> Self {
-        EvalError::ConstExprError(err)
     }
 }
 
@@ -173,7 +143,6 @@ impl<'a> DisplayString for EvalError<'a> {
             UndeclaredName {name, span} => format!("Line {}: Undeclared name: {}", span.line, name),
             UndeclaredUnit {name, span} => format!("Line {}: Undeclared unit: {}", span.line, name),
             ConversionFailed(err, span) => format!("Line {}: {}", span.line, err.display(units)),
-            ConstExprError(err) => err.display(units),
             DivideByZero {span} => format!("Line {}: attempt to divide by zero", span.line),
             ExponentMustBeUnitless {found, span} => {
                 format!("Line {}: can only raise to the power of a unitless quantity\n    expected: '_\n    found: {}",
@@ -182,6 +151,9 @@ impl<'a> DisplayString for EvalError<'a> {
             UnsupportedExponent {value, span} => {
                 format!("Line {}: Exponent must be a unitless integer constant expression\n    found: {}",
                     span.line, value.display(units))
+            },
+            UnsupportedConstExpr {expr: _, span} => {
+                format!("Line {}: Unsupported Constant Expression: Only a limited set of constant expressions can be evaluated at compile time", span.line)
             },
         }
     }
@@ -376,7 +348,7 @@ impl<'a> Interpreter<'a> {
 
             if let &Decl::Constant(Constant {name, unit: ref unit_expr, ref value, span}) = decl {
                 let target_unit = CanonicalUnit::from_unit_expr(unit_expr, &self.units)?;
-                let value = self.reduce_const_expr(value)?;
+                let value = self.evaluate_expr(value, EvalMode::ConstOnly)?;
                 if value.unit != target_unit {
                     return Err(DeclError::MismatchedUnit {
                         expected: unit_expr.clone(),
@@ -417,8 +389,8 @@ impl<'a> Interpreter<'a> {
                     })
                 },
                 Decl::ConversionDecl(ConversionDecl {left, right, ..}) => {
-                    let left = self.reduce_const_expr(left)?;
-                    let right = self.reduce_const_expr(right)?;
+                    let left = self.evaluate_expr(left, EvalMode::ConstOnly)?;
+                    let right = self.evaluate_expr(right, EvalMode::ConstOnly)?;
                     self.units.add_conversion(ConversionRatio {left, right});
                 },
                 _ => {},
@@ -520,44 +492,7 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn reduce_const_expr(&self, expr: &Expr<'a>) -> Result<Number, ConstExprError<'a>> {
-        match expr {
-            &Expr::Number(NumericLiteral {ref value, span: _}, ref unit) => {
-                let unit = CanonicalUnit::from_unit_expr(unit, &self.units)?;
-                Ok(Number {value: value.clone(), unit})
-            },
-            &Expr::Ident(ref path, span) => {
-                if path.len() != 1 { unimplemented!() }
-                let name = path.first().unwrap();
-                self.symbols.get_const(name).cloned().ok_or_else(|| ConstExprError::UndeclaredName {name, span})
-            },
-            Expr::ConvertTo(expr, target_unit, span) => {
-                let number = self.reduce_const_expr(expr)?;
-                let target_unit = CanonicalUnit::from_unit_expr(target_unit, &self.units)?;
-                if number.unit.is_unitless() {
-                    Ok(Number {
-                        value: number.value,
-                        unit: target_unit,
-                    })
-                }
-                else {
-                    self.convert(number, target_unit)
-                        .map_err(|err| ConstExprError::ConversionFailed(err, *span))
-                }
-            },
-            Expr::Add(_, _, span) | Expr::Sub(_, _, span) | Expr::Mul(_, _, span) |
-            //TODO: catch divisions by zero when we support division
-            //TODO: catch remainder by zero when we support remainder
-            Expr::Div(_, _, span) | Expr::Mod(_, _, span) | Expr::Pow(_, _, span) |
-            Expr::Call(_, _, span) | Expr::MacroCall(MacroInvoke {span, ..}) |
-            Expr::Return(_, span) | Expr::UnitValue(span) => {
-                Err(ConstExprError::UnsupportedConstExpr {expr: expr.clone(), span: *span})
-            },
-            Expr::Block(_) => unimplemented!(),
-        }
-    }
-
-    pub fn evaluate_expr(&self, expr: &Expr<'a>) -> Result<Number, EvalError<'a>> {
+    pub fn evaluate_expr(&self, expr: &Expr<'a>, mode: EvalMode) -> Result<Number, EvalError<'a>> {
         Ok(match expr {
             &Expr::Number(NumericLiteral {ref value, span: _}, ref unit) => {
                 let unit = CanonicalUnit::from_unit_expr(unit, &self.units)?;
@@ -567,10 +502,11 @@ impl<'a> Interpreter<'a> {
                 if path.len() != 1 { unimplemented!() }
                 let name = path.first().unwrap();
                 //TODO: Allow getting variables defined with `let` in the interpreter
+                //TODO: Limit to const exprs if we are in that eval mode
                 self.symbols.get_const(name).cloned().ok_or_else(|| EvalError::UndeclaredName {name, span})?
             },
             Expr::ConvertTo(expr, target_unit, span) => {
-                let number = self.evaluate_expr(expr)?;
+                let number = self.evaluate_expr(expr, mode)?;
                 let target_unit = CanonicalUnit::from_unit_expr(target_unit, &self.units)?;
                 if number.unit.is_unitless() {
                     Number {
@@ -584,8 +520,8 @@ impl<'a> Interpreter<'a> {
                 }
             },
             Expr::Add(lhs, rhs, span) => {
-                let lhs = self.evaluate_expr(lhs)?;
-                let rhs = self.convert(self.evaluate_expr(rhs)?, lhs.unit.clone())
+                let lhs = self.evaluate_expr(lhs, mode)?;
+                let rhs = self.convert(self.evaluate_expr(rhs, mode)?, lhs.unit.clone())
                     .map_err(|err| EvalError::ConversionFailed(err, *span))?;
                 Number {
                     value: lhs.value + rhs.value,
@@ -593,8 +529,8 @@ impl<'a> Interpreter<'a> {
                 }
             },
             Expr::Sub(lhs, rhs, span) => {
-                let lhs = self.evaluate_expr(lhs)?;
-                let rhs = self.convert(self.evaluate_expr(rhs)?, lhs.unit.clone())
+                let lhs = self.evaluate_expr(lhs, mode)?;
+                let rhs = self.convert(self.evaluate_expr(rhs, mode)?, lhs.unit.clone())
                     .map_err(|err| EvalError::ConversionFailed(err, *span))?;
                 Number {
                     value: lhs.value - rhs.value,
@@ -602,8 +538,8 @@ impl<'a> Interpreter<'a> {
                 }
             },
             Expr::Mul(lhs, rhs, _) => {
-                let lhs = self.evaluate_expr(lhs)?;
-                let rhs = self.evaluate_expr(rhs)?;
+                let lhs = self.evaluate_expr(lhs, mode)?;
+                let rhs = self.evaluate_expr(rhs, mode)?;
                 // Attempt to convert if possible, but otherwise just leave it
                 let rhs = self.convert(rhs.clone(), lhs.unit.clone()).unwrap_or_else(|_| rhs);
                 Number {
@@ -612,8 +548,8 @@ impl<'a> Interpreter<'a> {
                 }
             },
             Expr::Div(lhs, rhs, span) => {
-                let lhs = self.evaluate_expr(lhs)?;
-                let rhs = self.evaluate_expr(rhs)?;
+                let lhs = self.evaluate_expr(lhs, mode)?;
+                let rhs = self.evaluate_expr(rhs, mode)?;
                 // Attempt to convert if possible, but otherwise just leave it
                 let rhs = self.convert(rhs.clone(), lhs.unit.clone()).unwrap_or_else(|_| rhs);
                 if rhs.value == BigDecimal::from(0) {
@@ -631,10 +567,10 @@ impl<'a> Interpreter<'a> {
                 unimplemented!();
             },
             Expr::Pow(lhs, rhs, span) => {
-                let lhs = self.evaluate_expr(lhs)?;
+                let lhs = self.evaluate_expr(lhs, mode)?;
                 // Since all units must be known statically at compile time, the rhs must be
                 // a constexpr that evaluates to a unitless integer
-                let rhs = self.reduce_const_expr(rhs)?;
+                let rhs = self.evaluate_expr(rhs, EvalMode::ConstOnly)?;
                 if !rhs.unit.is_unitless() {
                     return Err(EvalError::ExponentMustBeUnitless {found: rhs.unit, span: *span});
                 }
@@ -671,7 +607,14 @@ impl<'a> Interpreter<'a> {
                     },
                 }
             },
-            _ => unimplemented!(),
+            Expr::Call(_, _, span) | Expr::MacroCall(MacroInvoke {span, ..}) |
+            Expr::Return(_, span) | Expr::UnitValue(span) => {
+                match mode {
+                    EvalMode::ConstOnly => return Err(EvalError::UnsupportedConstExpr {expr: expr.clone(), span: *span}),
+                    EvalMode::Unrestricted => unimplemented!(),
+                }
+            },
+            Expr::Block(_) => unimplemented!(),
         })
     }
 
