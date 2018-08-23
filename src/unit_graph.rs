@@ -3,6 +3,7 @@ use std::collections::{HashMap, VecDeque, HashSet};
 use nom::types::CompleteStr;
 use petgraph::graph::{UnGraph, NodeIndex, DefaultIx};
 use bigdecimal::BigDecimal;
+use num_traits::One;
 
 use canonical::CanonicalUnit;
 use ast::*;
@@ -27,7 +28,7 @@ pub struct ConversionPath {
 impl ConversionPath {
     /// Reduces the path into the factor that transforms start to end
     pub fn conversion_factor(self) -> BigDecimal {
-        let mut factor = BigDecimal::from(1);
+        let mut factor = BigDecimal::one();
 
         let mut current = self.start;
         for ratio in self.ratio_path {

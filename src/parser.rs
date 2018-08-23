@@ -482,6 +482,7 @@ named!(tt(Span) -> Token, ws_comments!(alt!(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use num_traits::{Zero, One};
 
     macro_rules! test_parser {
         ($parser:ident ( $input:expr ) -> ok) => {
@@ -1243,8 +1244,8 @@ mod tests {
         test_parser!(integer_literal("") -> err);
         test_parser!(integer_literal("a") -> err);
         test_parser!(integer_literal("'km") -> err);
-        test_parser!(integer_literal("0") -> ok, BigDecimal::from(0));
-        test_parser!(integer_literal("1") -> ok, BigDecimal::from(1));
+        test_parser!(integer_literal("0") -> ok, BigDecimal::zero());
+        test_parser!(integer_literal("1") -> ok, BigDecimal::one());
         test_parser!(integer_literal("123") -> ok, BigDecimal::from(123));
         test_parser!(integer_literal("-123") -> ok, BigDecimal::from(-123));
         test_parser!(integer_literal(".123") -> err);

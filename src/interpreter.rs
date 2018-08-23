@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::str::FromStr;
 
 use bigdecimal::BigDecimal;
-use num_traits::ToPrimitive;
+use num_traits::{ToPrimitive, One, Zero};
 
 use ast::*;
 use ir::{Number, ConversionRatio};
@@ -379,11 +379,11 @@ impl<'a> Interpreter<'a> {
                     // Alias means: 1 left_unit == 1 right_unit
                     self.units.add_conversion(ConversionRatio {
                         left: Number {
-                            value: BigDecimal::from(1),
+                            value: BigDecimal::one(),
                             unit: left_unit,
                         },
                         right: Number {
-                            value: BigDecimal::from(1),
+                            value: BigDecimal::one(),
                             unit: right_unit,
                         },
                     })
@@ -483,7 +483,7 @@ impl<'a> Interpreter<'a> {
                 unit: unit.clone(),
             };
             let right = Number {
-                value: BigDecimal::from(1),
+                value: BigDecimal::one(),
                 unit: prefix_unit,
             };
             self.units.add_conversion(ConversionRatio {left, right});
@@ -552,7 +552,7 @@ impl<'a> Interpreter<'a> {
                 let rhs = self.evaluate_expr(rhs, mode)?;
                 // Attempt to convert if possible, but otherwise just leave it
                 let rhs = self.convert(rhs.clone(), lhs.unit.clone()).unwrap_or_else(|_| rhs);
-                if rhs.value == BigDecimal::from(0) {
+                if rhs.value == BigDecimal::zero() {
                     return Err(EvalError::DivideByZero {span: *span});
                 }
 
@@ -584,7 +584,7 @@ impl<'a> Interpreter<'a> {
                 match exponent {
                     // Anything to the power of zero is 1 '_
                     0 => Number {
-                        value: BigDecimal::from(1),
+                        value: BigDecimal::one(),
                         unit: CanonicalUnit::unitless(),
                     },
                     // Anything to the power of 1 is itself
