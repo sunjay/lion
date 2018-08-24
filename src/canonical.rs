@@ -147,7 +147,9 @@ impl DisplayString for CanonicalUnit {
 
         let mut out = String::new();
         out += &format_units(top.iter().cloned());
-        out += " / ";
+        if !bottom.is_empty() {
+            out += " / ";
+        }
         if bottom.len() > 1 {
             out += "(";
         }

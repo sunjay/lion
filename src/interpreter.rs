@@ -718,7 +718,7 @@ mod tests {
         eval_test!(ctx, "9.81 'm 's^-2" => Ok("9.81 'm 's ^ -2"));
         eval_test!(ctx, "1 'm as 'cm" => Ok("100 'cm"));
         eval_test!(ctx, "10 'm * 's + 20 's * 'm" => Ok("30 'm * 's"));
-        eval_test!(ctx, "10 'm / 's + 20 's / 'm" => Err("Line 1: Cannot convert from 's 'm^-1 to 's^-1 'm"));
+        eval_test!(ctx, "10 'm / 's + 20 's / 'm" => Err("Line 1: Cannot convert from 's / 'm to 'm / 's"));
     }
 
     #[test]
