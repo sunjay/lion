@@ -121,7 +121,7 @@ impl DisplayString for CanonicalUnit {
             return "'_".to_string();
         }
 
-        fn print_unit<'b>(unit_name: &UnitName<'b>, exp: i64) -> String {
+        fn format_unit<'b>(unit_name: &UnitName<'b>, exp: i64) -> String {
             if exp != 1 {
                 format!("{}^{}", unit_name, exp)
             }
@@ -130,15 +130,30 @@ impl DisplayString for CanonicalUnit {
             }
         }
 
-        let mut names = self.iter_unit_names(units);
+        fn format_units<'b>(mut names: impl Iterator<Item=(&'b UnitName<'b>, i64)>) -> String {
+            let mut out = String::new();
+            if let Some((unit_name, exp)) = names.next() {
+                out += &format_unit(unit_name, exp);
+            }
+            for (ref unit_name, exp) in names {
+                out += " ";
+                out += &format_unit(unit_name, exp);
+            }
+
+            out
+        }
+
+        let (top, bottom): (Vec<_>, Vec<_>) = self.iter_unit_names(units).partition(|&(_, e)| e > 0);
 
         let mut out = String::new();
-        if let Some((unit_name, exp)) = names.next() {
-            out += &print_unit(unit_name, exp);
+        out += &format_units(top.iter().cloned());
+        out += " / ";
+        if bottom.len() > 1 {
+            out += "(";
         }
-        for (unit_name, exp) in names {
-            out += " ";
-            out += &print_unit(unit_name, exp);
+        out += &format_units(bottom.iter().map(|&(u, e)| (u, -e)));
+        if bottom.len() > 1 {
+            out += ")";
         }
 
         out
