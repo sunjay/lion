@@ -57,7 +57,7 @@ Error: Cannot convert from 'm / 's to 's / 'm
 * Conversions between units are performed automatically and implicitly
   ```rust
   % fn foo(x 'km) {}
-  % // This is automatically convered into 'km so it can be passed to the function
+  % // This is automatically converted into 'km so it can be passed to the function
   % foo(10 'm);
   % // This function only accepts values without a unit
   % fn bar(x) {}
