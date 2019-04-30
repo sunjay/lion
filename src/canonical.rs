@@ -2,9 +2,9 @@ use std::ops::{Mul, Div, BitXor as Pow};
 
 use smallvec::SmallVec;
 
-use ast::{UnitExpr, UnitName, Span};
-use unit_graph::{UnitGraph, UnitID};
-use display_string::DisplayString;
+use crate::ast::{UnitExpr, UnitName, Span};
+use crate::unit_graph::{UnitGraph, UnitID};
+use crate::display_string::DisplayString;
 
 #[derive(Debug, Clone)]
 pub struct UndeclaredUnit<'a> {

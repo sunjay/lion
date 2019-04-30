@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use bigdecimal::BigDecimal;
 
-pub use parser::Span;
+pub use crate::parser::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program<'i> {

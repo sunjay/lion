@@ -6,7 +6,7 @@ use nom_locate::LocatedSpan;
 use num_traits::cast::ToPrimitive;
 use bigdecimal::BigDecimal;
 
-use ast::*;
+use crate::ast::*;
 
 pub type Span<'a> = LocatedSpan<CompleteStr<'a>>;
 

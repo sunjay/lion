@@ -5,9 +5,9 @@ use petgraph::graph::{UnGraph, NodeIndex, DefaultIx};
 use bigdecimal::BigDecimal;
 use num_traits::One;
 
-use canonical::CanonicalUnit;
-use ast::*;
-use ir::ConversionRatio;
+use crate::canonical::CanonicalUnit;
+use crate::ast::*;
+use crate::ir::ConversionRatio;
 
 pub type UnitID = usize;
 

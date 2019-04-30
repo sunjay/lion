@@ -1,11 +1,11 @@
 //! Intermediate representation for type checked items
 
 use bigdecimal::BigDecimal;
-use canonical::CanonicalUnit;
-use unit_graph::UnitGraph;
-use display_string::DisplayString;
+use crate::canonical::CanonicalUnit;
+use crate::unit_graph::UnitGraph;
+use crate::display_string::DisplayString;
 
-use ast;
+use crate::ast;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function<'i> {

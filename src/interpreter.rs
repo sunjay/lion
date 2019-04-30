@@ -4,12 +4,12 @@ use std::str::FromStr;
 use bigdecimal::BigDecimal;
 use num_traits::{ToPrimitive, One, Zero};
 
-use ast::*;
-use ir::{Number, ConversionRatio};
-use unit_graph::UnitGraph;
-use symbols::SymbolTable;
-use canonical::{self, CanonicalUnit};
-use display_string::DisplayString;
+use crate::ast::*;
+use crate::ir::{Number, ConversionRatio};
+use crate::unit_graph::UnitGraph;
+use crate::symbols::SymbolTable;
+use crate::canonical::{self, CanonicalUnit};
+use crate::display_string::DisplayString;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EvalMode {
@@ -642,7 +642,7 @@ impl<'a> Interpreter<'a> {
 mod tests {
     use super::*;
     use nom::{Err::Error, Context::Code};
-    use parser::{parse_program, parse_expr, Span};
+    use crate::parser::{parse_program, parse_expr, Span};
 
     static PRELUDE: &str = include_str!("../examples/units.lion");
 

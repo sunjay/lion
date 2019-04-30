@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use ast::{Ident, Span};
-use ir::{Number, Function};
+use crate::ast::{Ident, Span};
+use crate::ir::{Number, Function};
 
 pub struct DuplicateSymbol<'a>(pub Ident<'a>);
 
