@@ -1,6 +1,6 @@
 use std::ops::{Mul, Div, BitXor as Pow};
 
-use smallvec::SmallVec;
+use smallvec::{SmallVec, smallvec};
 
 use crate::ast::{UnitExpr, UnitName, Span};
 use crate::unit_graph::{UnitGraph, UnitID};

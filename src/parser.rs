@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 pub use nom::Err as Error;
-use nom::{alpha, digit, recognize_float, sp, types::CompleteStr};
-use nom_locate::LocatedSpan;
+use nom::{*, types::CompleteStr};
+use nom_locate::{LocatedSpan, position};
 use num_traits::cast::ToPrimitive;
 use bigdecimal::BigDecimal;
 
