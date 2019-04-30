@@ -5,11 +5,11 @@ authors = ["Sunjay Varma <varma.sunjay@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-bigdecimal = "0.0.14"
+bigdecimal = "0.1"
 smallvec = "0.6"
 petgraph = "0.4"
 num-traits = "0.2"
-linefeed = "0.5"
+linefeed = "0.6"
 
 [dependencies.nom]
 version = "4.0.0"
@@ -20,4 +20,4 @@ version = "0.3.1"
 features = ["verbose-errors"]
 
 [dev-dependencies]
-pretty_assertions = "0.5.1"
+pretty_assertions = "0.6"
